@@ -1,0 +1,159 @@
+#pragma once
+#define GLM_ENABLE_EXPERIMENTAL
+
+#include "glm/glm.hpp"
+#include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtc/type_ptr.hpp"
+#include "glm/gtx/hash.hpp"
+#include<vector>
+
+namespace tEngine {
+	struct Vertex
+	{
+		glm::vec3 Position=glm::vec3(0,0,0);
+		glm::vec3 Normal=glm::vec3(0,1,0);
+		glm::vec2 TexCoords=glm::vec2(0,0);
+		glm::vec4 Color=glm::vec4(1,1,1,1);
+		glm::vec4 Weight = glm::vec4(0, 0, 0,0);
+		glm::ivec4 BoneIndices = glm::ivec4(0, 0, 0, 0);
+		bool operator==(const Vertex& v)const {
+			return v.Position == Position && v.TexCoords == TexCoords && v.Color == Color ;
+		}
+	};
+	struct Mesh {
+		Mesh(std::vector<Vertex> _vertices, std::vector<uint32_t> _indices) :vertices(_vertices), indices(_indices) {}
+		Mesh() {};
+		size_t VertexBufferSize() {
+			return vertices.size() * sizeof(Vertex);
+		}
+		size_t IndexBufferSize() {
+			return indices.size() * sizeof(uint32_t);
+		}
+		void UpdateNormal() {
+			for (auto& v : vertices) {
+				v.Normal = glm::vec3(0, 0, 0);
+			}
+			for (int i = 0; i < indices.size(); i += 3) {
+				int id_a = indices[i];
+				int id_b = indices[i + 1];
+				int id_c = indices[i + 2];
+				Vertex a = vertices[id_a];
+				Vertex b = vertices[id_b];
+				Vertex c = vertices[id_c];
+
+				auto normal = [](const Vertex& a, const Vertex& b, const Vertex& c) {
+					auto triangleArea = [](const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3) {
+						float a = (p2 - p1).length();
+						float b = (p2 - p3).length();
+						float c = (p3 - p1).length();
+						float p = (a + b + c) / 2.0;
+						return sqrt(p * (p - a) * (p - b) * (p - c));
+					};
+					return glm::cross(b.Position - a.Position, c.Position - a.Position) * triangleArea(a.Position, b.Position, c.Position);
+				};
+				vertices[id_a].Normal += normal(a, b, c);
+				vertices[id_b].Normal += normal(b, c, a);
+				vertices[id_c].Normal += normal(c, a, b);
+
+			}
+			for (auto& v :vertices) {
+				v.Normal = glm::normalize(v.Normal);
+			}
+		}
+		std::vector<Vertex> vertices;
+		std::vector<uint32_t> indices;
+		static Mesh UnitBox(float length = 2) {
+			float skyboxVertices[] = {
+				// positions
+				-1.0f,  1.0f, -1.0f,
+				-1.0f, -1.0f, -1.0f,
+				 1.0f, -1.0f, -1.0f,
+				 1.0f, -1.0f, -1.0f,
+				 1.0f,  1.0f, -1.0f,
+				-1.0f,  1.0f, -1.0f,
+
+				-1.0f, -1.0f,  1.0f,
+				-1.0f, -1.0f, -1.0f,
+				-1.0f,  1.0f, -1.0f,
+				-1.0f,  1.0f, -1.0f,
+				-1.0f,  1.0f,  1.0f,
+				-1.0f, -1.0f,  1.0f,
+
+				 1.0f, -1.0f, -1.0f,
+				 1.0f, -1.0f,  1.0f,
+				 1.0f,  1.0f,  1.0f,
+				 1.0f,  1.0f,  1.0f,
+				 1.0f,  1.0f, -1.0f,
+				 1.0f, -1.0f, -1.0f,
+
+				-1.0f, -1.0f,  1.0f,
+				-1.0f,  1.0f,  1.0f,
+				 1.0f,  1.0f,  1.0f,
+				 1.0f,  1.0f,  1.0f,
+				 1.0f, -1.0f,  1.0f,
+				-1.0f, -1.0f,  1.0f,
+
+				-1.0f,  1.0f, -1.0f,
+				 1.0f,  1.0f, -1.0f,
+				 1.0f,  1.0f,  1.0f,
+				 1.0f,  1.0f,  1.0f,
+				-1.0f,  1.0f,  1.0f,
+				-1.0f,  1.0f, -1.0f,
+
+				-1.0f, -1.0f, -1.0f,
+				-1.0f, -1.0f,  1.0f,
+				 1.0f, -1.0f, -1.0f,
+				 1.0f, -1.0f, -1.0f,
+				-1.0f, -1.0f,  1.0f,
+				 1.0f, -1.0f,  1.0f
+			};
+
+			std::vector<Vertex> vertices;
+			std::vector<uint32_t>indices;
+			for (int i = 0; i < 36; ++i) {
+				Vertex temp;
+				temp.Position = length / 2 * glm::vec3(skyboxVertices[3 * i], skyboxVertices[3 * i + 1], skyboxVertices[3 * i + 2]);
+				indices.push_back(i);
+				vertices.push_back(temp);
+			}
+			Mesh box(vertices, indices);
+			return box;
+		}
+		static Mesh UnitSquare() {
+			using namespace std;
+			vector<Vertex>vertices;
+			vector<unsigned int>indices;
+			Vertex temp[6];
+			temp[0].Position = glm::vec3(-1.0f, -1.0f, 0.0f);
+			temp[0].TexCoords = glm::vec2(0, 0);
+			temp[1].Position = glm::vec3(1.0f, -1.0f, 0.0f);
+			temp[1].TexCoords = glm::vec2(1, 0);
+			temp[2].Position = glm::vec3(-1.0f, 1.0f, 0.0f);
+			temp[2].TexCoords = glm::vec2(0, 1);
+			temp[3].Position = glm::vec3(-1.0f, 1.0f, 0.0f);
+			temp[3].TexCoords = glm::vec2(0, 1);
+			temp[4].Position = glm::vec3(1.0f, -1.0f, 0.0f);
+			temp[4].TexCoords = glm::vec2(1, 0);
+			temp[5].Position = glm::vec3(1.0f, 1.0f, 0.0f);
+			temp[5].TexCoords = glm::vec2(1, 1);
+			for (int i = 0; i < 6; i++) {
+				vertices.push_back(temp[i]);
+				indices.push_back(i);
+			}
+			Mesh mesh(vertices, indices);
+			return mesh;
+		}
+	};
+	
+
+	
+}
+namespace std {
+	template<> struct hash<tEngine::Vertex> {
+		size_t operator()(tEngine::Vertex const& vertex) const {
+			return ((hash<glm::vec3>()(vertex.Position) ^
+				(hash<glm::vec4>()(vertex.Color) << 1)) >> 1) ^
+				(hash<glm::vec2>()(vertex.TexCoords) << 1);
+		}
+	};
+}
