@@ -28,6 +28,8 @@ namespace tEngine {
 		}
 	public:
 		friend std::shared_ptr<MeshAsset> LoadMesh(std::string filename);
+		friend std::shared_ptr<ImageAsset> LoadImage(std::string filename);
+		friend std::shared_ptr<ShaderAsset> LoadShader(std::string filename);
 		static ResourceLoadManager manager;
 	};
 	//std::shared_ptr<MeshAsset> LoadMesh(std::string filename);

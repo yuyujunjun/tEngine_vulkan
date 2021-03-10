@@ -1,6 +1,7 @@
 #pragma once
 #include"SimpleGeometry.h"
-#include"tResource.h"
+#include"stb_image/stb_image.h"
+#include"vulkan/vulkan.hpp"
 #include<string>
 #include<atomic>
 namespace tEngine {
@@ -15,7 +16,26 @@ namespace tEngine {
 	struct MeshAsset :public Asset {
 		Mesh mesh;
 	};
+	struct ShaderAsset :public Asset {
+		std::vector<uint32_t> shaderSource;
+		std::string shaderReflection;
+	};
 	struct ImageAsset :public Asset {
-		
+		stbi_uc* pixels;
+		bool enableRandomWrite = false;
+		bool autoGenerateMips = false;
+		bool useMipMap = false;
+		vk::ImageType imageType = vk::ImageType::e2D;
+		vk::ImageUsageFlags usageFlags = vk::ImageUsageFlagBits::eSampled;
+		vk::Format format = vk::Format::eUndefined;
+		//pvrvk::SampleCountFlags sampleCount = pvrvk::SampleCountFlags::e_1_BIT;
+		vk::ImageTiling imageTiling = vk::ImageTiling::eOptimal;
+		vk::MemoryPropertyFlags memoryProperty = vk::MemoryPropertyFlagBits::eDeviceLocal;
+		int width, height, channels;
+		int depth = 1;
+
+		~ImageAsset() {
+			stbi_image_free(pixels);
+		}
 	};
 }

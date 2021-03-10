@@ -3,16 +3,16 @@
 #include"vulkan/vulkan.hpp"
 #include"Core.h"
 #include"utils.hpp"
+#include<unordered_map>
+
 namespace tEngine {
-	class tDescriptorSets {
-	public:
-		tDescriptorSets(const std::vector<vk::DescriptorSet>& descSets):descSets(descSets){}
-		void FreeDescriptorSet(vk::Device* device,vk::DescriptorPool pool) {
-			device->freeDescriptorSets(pool, descSets);
-		}
-	private:
-		std::vector<vk::DescriptorSet>descSets;
+	struct tDescSetsData {
+		uint32_t set_number;
+		std::vector<vk::DescriptorSetLayoutBinding> bindings;
+		std::unordered_map<uint32_t, GpuBlockBuffer> blockBuffers;
 	};
+	void MergeSet(std::vector<tDescSetsData>& setLayoutBinding);
+	class tDescriptorSets;
 	class tDescriptorPool {
 	public:
 		using SharedPtr = std::shared_ptr<tDescriptorPool>;
@@ -33,23 +33,15 @@ namespace tEngine {
 			}
 
 		}
-		tDescriptorSets* AllocateDescriptorSet(vk::DescriptorSetAllocateInfo descSetInfo) {
-			auto d = device.lock();
-			if (!descPool&&poolInfo.size()>0) {
-				
-				descPool = vk::su::createDescriptorPool(*d.get(),poolInfo);
-			}
-			if (descPool) {
-				descSetInfo.setDescriptorPool(descPool);
-				allocatedDescSets.emplace_back(std::make_unique<tDescriptorSets>(d->allocateDescriptorSets(descSetInfo)));
-				return allocatedDescSets.back().get();
-			}
-		}
-
+		std::vector<std::shared_ptr<tDescriptorSets>> AllocateDescriptorSets( std::vector<tDescSetsData>& setLayoutBinding);
+		void clearAllSets(const sharedDevice& d);
+	
 		~tDescriptorPool() {
 			if (descPool) {
 				if (!device.expired()) {
-					device.lock()->destroyDescriptorPool(descPool);
+					const auto& d = device.lock();
+					clearAllSets(d);
+					d->destroyDescriptorPool(descPool);
 				}
 				else {
 					reportDestroyedAfterDevice();
@@ -62,8 +54,31 @@ namespace tEngine {
 		weakDevice device;
 		std::vector<vk::DescriptorPoolSize> poolInfo;
 		vk::DescriptorPool descPool;
-		std::vector<std::unique_ptr<tDescriptorSets>> allocatedDescSets;
-	//	std::mutex mutex;
+		std::vector<std::shared_ptr<tDescriptorSets>> allocatedDescSets;
+	};
+	class tDescriptorSets {
+	public:
+		friend class tDescriptorPool;
+		using SharedPtr = std::shared_ptr<tDescriptorSets>;
+		static SharedPtr Create(vk::DescriptorSet vkDescSet,
+			vk::DescriptorSetLayout vkSetlayout,
+			const std::vector<vk::DescriptorSetLayoutBinding>& bindings) {
+			return std::make_shared<tDescriptorSets>(vkDescSet, vkSetlayout, bindings);
+		}
+		tDescriptorSets(vk::DescriptorSet vkDescSet,
+				vk::DescriptorSetLayout vkSetlayout,
+			const std::vector<vk::DescriptorSetLayoutBinding>& bindings) :vkDescSet(vkDescSet), vkSetlayout(vkSetlayout),bindings(bindings) {
+			
+		
+		}
+	
+		
+		std::vector<vk::DescriptorSetLayoutBinding> bindings;
+		vk::DescriptorSetLayout vkSetlayout;
+		vk::DescriptorSet vkDescSet;
+	private:
+		
+		
 	};
 
 }

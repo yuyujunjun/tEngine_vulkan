@@ -49,3 +49,5 @@ CMakeCache.txt
 build_android/
 Assets/Interaction/state.json
 UIBin/imgui.ini
+UnitTest1/
+Sample-Test1/

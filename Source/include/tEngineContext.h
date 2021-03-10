@@ -6,6 +6,8 @@
 #include"tResource.h"
 #include<unordered_map>
 #include"tAssetLoadManager.h"
+#include"CommandBufferBase.h"
+#include"tShader.h"
 namespace tEngine {
 
 	struct tEngineContext {
@@ -13,22 +15,23 @@ namespace tEngine {
 		tEngineContext(vk::Instance instance, vk::Extent2D resolution) :instance(instance),surfaceData(instance, "tang", resolution) {}
 		static tEngineContext* Context();
 		
-		std::unordered_map<vk::QueueFlagBits, uint32_t> queueFamilyIndex;
+		//std::unordered_map<vk::QueueFlagBits, uint32_t> queueFamilyIndex;
 		vk::DebugUtilsMessengerEXT debugUtilsMessenger;
 		vk::Instance instance;
 		sharedDevice device;
-		//vk::PhysicalDevice physicalDevice;
+		//vk::tPhysicalDevice physicalDevice;
 		vk::su::SurfaceData surfaceData;
 		tSwapChain::SharedPtr swapChainData;
-		tDescriptorPool::SharedPtr descriptorPool;
-		uint32_t graphicsQueuefamilyId;
-		uint32_t presentQueuefamilyId;
-		uint32_t computeQueuefamilyId;
+		vk::Queue graphicsQueue;
+		vk::Queue presentQueue;
+		vk::Queue computeQueue;
+		
 		
 		~tEngineContext() {
-			descriptorPool.reset();
+			device->waitIdle();
+			//descriptorPool.reset();
 			swapChainData.reset();
-			
+		
 			device->destroy();
 			instance.destroySurfaceKHR(surfaceData.surface);
 #if !defined( NDEBUG )
@@ -40,6 +43,19 @@ namespace tEngine {
 		static std::unique_ptr<tEngineContext> context;
 
 	};
-	
+	struct ThreadContext {
+		ThreadContext(const tEngineContext*const context);
+
+
+		tDescriptorPool::SharedPtr descriptorPool;
+		tEngine::tCommandPool::SharedPtr cmdPool;
+		std::vector<tEngine::CommandBuffer::SharedPtr> cmdBuffers;
+		~ThreadContext() {
+			
+		}
+	private:
+		const tEngineContext*const context;
+		
+	};
 	
 }

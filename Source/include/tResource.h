@@ -2,49 +2,65 @@
 #include"vulkan/vulkan.h"
 #include"vulkan/vulkan.hpp"
 #include"Core.h"
+#include"tAsset.h"
+#include<optional>
 namespace tEngine {
-	/// <summary>Aligns a given number based on the given alignment</summary>
-/// <param name="numberToAlign">A number ot align based alignment</param>
-/// <param name="alignment">The value to which the numberToAlign will be aligned</param>
-/// <returns>An aligned value</returns>
-	template<typename t1, typename t2>
-	inline t1 align(t1 numberToAlign, t2 alignment)
-	{
-		if (alignment)
-		{
-			t1 align1 = numberToAlign % (t1)alignment;
-			if (!align1) { align1 += (t1)alignment; }
-			numberToAlign += t1(alignment) - align1;
-		}
-		return numberToAlign;
-	}
+	class CommandBuffer;
+
 	class DeviceMemory {
 	public:
-		DeviceMemory():size(0),deviceMemory(vk::DeviceMemory()){}
+		DeviceMemory():size(0),vkMemory(vk::DeviceMemory()){}
 		DeviceMemory(sharedDevice device, vk::DeviceSize size, vk::MemoryRequirements const& requirements, vk::MemoryPropertyFlags const& propertyFlags);
 		~DeviceMemory() {
-			if (deviceMemory) {
+			if (vkMemory) {
 				if (!device.expired()) {
-					device.lock()->freeMemory(deviceMemory);
-					deviceMemory = vk::DeviceMemory();
+					device.lock()->freeMemory(vkMemory);
+					vkMemory = vk::DeviceMemory();
 				}
 				else {
 					reportDestroyedAfterDevice();
 				}
 			}
 		}
-		vk::DeviceMemory deviceMemory;
-	private:
+		
 		inline bool bHost() {
-			return (static_cast<uint32_t>(memoryProperties & vk::MemoryPropertyFlagBits::eHostCached) != 0)||
-				(static_cast<uint32_t>(memoryProperties & vk::MemoryPropertyFlagBits::eHostCoherent) != 0)||
+			return (static_cast<uint32_t>(memoryProperties & vk::MemoryPropertyFlagBits::eHostCached) != 0) ||
+				(static_cast<uint32_t>(memoryProperties & vk::MemoryPropertyFlagBits::eHostCoherent) != 0) ||
 				(static_cast<uint32_t>(memoryProperties & vk::MemoryPropertyFlagBits::eHostVisible) != 0);
+		}
+		inline bool bHostVisible() {
+			return (static_cast<uint32_t>(memoryProperties & vk::MemoryPropertyFlagBits::eHostVisible) != 0);
 		}
 		inline bool bHostCoherent() {
 			return (static_cast<uint32_t>(memoryProperties & vk::MemoryPropertyFlagBits::eHostCached) != 0) ||
 				(static_cast<uint32_t>(memoryProperties & vk::MemoryPropertyFlagBits::eHostCoherent) != 0);
 		}
-		void* memory;
+		void* Data() {
+			return mappedMemory;
+		}
+		vk::DeviceSize getSize() {
+			return size;
+		}
+		void SetRange(const void* data, int size, int offset = 0) {
+			memcpy((char*)mappedMemory + offset, (const char*)data, (size_t)size);
+			
+		}
+		void Flush(vk::DeviceSize offset = 0, vk::DeviceSize size = VK_WHOLE_SIZE) {
+			if (bHostVisible()) {
+				flushRange(offset, size);
+			}
+		}
+		vk::DeviceMemory vkMemory;
+	private:
+		void flushRange(vk::DeviceSize offset = 0, vk::DeviceSize size = VK_WHOLE_SIZE) {
+			VkMappedMemoryRange range = {};
+			range.sType = static_cast<VkStructureType>(vk::StructureType::eMappedMemoryRange);
+			range.memory = vkMemory;
+			range.offset = offset;
+			range.size = size;
+			device.lock()->flushMappedMemoryRanges({ range });
+		}
+		void* mappedMemory;
 		vk::MemoryPropertyFlags memoryProperties;
 		vk::DeviceSize size;
 		std::weak_ptr<vk::Device> device;
@@ -53,6 +69,9 @@ namespace tEngine {
 	class tBuffer {
 	public:
 		using SharedPtr = std::shared_ptr<tBuffer>;
+		static SharedPtr Create(sharedDevice& device, vk::DeviceSize size, vk::MemoryPropertyFlags propertyFlags, vk::BufferUsageFlags usage) {
+			return std::make_shared<tBuffer>(device,size,propertyFlags,usage);
+		}
 		tBuffer(sharedDevice device,vk::DeviceSize size, vk::MemoryPropertyFlags propertyFlags,vk::BufferUsageFlags usage):device(device),size(size), propertyFlags(propertyFlags),usage(usage) {
 			
 			CreateBufferWithMemory(device);
@@ -60,35 +79,42 @@ namespace tEngine {
 		tBuffer(sharedDevice device, vk::DeviceSize size, vk::MemoryPropertyFlags propertyFlags);
 		~tBuffer() {
 			deviceMemory.reset();
-			if (buffer) {
+			if (vkbuffer) {
 				if (!device.expired()) {
-					device.lock()->destroyBuffer(buffer);
-					buffer = vk::Buffer();
+					device.lock()->destroyBuffer(vkbuffer);
+					vkbuffer = vk::Buffer();
 				}
 				else {
 					reportDestroyedAfterDevice();
 				}
 			}
 		}
+		DeviceMemory* getMemory() {
+			return deviceMemory.get();
+		}
+		vk::Buffer& getBuffer() {
+			return vkbuffer;
+		}
+		vk::Buffer vkbuffer;
 	private:
 		inline static uint32_t minBufferAlignment(const Device* const device) {
 			int alignment = std::max(static_cast<uint32_t>(
-				device->getDeviceProperties().limits.minUniformBufferOffsetAlignment),
+				device->physicalDevice.getDeviceProperties().limits.minUniformBufferOffsetAlignment),
 				static_cast<uint32_t>(
-					device->getDeviceProperties().limits.minStorageBufferOffsetAlignment));
+					device->physicalDevice.getDeviceProperties().limits.minStorageBufferOffsetAlignment));
 			return alignment;
 		}
 		void CreateBufferWithMemory(sharedDevice& device) {
 			size = align(size, minBufferAlignment(device.get()));
-			buffer = device->createBuffer(vk::BufferCreateInfo(vk::BufferCreateFlags(), size, usage));
-			auto memoryRequirements = device->getBufferMemoryRequirements(buffer);
+			vkbuffer = device->createBuffer(vk::BufferCreateInfo(vk::BufferCreateFlags(), size, usage));
+			auto memoryRequirements = device->getBufferMemoryRequirements(vkbuffer);
 			size = memoryRequirements.size;
 			deviceMemory = std::make_unique<DeviceMemory>(device, size, memoryRequirements, propertyFlags);
-			device->mapMemory(deviceMemory->deviceMemory, 0, size);
-			device->bindBufferMemory(buffer, deviceMemory->deviceMemory, 0);
+			
+			device->bindBufferMemory(vkbuffer, deviceMemory->vkMemory, 0);
 		}
 		weakDevice device;
-		vk::Buffer buffer;
+		
 		std::unique_ptr<DeviceMemory> deviceMemory;
 		vk::DeviceSize size;
 		vk::BufferUsageFlags usage;
@@ -97,10 +123,10 @@ namespace tEngine {
 	class tSampler {
 		tSampler() {}
 		~tSampler() {
-			if (sampler) {
+			if (vksampler) {
 				if (!device.expired()) {
-					device.lock()->destroySampler(sampler); 
-					sampler = vk::Sampler();
+					device.lock()->destroySampler(vksampler); 
+					vksampler = vk::Sampler();
 				}
 				else {
 					reportDestroyedAfterDevice();
@@ -109,20 +135,33 @@ namespace tEngine {
 		}
 	private:
 		std::weak_ptr<vk::Device> device;
-		vk::Sampler sampler;
+		vk::Sampler vksampler;
 	};
 	struct tImage {
 	public:
 		
 		friend class tImageView;
+		using SharedPtr = std::shared_ptr<tImage>;
+		static SharedPtr Create(sharedDevice& device, vk::Image image) {
+			return std::make_shared<tImage>(device, image);
+		}
+		static SharedPtr Create(sharedDevice& device, vk::ImageCreateInfo info) {
+			return std::make_shared<tImage>(device, info);
+		}
 		tImage(sharedDevice& device, vk::Image image) :vkImage(image), device(device) {
 		
 		}
-		
+		tImage(sharedDevice& device, vk::ImageCreateInfo info):device(device) {
+			vkImage = device->createImage(info);
+			extent3D = info.extent;
+		}
+		void setImageLayout(vk::ImageLayout layout) {
+			this->imageLayout = layout;
+		}
 		void AllocateMemory(sharedDevice& device, vk::MemoryPropertyFlags const& propertyFlags) {
 			auto memoryRequirements = device->getImageMemoryRequirements(vkImage);
 			deviceMemory = std::make_unique<DeviceMemory>(device, memoryRequirements.size, memoryRequirements, propertyFlags);
-			device->bindImageMemory(vkImage, deviceMemory->deviceMemory, 0);
+			device->bindImageMemory(vkImage, deviceMemory->vkMemory, 0);
 		}
 		~tImage() {
 			deviceMemory.reset();
@@ -139,28 +178,45 @@ namespace tEngine {
 			}
 
 		}
+		vk::Extent3D getExtent3D() {
+			return extent3D;
+		}
 		vk::Image& VKHandle() {
 			return vkImage;
 		}
+		DeviceMemory* getMemory() {
+			return deviceMemory.get();
+		}
 		vk::Image vkImage;
+		void _bakeImageAsset(std::shared_ptr<ImageAsset>& asset) {
+			this->asset = asset;
+		}
 	private:
-		
+		vk::ImageLayout imageLayout;
+		vk::Extent3D extent3D;
 		std::weak_ptr<vk::Device> device;
 		std::unique_ptr<DeviceMemory> deviceMemory;
+		std::shared_ptr<ImageAsset> asset;
+		
 	};
 	class tImageView {
 	public:
 		using SharedPtr = std::shared_ptr<tImageView>;
-		tImageView(sharedDevice device, vk::ImageViewCreateInfo imageViewCreateInfo) :device(device), createInfo(imageViewCreateInfo){
-			image = std::make_shared<tImage>(device, createInfo.image);
-			imageView = device->createImageView(createInfo);
+		static SharedPtr Create(sharedDevice& device, std::shared_ptr<tImage>& image, vk::ImageViewCreateInfo&const info){
+			return std::make_shared<tImageView>(device,image,info);
 		}
-		
+		/*tImageView(sharedDevice device, std::shared_ptr<tImage>& image) :device(device),image(image) {
+
+		}*/
+		tImageView(sharedDevice& device, std::shared_ptr<tImage>& image, vk::ImageViewCreateInfo info) :device(device), image(image) {
+			info.image = image->vkImage;
+			vkimageView = device->createImageView(info);
+		}
 		~tImageView(){
-			if (imageView) {
+			if (vkimageView) {
 				if (!device.expired()) {
-					device.lock()->destroyImageView(imageView);
-					imageView = vk::ImageView();
+					device.lock()->destroyImageView(vkimageView);
+					vkimageView = vk::ImageView();
 				}
 				else {
 					reportDestroyedAfterDevice();
@@ -170,6 +226,7 @@ namespace tEngine {
 		vk::Format getFormat() {
 			return createInfo.format;
 		}
+		
 		void SetImageDevice(vk::Image& image, sharedDevice device) {
 			this->device = device;
 			this->image->vkImage = image;
@@ -179,26 +236,23 @@ namespace tEngine {
 		std::shared_ptr<tImage>& getImage() {
 			return image;
 		}
+	
 	private:
+		
 		std::shared_ptr<tImage> image;
 		vk::ImageViewCreateInfo createInfo;
-		
-		vk::ImageView imageView;
+		vk::ImageView vkimageView;
 		std::weak_ptr<vk::Device> device;
 	};
-	inline tImageView::SharedPtr CreateImageViewWithImage(sharedDevice& device,vk::ImageCreateInfo imageInfo,vk::ImageViewCreateInfo viewInfo,vk::MemoryPropertyFlags& memoryProperties) {
-		//Create Image
-		auto image = device->createImage(imageInfo);
-		//Create imageView
-		viewInfo.image = image;
-		auto imageView = std::make_shared<tImageView>(device,viewInfo);
-		imageView->getImage()->AllocateMemory(device, memoryProperties);
-		return imageView;
-	}
+	
+	tImageView::SharedPtr CreateImageViewWithImage(sharedDevice& device, vk::ImageCreateInfo imageInfo, vk::ImageViewCreateInfo viewInfo, vk::MemoryPropertyFlags& memoryProperties);
+	tImageView::SharedPtr CreateImageViewWithImage(sharedDevice& device, std::shared_ptr<ImageAsset>& asset,const std::shared_ptr<CommandBuffer>& cb);
+	void CopyBufferToImage(const std::shared_ptr<CommandBuffer>& cb, tBuffer::SharedPtr buffer, tImageView::SharedPtr imageView, vk::ImageLayout initialLayout, vk::ImageLayout finalLayout);
+
 	class tSwapChain {
 	public:
 		using SharedPtr = std::shared_ptr<tSwapChain>;
-		tSwapChain(vk::PhysicalDevice const& physicalDevice,
+		tSwapChain(
 			sharedDevice device,
 			vk::SurfaceKHR const& surface,
 			vk::Extent2D const& extent,
@@ -206,6 +260,9 @@ namespace tEngine {
 			vk::SwapchainKHR const& oldSwapChain,
 			uint32_t                   graphicsFamilyIndex,
 			uint32_t                   presentFamilyIndex);
+		uint8_t getSwapchainLength() {
+			return imageList.size();
+		}
 		~tSwapChain() {
 			if (swapChain) {
 				

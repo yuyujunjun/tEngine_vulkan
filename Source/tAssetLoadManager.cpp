@@ -10,6 +10,49 @@
 #include"tiny_obj_loader.h"
 namespace tEngine {
 	ResourceLoadManager ResourceLoadManager::manager;
+	std::vector<uint32_t> read_binary_file(const std::string& filename, const uint32_t count)
+	{
+		std::vector<uint32_t> data;
+
+		std::ifstream file;
+
+		file.open(filename, std::ios::in | std::ios::binary);
+
+		if (!file.is_open())
+		{
+			throw std::runtime_error("Failed to open file: " + filename);
+		}
+
+		uint64_t read_count = count;
+		if (count == 0)
+		{
+			file.seekg(0, std::ios::end);
+			read_count = static_cast<uint64_t>(file.tellg());
+			file.seekg(0, std::ios::beg);
+		}
+
+		data.resize(static_cast<size_t>(read_count/sizeof(uint32_t)));
+		file.read(reinterpret_cast<char*>(data.data()), read_count);
+		file.close();
+
+		return data;
+	}
+	std::string read_text_file(const std::string& filename)
+	{
+		std::vector<std::string> data;
+
+		std::ifstream file;
+
+		file.open(filename, std::ios::in);
+
+		if (!file.is_open())
+		{
+			throw std::runtime_error("Failed to open file: " + filename);
+		}
+
+		return std::string{ (std::istreambuf_iterator<char>(file)),
+						   (std::istreambuf_iterator<char>()) };
+	}
 	std::shared_ptr<MeshAsset> LoadMesh(std::string filename) {
 		auto& manager = ResourceLoadManager::manager;
 		auto key = manager.getKey(filename);
@@ -61,5 +104,46 @@ namespace tEngine {
 			Log("Load Mesh", LogLevel::Performance);
 		}
 		return std::static_pointer_cast<tEngine::MeshAsset>(res);
+	}
+	std::shared_ptr<ImageAsset> LoadImage(std::string name) {
+		auto& m = ResourceLoadManager::manager;
+		auto image = std::static_pointer_cast<ImageAsset>(m.GetResource(m.getKey(name)));
+		//Load image
+		if (image == nullptr) {
+			Log(("LoadImage: " + m.getKey(name)).c_str(), LogLevel::Performance);
+			int width, height, channels;
+			stbi_set_flip_vertically_on_load(true);
+			stbi_uc* pixels = stbi_load(("../Assets/" + name).c_str(), &width, &height, &channels, STBI_rgb_alpha);
+			image = std::make_shared<ImageAsset>();
+			image->pixels = pixels;
+			image->width = width;
+			image->height = height;
+			image->depth = 1;
+			image->format = vk::Format::eR8G8B8A8Srgb;
+			image->autoGenerateMips = false;
+			image->enableRandomWrite = false;
+			image->channels = 4;
+			m.assetPool[m.getKey(name)] = image;
+			
+		}
+		return image;
+	}
+	std::shared_ptr<ShaderAsset> LoadShader(std::string filename) {
+		auto& m = ResourceLoadManager::manager;
+		auto shader = std::static_pointer_cast<ShaderAsset>(m.GetResource(m.getKey(filename)));
+		//Load image
+		if (shader == nullptr) {
+			std::string shaderFile = "../Assets/Shader/" + filename+".spv";
+			std::string jsonFile = "../Assets/Json/" + filename+".refl";
+			Log(("LoadShader: " + m.getKey(filename)).c_str(), LogLevel::Performance);
+			auto shader_source= read_binary_file(shaderFile,0);
+			auto json_code = read_text_file(jsonFile);
+			shader = std::make_shared<ShaderAsset>();
+			shader->shaderReflection = json_code;
+			shader->shaderSource = shader_source;
+			m.assetPool[m.getKey(filename)] = shader;
+
+		}
+		return shader;
 	}
 }

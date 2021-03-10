@@ -24,7 +24,7 @@
 #include "imgui.h"      // IMGUI_IMPL_API
 #include <vulkan/vulkan.h>
 
-// Initialization data, for ImGui_ImplVulkan_Init()
+// Initialization mappedMemory, for ImGui_ImplVulkan_Init()
 // [Please zero-clear before use!]
 struct ImGui_ImplVulkan_InitInfo
 {
@@ -78,7 +78,7 @@ IMGUI_IMPL_API VkSurfaceFormatKHR   ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhys
 IMGUI_IMPL_API VkPresentModeKHR     ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count);
 IMGUI_IMPL_API int                  ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_mode);
 
-// Helper structure to hold the data needed by one rendering frame
+// Helper structure to hold the mappedMemory needed by one rendering frame
 // (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own engine/app.)
 // [Please zero-clear before use!]
 struct ImGui_ImplVulkanH_Frame
@@ -97,7 +97,7 @@ struct ImGui_ImplVulkanH_FrameSemaphores
     VkSemaphore         RenderCompleteSemaphore;
 };
 
-// Helper structure to hold the data needed by one rendering context into one OS window
+// Helper structure to hold the mappedMemory needed by one rendering context into one OS window
 // (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own engine/app.)
 struct ImGui_ImplVulkanH_Window
 {
@@ -112,7 +112,7 @@ struct ImGui_ImplVulkanH_Window
     VkClearValue        ClearValue;
     uint32_t            FrameIndex;             // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
     uint32_t            ImageCount;             // Number of simultaneous in-flight frames (returned by vkGetSwapchainImagesKHR, usually derived from min_image_count)
-    uint32_t            SemaphoreIndex;         // Current set of swapchain wait semaphores we're using (needs to be distinct from per frame data)
+    uint32_t            SemaphoreIndex;         // Current set of swapchain wait semaphores we're using (needs to be distinct from per frame mappedMemory)
     ImGui_ImplVulkanH_Frame*            Frames;
     ImGui_ImplVulkanH_FrameSemaphores*  FrameSemaphores;
 

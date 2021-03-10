@@ -71,20 +71,7 @@ namespace tEngine {
 		extensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 #endif
 
-#ifdef DEBUG
-		// if the build is Debug then attempt to enable the VK_EXT_debug_report extension to aid with debugging
-#if defined(VK_EXT_debug_report) && !defined(VK_USE_PLATFORM_MACOS_MVK)
-		extensions.push_back(pvrvk::VulkanExtension(VK_EXT_DEBUG_REPORT_EXTENSION_NAME, (uint32_t)-1));
-#endif
-		// if the build is Debug then attempt to enable the VK_EXT_debug_utils extension to aid with debugging
-#if defined(VK_EXT_debug_utils) && !defined(VK_USE_PLATFORM_MACOS_MVK)
-		extensions.push_back(pvrvk::VulkanExtension(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, (uint32_t)-1));
-#endif
-		// if the build is Debug then attempt to enable the VK_EXT_validation_features extension to aid with debugging
-#ifdef VK_EXT_validation_features
-		extensions.push_back(pvrvk::VulkanExtension(VK_EXT_VALIDATION_FEATURES_EXTENSION_NAME, (uint32_t)-1));
-#endif
-#endif
+
 		extensions.push_back("VK_KHR_win32_surface");
 	
 		return extensions;
@@ -104,30 +91,50 @@ namespace tEngine {
 			
 			auto physicalDevice = context->instance.enumeratePhysicalDevices().front();
 			auto pair = vk::su::findGraphicsAndPresentQueueFamilyIndex(physicalDevice, context->surfaceData.surface);
-			context->graphicsQueuefamilyId = pair.first;
-			context->presentQueuefamilyId = pair.second;
-			std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
-			context->computeQueuefamilyId = findQueueFamilyIndex(queueFamilyProperties, vk::QueueFlagBits::eCompute);
+			
 
 			context->device =
-				std::make_shared<Device>(vk::su::createDevice(physicalDevice, context->graphicsQueuefamilyId, vk::su::getDeviceExtensions()));
-			context->device->getPhysicalDevice() = physicalDevice;
+				std::make_shared<Device>(vk::su::createDevice(physicalDevice, pair.first, vk::su::getDeviceExtensions()));
+			context->device->physicalDevice.SetPhysicalDevice( physicalDevice);
 			auto& device = context->device;
 			
-		
+			device->physicalDevice.graphicsQueuefamilyId = pair.first;
+			device->physicalDevice.presentQueuefamilyId = pair.second;
+			std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
+			device->physicalDevice.computeQueuefamilyId = findQueueFamilyIndex(queueFamilyProperties, vk::QueueFlagBits::eCompute);
 
+			context->graphicsQueue = device->getQueue(device->physicalDevice.graphicsQueuefamilyId,0);
+			context->computeQueue = device->getQueue(device->physicalDevice.computeQueuefamilyId, 0);
+			context->presentQueue = device->getQueue(device->physicalDevice.presentQueuefamilyId, 0);
 		
-
-			context->descriptorPool = std::make_shared<tDescriptorPool>(context->device);
-			context->descriptorPool->addDescriptorInfo(vk::DescriptorType::eCombinedImageSampler, 10);
-			context->descriptorPool->addDescriptorInfo(vk::DescriptorType::eUniformBufferDynamic, 10);
-			context->descriptorPool->addDescriptorInfo(vk::DescriptorType::eStorageBufferDynamic, 10);
-			context->swapChainData = std::make_shared<tSwapChain>(device->getPhysicalDevice(), context->device, context->surfaceData.surface, context->surfaceData.extent,
+			context->swapChainData = std::make_shared<tSwapChain>(context->device, context->surfaceData.surface, context->surfaceData.extent,
 				vk::ImageUsageFlagBits::eColorAttachment |
-				vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst, vk::SwapchainKHR(), context->graphicsQueuefamilyId, context->presentQueuefamilyId);
+				vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst, vk::SwapchainKHR(), device->physicalDevice.graphicsQueuefamilyId, device->physicalDevice.presentQueuefamilyId);
 
 		}
 		return context.get();
+	}
+	ThreadContext::ThreadContext(const tEngineContext const* context):context(context) {
+		//DescriptorPool
+		descriptorPool = std::make_shared<tDescriptorPool>(context->device);
+		descriptorPool->addDescriptorInfo(vk::DescriptorType::eCombinedImageSampler, 10);
+		descriptorPool->addDescriptorInfo(vk::DescriptorType::eUniformBufferDynamic, 10);
+		descriptorPool->addDescriptorInfo(vk::DescriptorType::eStorageBufferDynamic, 10);
+		//CommandPool
+		vk::CommandPoolCreateInfo poolInfo;
+		poolInfo.queueFamilyIndex = context->device->physicalDevice.graphicsQueuefamilyId;
+		
+		cmdPool = tCommandPool::Create(context->device, context->device->createCommandPool(poolInfo));
+		//CommandBuffer
+		vk::CommandBufferAllocateInfo cbInfo;
+		cbInfo.commandBufferCount = context->swapChainData->getSwapchainLength();
+		cbInfo.commandPool = cmdPool->vkCommandPool;
+		auto& cbs = context->device->allocateCommandBuffers(cbInfo);
+
+		for (const auto& cb : cbs) {
+			cmdBuffers.emplace_back( CommandBuffer::Create(context->device,cb));
+		}
+		
 	}
 
 }
