@@ -9,8 +9,8 @@
 
 
 namespace tEngine {
-	 std::unique_ptr<tEngineContext> tEngineContext::context;
-	
+	std::unique_ptr<tEngineContext> tEngineContext::context;
+	tDescriptorSetLayoutManager tDescriptorSetLayoutManager::manager;
 	uint32_t findQueueFamilyIndex(std::vector<vk::QueueFamilyProperties>const& queueFamilyProperties, vk::QueueFlagBits bits) {
 		std::vector<vk::QueueFamilyProperties>::const_iterator graphicsQueueFamilyProperty = std::find_if(
 			queueFamilyProperties.begin(), queueFamilyProperties.end(), [bits](vk::QueueFamilyProperties const& qfp) {
@@ -120,6 +120,8 @@ namespace tEngine {
 		descriptorPool->addDescriptorInfo(vk::DescriptorType::eCombinedImageSampler, 10);
 		descriptorPool->addDescriptorInfo(vk::DescriptorType::eUniformBufferDynamic, 10);
 		descriptorPool->addDescriptorInfo(vk::DescriptorType::eStorageBufferDynamic, 10);
+		descriptorPool->addDescriptorInfo(vk::DescriptorType::eStorageBufferDynamic, 10);
+		descriptorPool->CreatePool();
 		//CommandPool
 		vk::CommandPoolCreateInfo poolInfo;
 		poolInfo.queueFamilyIndex = context->device->physicalDevice.graphicsQueuefamilyId;

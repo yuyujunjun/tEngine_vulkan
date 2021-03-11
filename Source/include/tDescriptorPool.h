@@ -5,33 +5,100 @@
 #include"utils.hpp"
 #include<unordered_map>
 #include"tResource.h"
+#include<mutex>
 namespace tEngine {
-	struct tDescSetsData {
-		uint32_t set_number;
+	//Not ordered by binding
+	struct tDescLayoutData {
+		vk::DescriptorSetLayoutBinding& bindingAt(uint32_t idx) {
+			auto& result= std::find_if(bindings.begin(), bindings.end(),
+				[&idx](const vk::DescriptorSetLayoutBinding & b) {
+					return  idx == b.binding;
+				 });
+			return *result;
+		}
 		std::vector<vk::DescriptorSetLayoutBinding> bindings;
+	private:
+		
+		
+	};
+	struct tDescSetsDataWithSetNumber {
+		uint32_t set_number;
+		tDescLayoutData data;
 		std::unordered_map<uint32_t, GpuBlockBuffer> blockBuffers;
 	};
-	void MergeSet(std::vector<tDescSetsData>& setLayoutBinding);
+
+	void MergeSet(std::vector<tDescSetsDataWithSetNumber>& setLayoutBinding);
 	class tDescriptorSets;
 
 	class tDescriptorSetLayout {
 	public:
 		DECLARE_SHARED(tDescriptorSetLayout);
-		static SharedPtr Create(sharedDevice& device,const tDescSetsData& bindings) {
-			return std::make_shared<tDescriptorSetLayout>(device, bindings);
+		tDescLayoutData bindings;
+		vk::DescriptorSetLayout vkLayout;
+		~tDescriptorSetLayout() {
+			if (vkLayout) {
+				device.lock()->destroyDescriptorSetLayout(vkLayout);
+				vkLayout = vk::DescriptorSetLayout();
+			}
 		}
-		tDescriptorSetLayout(sharedDevice& device, const tDescSetsData& bindings) :device(device),bindings(bindings) {
+		tDescriptorSetLayout(sharedDevice& device, const tDescLayoutData& bindings) :device(device), bindings(bindings) {
 			vk::DescriptorSetLayoutCreateInfo info;
 			info.setBindings(bindings.bindings);
 			vkLayout = device->createDescriptorSetLayout(info);
 		}
-		~tDescriptorSetLayout() {
-
-		}
-		tDescSetsData bindings;
-		vk::DescriptorSetLayout vkLayout;
 	private:
+		friend class tDescriptorSetLayoutManager;
+		static SharedPtr Create(sharedDevice& device,const tDescLayoutData& bindings) {
+			return std::make_shared<tDescriptorSetLayout>(device, bindings);
+		}
+		
+	
+		
+	private:
+		
 		weakDevice device;
+	};
+	//To ensure that the same bindings of a set produce the same layout
+	class tDescriptorSetLayoutManager {
+	public:
+		static tDescriptorSetLayoutManager manager;
+		tDescriptorSetLayoutManager() {}
+	
+		tDescriptorSetLayout::SharedPtr createSetLayout(sharedDevice& device,const tDescLayoutData& bindings) {
+			//find first
+			for (size_t i = 0; i < bindingInfoList.size(); ++i) {
+				if (bindings.bindings == bindingInfoList[i].bindings ) {
+					if (!layoutList[i].expired()) {
+						return layoutList[i].lock();
+					}
+				}
+			}
+			std::lock_guard<std::mutex> lock(mtx);
+
+			for (size_t i = 0; i < bindingInfoList.size(); ++i) {
+				if (bindings.bindings == bindingInfoList[i].bindings) {
+					if (!layoutList[i].expired()) {
+						return layoutList[i].lock();
+					}
+					else {
+
+						auto descSetLayout = tDescriptorSetLayout::Create(device,bindings);
+						layoutList[i] = descSetLayout;
+						return descSetLayout;
+					}
+				}
+			}
+			auto descSetLayout = tDescriptorSetLayout::Create(device, bindings);
+			layoutList.push_back(descSetLayout);
+			bindingInfoList.push_back(bindings);
+			return descSetLayout;
+		}
+		
+	private:
+		std::mutex mtx;
+		//using BindingInfo = std::vector<vk::DescriptorSetLayoutBinding>;
+		std::vector<tDescLayoutData > bindingInfoList;
+		std::vector< std::weak_ptr<tDescriptorSetLayout>> layoutList;
 	};
 	class tDescriptorSets {
 	public:
@@ -53,13 +120,13 @@ namespace tEngine {
 			bindBuffer[binding] = buffer;
 			//updatedBuffer.emplace_back(binding);
 			bufferInfos.emplace_back(buffer->vkbuffer, 0, buffer->deviceMemory->getSize());
-			writeDescriptorSets.emplace_back(vk::WriteDescriptorSet(vkDescSet, binding, 0, Setlayout->bindings.bindings[binding].descriptorType, nullptr, bufferInfos.back(), {}));
+			writeDescriptorSets.emplace_back(vk::WriteDescriptorSet(vkDescSet, binding, 0, Setlayout->bindings.bindingAt(binding).descriptorType, nullptr, bufferInfos.back(), {}));
 
 		}
 		void SetImage(uint32_t binding, tImageView::SharedPtr image) {
 			if (bindImage.count(binding) != 0 && bindImage.at(binding)->vkimageView == image->vkimageView)return;
 			bindImage[binding] = image;
-			auto type = Setlayout->bindings.bindings[binding].descriptorType;
+			auto type = Setlayout->bindings.bindingAt(binding).descriptorType;
 			switch (type) {
 			case vk::DescriptorType::eCombinedImageSampler:
 				imageInfos.emplace_back(vk::DescriptorImageInfo(image->sampler->vksampler, image->vkimageView, vk::ImageLayout::eShaderReadOnlyOptimal));
@@ -100,7 +167,7 @@ namespace tEngine {
 		}
 		tDescriptorSetLayout::SharedPtr Setlayout;
 		vk::DescriptorSet vkDescSet;
-		
+		bool bInUse=false;
 	private:
 		std::unordered_map<uint32_t, tBuffer::SharedPtr> bindBuffer;
 		std::unordered_map<uint32_t, tImageView::SharedPtr> bindImage;
@@ -111,6 +178,7 @@ namespace tEngine {
 		weakDevice device;
 		
 	};
+	class tShader;
 	class tDescriptorPool {
 	public:
 		using SharedPtr = std::shared_ptr<tDescriptorPool>;
@@ -124,15 +192,16 @@ namespace tEngine {
 		tDescriptorPool& addDescriptorInfo(vk::DescriptorType type, uint32_t count) {
 			if (descPool) { throw std::exception("cannot add DescriptorInfo after create descriptorPool"); }
 
-			for (auto& poolSize : poolInfo) {
-				if (poolSize.type == type) {
-					poolSize.descriptorCount += count;
-				}
-			}
+			poolInfo.emplace_back(vk::DescriptorPoolSize(type, count));
 			return *this;
 
 		}
-		std::vector<std::shared_ptr<tDescriptorSets>> AllocateDescriptorSets(std::vector<std::shared_ptr<tDescriptorSetLayout>>& setLayoutBinding);
+		void CreatePool();
+		std::vector<std::shared_ptr<tDescriptorSets>> AllocateDescriptorSets(
+			const std::shared_ptr<tShader>& shader,
+			const std::vector<std::unordered_map<uint32_t, tBuffer::SharedPtr>>& buffers
+			, const std::vector<std::unordered_map<uint32_t, tImageView::SharedPtr>>& images);
+	
 		void clearAllSets(const sharedDevice& d);
 
 		~tDescriptorPool() {
@@ -150,7 +219,7 @@ namespace tEngine {
 		}
 
 	private:
-
+		std::mutex mtx;
 		weakDevice device;
 		std::vector<vk::DescriptorPoolSize> poolInfo;
 		vk::DescriptorPool descPool;

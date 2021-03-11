@@ -65,6 +65,12 @@ namespace tEngine {
 		std::weak_ptr<vk::Device> device;
 		
 	};
+	inline  bool operator==(const std::unique_ptr<DeviceMemory>& a, const std::unique_ptr<DeviceMemory>& b) {
+		return a->vkMemory == b->vkMemory;
+	}
+	inline  bool operator!=(const std::unique_ptr<DeviceMemory>& a, const std::unique_ptr<DeviceMemory>& b) {
+		return !(a==b);
+	}
 	class tBuffer {
 	public:
 		using SharedPtr = std::shared_ptr<tBuffer>;
@@ -120,6 +126,12 @@ namespace tEngine {
 		vk::BufferUsageFlags usage;
 		vk::MemoryPropertyFlags propertyFlags;
 	};
+	inline  bool operator==(const tBuffer::SharedPtr& a,const tBuffer::SharedPtr& b) {
+		return a->vkbuffer == b->vkbuffer;
+	}
+	inline  bool operator != (const tBuffer::SharedPtr & a, const tBuffer::SharedPtr & b) {
+		return !(a->vkbuffer == b->vkbuffer);
+	}
 	class tSampler {
 	public:
 		DECLARE_SHARED(tSampler);
@@ -147,6 +159,12 @@ namespace tEngine {
 		std::weak_ptr<vk::Device> device;
 		
 	};
+	inline  bool operator==(const tSampler::SharedPtr& a, const tSampler::SharedPtr& b) {
+		return a->vksampler == b->vksampler;
+	}
+	inline  bool operator != (const tSampler::SharedPtr& a, const tSampler::SharedPtr& b) {
+		return !(a->vksampler == b->vksampler);
+	}
 	struct tImage {
 	public:
 		
@@ -209,6 +227,12 @@ namespace tEngine {
 		std::shared_ptr<ImageAsset> asset;
 		
 	};
+	inline  bool operator==(const tImage::SharedPtr& a, const tImage::SharedPtr& b) {
+		return a->vkImage == b->vkImage;
+	}
+	inline  bool operator != (const tImage::SharedPtr& a, const tImage::SharedPtr& b) {
+		return !(a->vkImage == b->vkImage);
+	}
 	class tImageView {
 	public:
 		using SharedPtr = std::shared_ptr<tImageView>;
@@ -257,7 +281,8 @@ namespace tEngine {
 		
 		std::weak_ptr<vk::Device> device;
 	};
-	
+	 bool operator==(const tImageView::SharedPtr& a, const tImageView::SharedPtr& b);
+	 bool operator != (const tImageView::SharedPtr& a, const tImageView::SharedPtr& b);
 	tImageView::SharedPtr CreateImageViewWithImage(sharedDevice& device, vk::ImageCreateInfo imageInfo, vk::ImageViewCreateInfo viewInfo, vk::MemoryPropertyFlags& memoryProperties);
 	tImageView::SharedPtr CreateImageViewWithImage(sharedDevice& device, std::shared_ptr<ImageAsset>& asset,const std::shared_ptr<CommandBuffer>& cb);
 	void CopyBufferToImage(const std::shared_ptr<CommandBuffer>& cb, tBuffer::SharedPtr buffer, tImageView::SharedPtr imageView, vk::ImageLayout initialLayout, vk::ImageLayout finalLayout);

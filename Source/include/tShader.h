@@ -7,13 +7,14 @@
 
 namespace tEngine {
 	struct ShaderAsset;
-	struct tShader {
+	class tShader {
+	public:
 		using SharedPtr = std::shared_ptr<tShader>;
 		static SharedPtr Create(sharedDevice& device) {
 			return std::make_shared<tShader>(device);
 		}
 		tShader(sharedDevice& device) :device(device) {}
-		void AddShaderModule(const vk::ArrayProxy<const std::string>& fileName, vk::ShaderStageFlags stageFlag);
+		void SetShaderModule(const vk::ArrayProxy<const std::string>& fileName, vk::ShaderStageFlags stageFlag);
 		
 		~tShader() {
 			if (shaderModule.size() > 0) {
@@ -30,8 +31,10 @@ namespace tEngine {
 
 		std::vector<vk::ShaderModule> shaderModule;
 		vk::ShaderStageFlags stageFlags;
-		std::vector<tDescSetsData> setsData;
+
+		std::vector<tDescSetsDataWithSetNumber> setsnumberData;//setsnumberData coresspond to setlayouts
 		std::vector<tDescriptorSetLayout::SharedPtr> setlayouts;
+
 		tPipelineLayout::SharedPtr pipelinelayout;
 		GpuBlockBuffer pushConstant;
 	private:

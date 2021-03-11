@@ -25,16 +25,16 @@ namespace tEngine {
 	};
 
 
-	void Reflector::reflectionShader(std::string jsonfile,std::vector<tDescSetsData>& descSetsData,GpuBlockBuffer& pushConstant, vk::ShaderStageFlags stageFlag) {
+	void Reflector::reflectionShader(std::string jsonfile,std::vector<tDescSetsDataWithSetNumber>& descSetsData,GpuBlockBuffer& pushConstant, vk::ShaderStageFlags stageFlag) {
 	//	std::unordered_map<std::string, GpuBlockBuffer> blocks;
 		rapidjson::Document document;
-		//std::unordered_map<uint32_t, tDescSetsData> sets;
+		//std::unordered_map<uint32_t, tDescLayoutData> sets;
 
 		document.Parse(jsonfile.data(), jsonfile.size());
 		const rapidjson::Value& descriptors = document["descriptor_sets"];
 		descSetsData.reserve(descriptors.Size()+descSetsData.size());
 		for (rapidjson::SizeType i = 0; i < descriptors.Size(); ++i) {
-			descSetsData.push_back(tDescSetsData());
+			descSetsData.push_back(tDescSetsDataWithSetNumber());
 			uint32_t set_number = descriptors[i].GetObject()["set"].GetInt();
 			auto& m_set = descSetsData.back();
 			m_set.set_number = set_number;
@@ -44,7 +44,7 @@ namespace tEngine {
 			m_binding.binding = descriptors[i].GetObject()["binding"].GetInt();
 			m_binding.descriptorCount = 1;
 			m_binding.stageFlags = stageFlag;
-			m_set.bindings.push_back(m_binding);
+			m_set.data.bindings.push_back(m_binding);
 			//Set block
 			GpuBlockBuffer block;
 			block.name = descriptors[i].GetObject()["name"].GetString();

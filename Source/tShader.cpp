@@ -2,17 +2,18 @@
 #include"Reflector.h"
 #include"tAssetLoadManager.h"
 namespace tEngine {
-	void tShader::AddShaderModule(const vk::ArrayProxy<const std::string>& fileName, vk::ShaderStageFlags stageFlag) {
+	void tShader::SetShaderModule(const vk::ArrayProxy<const std::string>& fileName, vk::ShaderStageFlags stageFlag) {
 		for (uint32_t i = 0; i < fileName.size(); ++i) {
 			AddShaderModule(reinterpret_cast<const std::string*>(fileName.data())[i], stageFlag);
 		}
+		MergeSet(setsnumberData);
 		CreateShaderLayout();
 	}
 	void tShader::CreateShaderLayout() {
 		auto& d = device.lock();
 		if (setlayouts.size() == 0) {
-			for (int i = 0; i < setsData.size(); ++i) {
-				setlayouts.emplace_back(tDescriptorSetLayout::Create(d, setsData[i]));
+			for (int i = 0; i < setsnumberData.size(); ++i) {
+				setlayouts.emplace_back(tDescriptorSetLayoutManager::manager.createSetLayout(d, setsnumberData[i].data));
 			}
 		}
 		if (pipelinelayout == nullptr) {
@@ -28,7 +29,7 @@ namespace tEngine {
 		setlayouts.clear();
 		auto& d = device.lock();
 		shaderAsset.push_back( LoadShader(fileName));
-		Reflector::reflectionShader(shaderAsset.back()->shaderReflection, setsData, pushConstant, stageFlags);
+		Reflector::reflectionShader(shaderAsset.back()->shaderReflection, setsnumberData, pushConstant, stageFlags);
 		//To check stage Flags
 		vk::ShaderModuleCreateInfo info;
 		info.setCode( shaderAsset.back()->shaderSource);

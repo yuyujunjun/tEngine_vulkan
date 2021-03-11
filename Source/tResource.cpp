@@ -2,6 +2,12 @@
 #include"utils.hpp"
 #include"CommandBufferBase.h"
 namespace tEngine {
+      bool operator==(const tImageView::SharedPtr& a, const tImageView::SharedPtr& b) {
+        return a->vkimageView == b->vkimageView;
+    }
+      bool operator != (const tImageView::SharedPtr& a, const tImageView::SharedPtr& b) {
+        return !(a->vkimageView == b->vkimageView);
+    }
      tImageView::SharedPtr CreateImageViewWithImage(sharedDevice& device, vk::ImageCreateInfo imageInfo, vk::ImageViewCreateInfo viewInfo, vk::MemoryPropertyFlags& memoryProperties) {
         //Create Image
         auto image = tImage::Create(device, imageInfo);

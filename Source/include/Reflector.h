@@ -6,7 +6,7 @@
 namespace tEngine {
 	namespace Reflector {
 	
-		 void reflectionShader(std::string jsonfile, std::vector<tDescSetsData>& descSetsData, GpuBlockBuffer& pushConstant,vk::ShaderStageFlags stageFlag);
+		 void reflectionShader(std::string jsonfile, std::vector<tDescSetsDataWithSetNumber>& descSetsData, GpuBlockBuffer& pushConstant,vk::ShaderStageFlags stageFlag);
 		
 	};
 

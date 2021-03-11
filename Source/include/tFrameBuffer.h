@@ -205,7 +205,7 @@ namespace tEngine {
 		vk::Framebuffer vkFrameBuffer;
 
 		tRenderPass::SharedPtr renderPass;
-		std::vector<std::shared_ptr<tImage>> frameBufferImages;
+		std::vector<std::shared_ptr<tImageView>> frameBufferImages;
 	private:
 		void SetUpFrameBuffer(std::string name = "tFrameBuffer");
 		

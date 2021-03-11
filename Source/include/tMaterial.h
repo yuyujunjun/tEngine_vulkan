@@ -21,7 +21,7 @@ namespace tEngine {
 		void SetBuffer(std::string name, tBuffer::SharedPtr buffer) {
 			assert(BindMap.count(name) != 0);
 			auto group = BindMap[name];
-			descriptorSets[group.first]->SetBuffer(group.second, buffer);
+			buffers[group.first][group.second]= buffer;
 		}
 		//有则返回，无则创建
 		void BindDescriptorSets(CommandBuffer::SharedPtr cmdBuffer);
@@ -29,7 +29,7 @@ namespace tEngine {
 		void SetImage(std::string name, tImageView::SharedPtr image) {
 			assert(BindMap.count(name) != 0);
 			auto group = BindMap[name];
-			descriptorSets[group.first]->SetImage(group.second, image);
+			images[group.first][group.second]= image;
 		}
 		template <typename T>
 		void SetValue(std::string valueName, T value, int RangeId) {
@@ -81,8 +81,10 @@ namespace tEngine {
 		std::unordered_map<std::string, std::pair<uint8_t, uint16_t>> BindMap;//Resource Name,set,bind. Tell which set and binding each image or buffer belong to
 	
 		//Consecutive Set,interleved binding
-		std::vector<tDescriptorSets::SharedPtr> descriptorSets;
-		std::vector<std::unordered_map<int, std::vector<char>>>  buffer_data;
+	//	std::vector<tDescriptorSets::SharedPtr> descriptorSets;
+		std::vector<std::unordered_map<uint32_t, std::vector<char>>>  buffer_data;
+		std::vector<std::unordered_map<uint32_t, tBuffer::SharedPtr>>  buffers;
+		std::vector<std::unordered_map<uint32_t,	tImageView::SharedPtr>>  images;
 		std::vector<char> pushConstantBlock;
 	private:
 		

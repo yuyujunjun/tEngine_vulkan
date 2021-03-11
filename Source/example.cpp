@@ -5,13 +5,19 @@ int main(){
 	ThreadContext* threadContext=new ThreadContext(context);
 	auto meshAsset=tEngine::LoadMesh("pig.obj");
 	auto imageAsset = tEngine::LoadImage("174.png");
+	
 	auto shader=tShader::Create (context->device);
 	std::vector<std::string> shaders = { "draw.vsh","draw.fsh" };
-	shader->AddShaderModule(shaders, vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eFragment);
+	shader->SetShaderModule(shaders, vk::ShaderStageFlagBits::eVertex| vk::ShaderStageFlagBits::eFragment);
 	auto material = tEngine::tMaterial::Create(context->device, threadContext->descriptorPool);
 	material->SetShader(shader);
+	
+
+
 	threadContext->cmdBuffers[0]->begin(vk::CommandBufferUsageFlags());
-	CreateImageViewWithImage(context->device, imageAsset,threadContext->cmdBuffers[0] );
+	auto image=CreateImageViewWithImage(context->device, imageAsset,threadContext->cmdBuffers[0] );
+	material->SetImage("_MainTex", image);
+	material->BindDescriptorSets(threadContext->cmdBuffers[0]);
 	threadContext->cmdBuffers[0]->end();
 
 	vk::SubmitInfo info;
@@ -23,6 +29,7 @@ int main(){
 	context->device->waitIdle();
 	delete threadContext;
 	shader.reset();
+	material.reset();
 	//CreateImageViewWithImage();
 	
 

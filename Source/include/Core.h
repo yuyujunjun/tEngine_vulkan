@@ -27,6 +27,12 @@ namespace tEngine {
 		std::string name = "";
 		uint32_t offset = static_cast<uint32_t>(-1);
 		uint32_t size = static_cast<uint32_t>(-1);
+		bool operator==(const GpuBlockMember& b2) {
+			return name == b2.name && offset == b2.offset && size == b2.size;
+		}
+		bool operator!=(const GpuBlockMember& b) {
+			return !(*this == b);
+		}
 	};
 	struct GpuBlockBuffer {
 		GpuBlockMember& operator[](int id)noexcept {
@@ -37,10 +43,10 @@ namespace tEngine {
 			if (data.empty())return 0;
 			return data.back().size + data.back().offset;
 		}
-		char* RequestMemory() {
+		/*char* RequestMemory() {
 			if (ByteSize() == 0)return nullptr;
 			return new char[ByteSize()];
-		}
+		}*/
 		size_t size() const {
 			return data.size();
 		}
@@ -79,6 +85,7 @@ namespace tEngine {
 		GpuBlockMember& back() { return data.back(); }
 
 		std::string name;
+
 	//	vk::DescriptorType descType;
 	private:
 
