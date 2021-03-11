@@ -1,5 +1,7 @@
 #include"tDescriptorPool.h"
 #include<unordered_map>
+#include <iomanip>
+#include <numeric>
 namespace tEngine {
 	//Each element belongs to a set
 	void MergeSet(std::vector<tDescSetsData>& setLayoutBinding) {
@@ -47,38 +49,52 @@ namespace tEngine {
 			setLayoutBinding[idx].blockBuffers = map.second.second;
 			++idx;
 		}
+		std::sort(setLayoutBinding.begin(), setLayoutBinding.end(),
+			[](const tEngine::tDescSetsData& d1,const tEngine::tDescSetsData& d2) {
+				assert(d1.set_number != d2.set_number);
+				return d1.set_number < d2.set_number;
+			});
 	}
-	std::vector<tDescriptorSets::SharedPtr> tDescriptorPool::AllocateDescriptorSets( std::vector<tDescSetsData>& setLayoutBinding) {
-		
-		auto d = device.lock();
+	//return ordered descriptorSets, nullptr for null set
+	std::vector<tDescriptorSets::SharedPtr> tDescriptorPool::AllocateDescriptorSets( std::vector<tDescriptorSetLayout::SharedPtr>& setLayoutBinding) {
+		if (setLayoutBinding.size() == 0)return std::vector<tDescriptorSets::SharedPtr>();
+		auto& d = device.lock();
 		if (!descPool && poolInfo.size() > 0) {
+			uint32_t maxSets =
+				std::accumulate(poolInfo.begin(), poolInfo.end(), 0, [](uint32_t sum, vk::DescriptorPoolSize const& dps) {
+				return sum + dps.descriptorCount;
+					});
+			assert(0 < maxSets);
 
-			descPool = vk::su::createDescriptorPool(*d.get(), poolInfo);
+			vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo(
+				vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, maxSets, poolInfo);
+			descPool= d->createDescriptorPool(descriptorPoolCreateInfo);
+			
 		}
 		//First merge all set
-		MergeSet(setLayoutBinding);
-		std::vector<tDescriptorSets::SharedPtr> results(setLayoutBinding.size());
-		std::vector<vk::DescriptorSetLayout> vkLayouts(setLayoutBinding.size());
-		std::vector<vk::DescriptorSet> vkSets(setLayoutBinding.size());
-		//There might be the same set
-		{
-			int idx = 0;
-			for (auto& eachSet : setLayoutBinding) {
-				vk::DescriptorSetLayoutCreateInfo layoutsCreateInfo;
-				layoutsCreateInfo.setBindings(eachSet.bindings);
-				vkLayouts[idx++] = d->createDescriptorSetLayout(layoutsCreateInfo);
-			}
+		//MergeSet(setLayoutBinding);
+		uint32_t maxSetSize=0;
+		for (int i = 0; i < setLayoutBinding.size(); ++i) {
+			maxSetSize = maxSetSize < setLayoutBinding[i]->bindings.set_number ? setLayoutBinding[i]->bindings.set_number : maxSetSize;
 		}
+		maxSetSize += 1;
+		std::vector<tDescriptorSets::SharedPtr> results(maxSetSize);
+		std::vector<vk::DescriptorSet> vkSets(setLayoutBinding.size());
+	
 		if (descPool) {
 			vk::DescriptorSetAllocateInfo descSetInfo;
 			descSetInfo.setDescriptorPool(descPool);
-			descSetInfo.setSetLayouts(vkLayouts);
+			std::vector<vk::DescriptorSetLayout > descLayouts(setLayoutBinding.size());
+			for (int i = 0; i < setLayoutBinding.size(); ++i) {
+				descLayouts[i] = setLayoutBinding[i]->vkLayout;
+			}
+			descSetInfo.setSetLayouts(descLayouts);
 			//Allocate sets
 			vkSets = d->allocateDescriptorSets(descSetInfo);
 			for (int i = 0; i < vkSets.size(); ++i) {
 				auto& set = vkSets[i];
-				results.emplace_back(tDescriptorSets::Create(set,vkLayouts[i],setLayoutBinding[i].bindings));
-				allocatedDescSets.emplace_back(results.back());
+				results[setLayoutBinding[i]->bindings.set_number]=(tDescriptorSets::Create(d,set, setLayoutBinding[i]));
+				allocatedDescSets.emplace_back(results[setLayoutBinding[i]->bindings.set_number]);
 			}
 		}
 		assert(results.size() != 0);
@@ -89,7 +105,6 @@ namespace tEngine {
 		std::vector<vk::DescriptorSet> sets(allocatedDescSets.size());
 		int idx = 0;
 		for (auto& set : allocatedDescSets) {
-			d->destroyDescriptorSetLayout(set->vkSetlayout);
 			sets[idx++] = set->vkDescSet;
 		}
 		d->freeDescriptorSets(descPool,sets);

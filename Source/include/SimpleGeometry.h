@@ -33,7 +33,7 @@ namespace tEngine {
 			for (auto& v : vertices) {
 				v.Normal = glm::vec3(0, 0, 0);
 			}
-			for (int i = 0; i < indices.size(); i += 3) {
+			for (size_t i = 0; i < indices.size(); i += 3) {
 				int id_a = indices[i];
 				int id_b = indices[i + 1];
 				int id_c = indices[i + 2];
@@ -43,10 +43,10 @@ namespace tEngine {
 
 				auto normal = [](const Vertex& a, const Vertex& b, const Vertex& c) {
 					auto triangleArea = [](const glm::vec3& p1, const glm::vec3& p2, const glm::vec3& p3) {
-						float a = (p2 - p1).length();
-						float b = (p2 - p3).length();
-						float c = (p3 - p1).length();
-						float p = (a + b + c) / 2.0;
+						float a = glm::length(p2 - p1);
+						float b = glm::length(p2 - p3);
+						float c = glm::length(p3 - p1);
+						float p = (a + b + c) / 2.f;
 						return sqrt(p * (p - a) * (p - b) * (p - c));
 					};
 					return glm::cross(b.Position - a.Position, c.Position - a.Position) * triangleArea(a.Position, b.Position, c.Position);

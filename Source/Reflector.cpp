@@ -1,4 +1,4 @@
-#include"SPIRV-Reflect/examples/common.h"
+
 #include "cereal/external//rapidjson/document.h"
 #include "Reflector.h"
 #include <string>

@@ -114,7 +114,7 @@ namespace tEngine {
 		}
 		return context.get();
 	}
-	ThreadContext::ThreadContext(const tEngineContext const* context):context(context) {
+	ThreadContext::ThreadContext(const tEngineContext* const context):context(context) {
 		//DescriptorPool
 		descriptorPool = std::make_shared<tDescriptorPool>(context->device);
 		descriptorPool->addDescriptorInfo(vk::DescriptorType::eCombinedImageSampler, 10);
@@ -127,7 +127,7 @@ namespace tEngine {
 		cmdPool = tCommandPool::Create(context->device, context->device->createCommandPool(poolInfo));
 		//CommandBuffer
 		vk::CommandBufferAllocateInfo cbInfo;
-		cbInfo.commandBufferCount = context->swapChainData->getSwapchainLength();
+		cbInfo.commandBufferCount = static_cast<uint32_t>(context->swapChainData->getSwapchainLength());
 		cbInfo.commandPool = cmdPool->vkCommandPool;
 		auto& cbs = context->device->allocateCommandBuffers(cbInfo);
 

@@ -3,13 +3,12 @@
 #include"vulkan/vulkan.hpp"
 #include"Core.h"
 #include"tAsset.h"
-#include<optional>
 namespace tEngine {
 	class CommandBuffer;
 
 	class DeviceMemory {
 	public:
-		DeviceMemory():size(0),vkMemory(vk::DeviceMemory()){}
+		DeviceMemory():size(0),vkMemory(vk::DeviceMemory()),mappedMemory((void*)0){}
 		DeviceMemory(sharedDevice device, vk::DeviceSize size, vk::MemoryRequirements const& requirements, vk::MemoryPropertyFlags const& propertyFlags);
 		~DeviceMemory() {
 			if (vkMemory) {
@@ -41,8 +40,8 @@ namespace tEngine {
 		vk::DeviceSize getSize() {
 			return size;
 		}
-		void SetRange(const void* data, int size, int offset = 0) {
-			memcpy((char*)mappedMemory + offset, (const char*)data, (size_t)size);
+		void SetRange(const void* data, size_t size, int offset = 0) {
+			memcpy((char*)mappedMemory + offset, (const char*)data, size);
 			
 		}
 		void Flush(vk::DeviceSize offset = 0, vk::DeviceSize size = VK_WHOLE_SIZE) {
@@ -96,6 +95,7 @@ namespace tEngine {
 			return vkbuffer;
 		}
 		vk::Buffer vkbuffer;
+		std::unique_ptr<DeviceMemory> deviceMemory;
 	private:
 		inline static uint32_t minBufferAlignment(const Device* const device) {
 			int alignment = std::max(static_cast<uint32_t>(
@@ -115,13 +115,22 @@ namespace tEngine {
 		}
 		weakDevice device;
 		
-		std::unique_ptr<DeviceMemory> deviceMemory;
+		
 		vk::DeviceSize size;
 		vk::BufferUsageFlags usage;
 		vk::MemoryPropertyFlags propertyFlags;
 	};
 	class tSampler {
-		tSampler() {}
+	public:
+		DECLARE_SHARED(tSampler);
+		static SharedPtr Create(sharedDevice& device) {
+			return std::make_shared<tSampler>(device);
+		}
+		tSampler(sharedDevice& device):device(device) {
+			vk::SamplerCreateInfo info;
+			vksampler = device->createSampler(info);
+		
+		}
 		~tSampler() {
 			if (vksampler) {
 				if (!device.expired()) {
@@ -133,9 +142,10 @@ namespace tEngine {
 				}
 			}
 		}
+		vk::Sampler vksampler;
 	private:
 		std::weak_ptr<vk::Device> device;
-		vk::Sampler vksampler;
+		
 	};
 	struct tImage {
 	public:
@@ -148,10 +158,10 @@ namespace tEngine {
 		static SharedPtr Create(sharedDevice& device, vk::ImageCreateInfo info) {
 			return std::make_shared<tImage>(device, info);
 		}
-		tImage(sharedDevice& device, vk::Image image) :vkImage(image), device(device) {
+		tImage(sharedDevice& device, vk::Image image) :vkImage(image), device(device), imageLayout(vk::ImageLayout()){
 		
 		}
-		tImage(sharedDevice& device, vk::ImageCreateInfo info):device(device) {
+		tImage(sharedDevice& device, vk::ImageCreateInfo info):device(device), imageLayout(vk::ImageLayout()) {
 			vkImage = device->createImage(info);
 			extent3D = info.extent;
 		}
@@ -202,7 +212,7 @@ namespace tEngine {
 	class tImageView {
 	public:
 		using SharedPtr = std::shared_ptr<tImageView>;
-		static SharedPtr Create(sharedDevice& device, std::shared_ptr<tImage>& image, vk::ImageViewCreateInfo&const info){
+		static SharedPtr Create(sharedDevice& device, std::shared_ptr<tImage>& image, const vk::ImageViewCreateInfo& info){
 			return std::make_shared<tImageView>(device,image,info);
 		}
 		/*tImageView(sharedDevice device, std::shared_ptr<tImage>& image) :device(device),image(image) {
@@ -211,6 +221,7 @@ namespace tEngine {
 		tImageView(sharedDevice& device, std::shared_ptr<tImage>& image, vk::ImageViewCreateInfo info) :device(device), image(image) {
 			info.image = image->vkImage;
 			vkimageView = device->createImageView(info);
+			sampler = tSampler::Create(device);
 		}
 		~tImageView(){
 			if (vkimageView) {
@@ -236,12 +247,14 @@ namespace tEngine {
 		std::shared_ptr<tImage>& getImage() {
 			return image;
 		}
-	
+		tSampler::SharedPtr sampler;
+		vk::ImageView vkimageView;
+		std::shared_ptr<tImage> image;
 	private:
 		
-		std::shared_ptr<tImage> image;
+	
 		vk::ImageViewCreateInfo createInfo;
-		vk::ImageView vkimageView;
+		
 		std::weak_ptr<vk::Device> device;
 	};
 	
@@ -260,7 +273,7 @@ namespace tEngine {
 			vk::SwapchainKHR const& oldSwapChain,
 			uint32_t                   graphicsFamilyIndex,
 			uint32_t                   presentFamilyIndex);
-		uint8_t getSwapchainLength() {
+		size_t getSwapchainLength() {
 			return imageList.size();
 		}
 		~tSwapChain() {

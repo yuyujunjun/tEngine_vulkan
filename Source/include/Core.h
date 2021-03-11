@@ -33,7 +33,7 @@ namespace tEngine {
 			assert(id < data.size() && "id exceed blocks");
 			return data[id];
 		}
-		uint32_t ByteSize() {
+		uint32_t ByteSize()const {
 			if (data.empty())return 0;
 			return data.back().size + data.back().offset;
 		}
@@ -41,7 +41,7 @@ namespace tEngine {
 			if (ByteSize() == 0)return nullptr;
 			return new char[ByteSize()];
 		}
-		uint32_t size() const {
+		size_t size() const {
 			return data.size();
 		}
 		void push_back(GpuBlockMember _data) {
@@ -124,6 +124,8 @@ namespace tEngine {
 	};
 	using weakDevice = std::weak_ptr<Device>;
 	using sharedDevice = std::shared_ptr<Device>;
+
+#define DECLARE_SHARED(TYPE) using SharedPtr=std::shared_ptr<TYPE>;
 	/// <summary>INTERNAL. Disable the Copy Constructor and the Copy Assignment Operator of the type</summary>
 #define DECLARE_NO_COPY_SEMANTICS(TYPE) \
 	TYPE(const TYPE&) = delete; \

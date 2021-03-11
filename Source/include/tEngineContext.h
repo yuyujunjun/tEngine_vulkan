@@ -8,6 +8,7 @@
 #include"tAssetLoadManager.h"
 #include"CommandBufferBase.h"
 #include"tShader.h"
+#include"tMaterial.h"
 namespace tEngine {
 
 	struct tEngineContext {

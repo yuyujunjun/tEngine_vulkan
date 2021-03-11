@@ -21,7 +21,7 @@ namespace tEngine {
 
 			const char* pre = "Assets/";
 			auto preStr = std::strstr(name.c_str(), pre);
-			int idx_begin = preStr - name.c_str();
+			size_t idx_begin = preStr - name.c_str();
 			idx_begin += std::strlen(pre);
 			auto result = name.substr(idx_begin);
 			return result;

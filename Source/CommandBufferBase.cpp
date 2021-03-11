@@ -104,9 +104,10 @@ namespace tEngine {
 	}
 
 	// bind pipelines, sets, vertex/index buffers
-	void CommandBufferBase_::bindDescriptorSets(PipelineBindPoint bindingPoint, const PipelineLayout& pipelineLayout, uint32_t firstSet,
+	void CommandBufferBase_::bindDescriptorSets(PipelineBindPoint bindingPoint, const tPipelineLayout::SharedPtr& pipelineLayout, uint32_t firstSet,
 		const std::vector<tDescriptorSets::SharedPtr>& sets, const std::vector<uint32_t>& dynamicOffsets)
 	{
+		_objectReferences.push_back(pipelineLayout);
 		auto numDescriptorSets = sets.size();
 		const int MaxDescriptorSets = 8;
 		assert(numDescriptorSets < static_cast<uint32_t>(MaxDescriptorSets) && "Attempted to bind more than 8 descriptor sets");
@@ -118,7 +119,7 @@ namespace tEngine {
 				_objectReferences.emplace_back(sets[i]);
 				native_sets[i] = sets[i]->vkDescSet;
 			}
-			cb.bindDescriptorSets(bindingPoint, pipelineLayout, firstSet, native_sets, dynamicOffsets);
+			cb.bindDescriptorSets(bindingPoint, pipelineLayout->vkLayout, firstSet, native_sets, dynamicOffsets);
 		}
 	}
 
@@ -238,10 +239,10 @@ namespace tEngine {
 
 	}
 
-	void CommandBufferBase_::pushConstants(const PipelineLayout& pipelineLayout, ShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* data)
+	void CommandBufferBase_::pushConstants(const tPipelineLayout::SharedPtr& pipelineLayout, ShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* data)
 	{
-		//_objectReferences.emplace_back(pipelineLayout);
-		cb.pushConstants(pipelineLayout, stageFlags, offset, size, data);
+		_objectReferences.emplace_back(pipelineLayout);
+		cb.pushConstants(pipelineLayout->vkLayout, stageFlags, offset, size, data);
 	}
 
 	void CommandBufferBase_::resolveImage(const tImage::SharedPtr& srcImage, const tImage::SharedPtr& dstImage, const std::vector<ImageResolve>& regions, ImageLayout srcLayout, ImageLayout dstLayout)

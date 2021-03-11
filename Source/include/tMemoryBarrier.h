@@ -118,7 +118,7 @@ namespace tEngine {
 
 	public:
 		/// <summary>Constructor, zero initialization</summary>
-		tBufferMemoryBarrier() : srcAccessMask(vk::AccessFlags(0)), dstAccessMask(vk::AccessFlags(0)) {}
+		tBufferMemoryBarrier() : srcAccessMask(vk::AccessFlags(0)), dstAccessMask(vk::AccessFlags(0)),offset(0),size(0) {}
 
 		/// <summary>Constructor, individual elements</summary>
 		/// <param name="srcAccessMask">Bitmask of vk::AccessFlagBits specifying a source access mask.</param>

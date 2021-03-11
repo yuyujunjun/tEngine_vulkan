@@ -102,7 +102,7 @@ namespace tEngine {
 	struct tFrameBuffer;
 	std::vector<vk::SubpassDependency> GetOnePassDependency();
 	std::vector<vk::SubpassDependency> GetTwoPassDependency();
-	struct tRenderPass {
+	class tRenderPass {
 	public:
 		using SharedPtr = std::shared_ptr<tRenderPass>;
 		tRenderPass(sharedDevice device):device(device) {
@@ -144,7 +144,7 @@ namespace tEngine {
 		}
 		void CreateRenderPass();
 		uint32_t attachmentsCount() {
-			return attachments.size();
+			return static_cast<uint32_t>(attachments.size());
 		}
 		vk::RenderPass vkRenderPass;
 		std::vector<tSubpass> subpass;

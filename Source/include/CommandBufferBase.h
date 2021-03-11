@@ -1,7 +1,7 @@
 #pragma once
 #include"vulkan/vulkan.hpp"
 #include"Core.h"
-#include"Pipeline.h"
+#include"tPipeline.h"
 #include"tResource.h"
 #include"tMemoryBarrier.h"
 #include"tDescriptorPool.h"
@@ -186,7 +186,7 @@ namespace tEngine {
 		/// <param name="numDescriptorSets">Number of descriptor sets</param>
 		/// <param name="dynamicOffsets">Pointer to an array of uint</param>32_t values specifying dynamic offsets
 		/// <param name="numDynamicOffsets">Number of dynamic offsets</param>
-		void bindDescriptorSets(PipelineBindPoint bindingPoint, const PipelineLayout& pipelineLayout, uint32_t firstSet, const std::vector<tDescriptorSets::SharedPtr>& sets,const std::vector<uint32_t>& dynamicOffsets);
+		void bindDescriptorSets(PipelineBindPoint bindingPoint, const tPipelineLayout::SharedPtr& pipelineLayout, uint32_t firstSet, const std::vector<tDescriptorSets::SharedPtr>& sets,const std::vector<uint32_t>& dynamicOffsets);
 
 		/// <summary>Bind descriptorset</summary>
 		/// <param name="bindingPoint">Pipeline binding point</param>
@@ -195,7 +195,7 @@ namespace tEngine {
 		/// <param name="set">Descriptor set to be bound</param>
 		/// <param name="dynamicOffsets">Pointer to an array of uint</param>32_t values specifying dynamic offsets
 		/// <param name="numDynamicOffsets">Number of dynamic offsets</param>
-		void bindDescriptorSet(PipelineBindPoint bindingPoint, const PipelineLayout& pipelineLayout, uint32_t firstSet, const tDescriptorSets::SharedPtr& set,
+		void bindDescriptorSet(PipelineBindPoint bindingPoint, const tPipelineLayout::SharedPtr& pipelineLayout, uint32_t firstSet, const tDescriptorSets::SharedPtr& set,
 			const uint32_t dynamicOffsets = 0)
 		{
 			bindDescriptorSets(bindingPoint, pipelineLayout, firstSet, { set }, { dynamicOffsets });
@@ -208,7 +208,7 @@ namespace tEngine {
 		/// <param name="offsets">A pointer to an array of bindingCount buffer offsets</param>
 		void bindVertexBuffers(const std::vector<tBuffer::SharedPtr>& buffers, uint32_t firstBinding, const std::vector<vk::DeviceSize>& offsets)
 		{
-			uint16_t bindingCount = buffers.size();
+			uint32_t bindingCount = static_cast<uint32_t>(buffers.size());
 			std::vector<vk::Buffer>native_buffers(static_cast<uint32_t>(bindingCount));// = { VK_NULL_HANDLE };
 			for (uint32_t i = 0; i < bindingCount; ++i)
 			{
@@ -549,7 +549,7 @@ namespace tEngine {
 		/// <param name="offset">The start offset of the push constant range to update, in units of bytes.</param>
 		/// <param name="size">The size of the push constant range to update, in units of bytes.</param>
 		/// <param name="data">An array of size bytes containing the new push constant values.</param>
-		void pushConstants(const PipelineLayout& pipelineLayout, ShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* data);
+		void pushConstants(const tPipelineLayout::SharedPtr& pipelineLayout, ShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* data);
 
 		
 		/// <summary>Records a non-indexed draw call, where the vertex count is based on a byte count read from a buffer and the passed in vertex stride parameter.</summary>
@@ -577,7 +577,8 @@ namespace tEngine {
 	};
 
 	//using SecondaryCommandBuffer = std::shared_ptr<SecondaryCommandBuffer>;
-	struct CommandBuffer :public CommandBufferBase_ {
+	class CommandBuffer :public CommandBufferBase_ {
+	public:
 		using SharedPtr = std::shared_ptr<CommandBuffer>;
 		static SharedPtr Create(const sharedDevice& device, const vk::CommandBuffer& cb) {
 			return std::make_shared<CommandBuffer>(device, cb);
