@@ -9,26 +9,29 @@
 #include"CommandBufferBase.h"
 #include"tShader.h"
 #include"tMaterial.h"
+#include"CTPL/ctpl_stl.h"
 namespace tEngine {
-
+	struct ThreadContext;
 	struct tEngineContext {
 	public:
 		tEngineContext(vk::Instance instance, vk::Extent2D resolution) :instance(instance),surfaceData(instance, "tang", resolution) {}
 		static tEngineContext* Context();
-		
+	
 		//std::unordered_map<vk::QueueFlagBits, uint32_t> queueFamilyIndex;
 		vk::DebugUtilsMessengerEXT debugUtilsMessenger;
 		vk::Instance instance;
-		sharedDevice device;
+		uniqueDevice device;
 		//vk::tPhysicalDevice physicalDevice;
 		vk::su::SurfaceData surfaceData;
 		tSwapChain::SharedPtr swapChainData;
 		vk::Queue graphicsQueue;
 		vk::Queue presentQueue;
 		vk::Queue computeQueue;
-		
+		vk::PipelineCache pipelineCache;
+		std::unordered_map<uint32_t, uint32_t> threadID_to_index;
 		
 		~tEngineContext() {
+			device->destroyPipelineCache(pipelineCache);
 			device->waitIdle();
 			//descriptorPool.reset();
 			swapChainData.reset();
@@ -49,6 +52,7 @@ namespace tEngine {
 
 
 		tDescriptorPool::SharedPtr descriptorPool;
+		//std::unique_ptr<currentDescriptorTable> table;
 		tEngine::tCommandPool::SharedPtr cmdPool;
 		std::vector<tEngine::CommandBuffer::SharedPtr> cmdBuffers;
 		~ThreadContext() {

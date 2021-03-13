@@ -6,27 +6,25 @@
 #include"tMemoryBarrier.h"
 #include"tDescriptorPool.h"
 #include"tFrameBuffer.h"
+#include"tShader.h"
 #include<memory>
 namespace tEngine {
 
 	struct tCommandPool {
 		using SharedPtr = std::shared_ptr<tCommandPool>;
-		static SharedPtr Create(const sharedDevice& device, const vk::CommandPool& vkPool) {
+		static SharedPtr Create(const uniqueDevice& device, const vk::CommandPool& vkPool) {
 			return std::make_shared<tCommandPool>(device,vkPool);
 		}
-		tCommandPool(const sharedDevice& device, const vk::CommandPool& vkPool) :device(device),vkCommandPool(vkPool) {}
+		tCommandPool(const uniqueDevice& device, const vk::CommandPool& vkPool) :device(device.get()),vkCommandPool(vkPool) {}
 		vk::CommandPool vkCommandPool;
 		
 		~tCommandPool() {
 			if (vkCommandPool) {
 				
-				if (!device.expired()) {
-					device.lock()->destroyCommandPool(vkCommandPool);
+				
+					device->destroyCommandPool(vkCommandPool);
 					vkCommandPool = vk::CommandPool();
-				}
-				else {
-					reportDestroyedAfterDevice();
-				}
+			
 			}
 		}
 	private:
@@ -67,8 +65,8 @@ namespace tEngine {
 		vk::CommandBuffer cb;
 		bool _isRecording;
 		weakDevice device;
-		sharedDevice getDevice() {
-			return device.lock();
+		const Device* getDevice() {
+			return device;
 		}
 
 	public:
@@ -84,7 +82,7 @@ namespace tEngine {
 		/// <param name="device">The device used to allocate this command buffer.</param>
 		/// <param name="pool">The pool from which the command buffer was allocated.</param>
 		/// <param name="myHandle">The vulkan handle for this command buffer.</param>
-		CommandBufferBase_(const sharedDevice& device,const vk::CommandBuffer& cb)
+		CommandBufferBase_(const Device* device,const vk::CommandBuffer& cb)
 			: device(device), _isRecording(false),cb(cb)
 		{}
 		
@@ -187,7 +185,7 @@ namespace tEngine {
 		/// <param name="dynamicOffsets">Pointer to an array of uint</param>32_t values specifying dynamic offsets
 		/// <param name="numDynamicOffsets">Number of dynamic offsets</param>
 		void bindDescriptorSets(PipelineBindPoint bindingPoint, const tPipelineLayout::SharedPtr& pipelineLayout, uint32_t firstSet, const std::vector<tDescriptorSets::SharedPtr>& sets,const std::vector<uint32_t>& dynamicOffsets);
-
+		void bindDescriptorSets(tDescriptorPool::SharedPtr& descPool, PipelineBindPoint bindingPoint, tShaderInterface* mat);
 		/// <summary>Bind descriptorset</summary>
 		/// <param name="bindingPoint">Pipeline binding point</param>
 		/// <param name="pipelineLayout">Pipeline layout</param>
@@ -206,14 +204,14 @@ namespace tEngine {
 		/// <param name="firstBinding">The first index into buffers</param>
 		/// <param name="bindingCount">The number of vertex buffers to bind</param>
 		/// <param name="offsets">A pointer to an array of bindingCount buffer offsets</param>
-		void bindVertexBuffers(const std::vector<tBuffer::SharedPtr>& buffers, uint32_t firstBinding, const std::vector<vk::DeviceSize>& offsets)
+		void bindVertexBuffers(const std::vector<BufferHandle>& buffers, uint32_t firstBinding, const std::vector<vk::DeviceSize>& offsets)
 		{
 			uint32_t bindingCount = static_cast<uint32_t>(buffers.size());
 			std::vector<vk::Buffer>native_buffers(static_cast<uint32_t>(bindingCount));// = { VK_NULL_HANDLE };
 			for (uint32_t i = 0; i < bindingCount; ++i)
 			{
 				_objectReferences.emplace_back(buffers[i]);
-				native_buffers[i] = buffers[i]->vkbuffer;
+				native_buffers[i] = buffers[i]->getVkHandle();
 			}
 			cb.bindVertexBuffers(firstBinding, native_buffers, offsets);
 		
@@ -223,21 +221,21 @@ namespace tEngine {
 		/// <param name="buffer">Buffer</param>
 		/// <param name="offset">Buffer offset</param>
 		/// <param name="bindingIndex">The index of the vertex input binding whose state is updated by the command.</param>
-		void bindVertexBuffer(const tBuffer::SharedPtr& buffer, vk::DeviceSize offset, uint16_t bindingIndex)
+		void bindVertexBuffer(const BufferHandle& buffer, vk::DeviceSize offset, uint16_t bindingIndex)
 		{
 			_objectReferences.emplace_back(buffer);
 			
-			cb.bindVertexBuffers( bindingIndex , { buffer->vkbuffer }, { offset });
+			cb.bindVertexBuffers( bindingIndex , { buffer->getVkHandle() }, { offset });
 		
 		}
 		/// <summary>Bind index bufer</summary>
 		/// <param name="buffer">Imdex buffer</param>
 		/// <param name="offset">Buffer offset</param>
 		/// <param name="indexType">IndexType</param>
-		void bindIndexBuffer(const tBuffer::SharedPtr& buffer, vk::DeviceSize offset, IndexType indexType)
+		void bindIndexBuffer(const BufferHandle& buffer, vk::DeviceSize offset, IndexType indexType)
 		{
 			_objectReferences.emplace_back(buffer);
-			cb.bindIndexBuffer(buffer->getBuffer(), offset, indexType);
+			cb.bindIndexBuffer(buffer->getVkHandle(), offset, indexType);
 		
 		}
 
@@ -298,7 +296,7 @@ namespace tEngine {
 		/// <param name="dstImageLayout">Destination image layout</param>
 		/// <param name="regions">Regions to copy</param>
 		/// <param name="numRegions">Number of regions</param>
-		void copyImage(const tImage::SharedPtr& srcImage, const tImage::SharedPtr& dstImage, ImageLayout srcImageLayout, ImageLayout dstImageLayout,  const std::vector<ImageCopy>& regions);
+		void copyImage(const ImageHandle& srcImage, const ImageHandle& dstImage, ImageLayout srcImageLayout, ImageLayout dstImageLayout,  const std::vector<ImageCopy>& regions);
 
 		/// <summary>Copy image to buffer</summary>
 		/// <param name="srcImage">Source image to copy from</param>
@@ -306,7 +304,7 @@ namespace tEngine {
 		/// <param name="dstBuffer">Destination buffer</param>
 		/// <param name="regions">Regions to copy</param>
 		/// <param name="numRegions">Number of regions</param>
-		void copyImageToBuffer(const tImage::SharedPtr& srcImage, ImageLayout srcImageLayout, tBuffer::SharedPtr& dstBuffer, vk::ArrayProxy<const vk::BufferImageCopy> const& regions);
+		void copyImageToBuffer(const ImageHandle& srcImage, ImageLayout srcImageLayout, BufferHandle& dstBuffer, vk::ArrayProxy<const vk::BufferImageCopy> const& regions);
 
 		/// <summary>Copy Buffer</summary>
 		/// <param name="srcBuffer">Source buffer</param>
@@ -315,7 +313,7 @@ namespace tEngine {
 		/// <param name="regions">Pointer to an array of BufferCopy structures specifying the regions to copy.
 		/// Each region in pRegions is copied from the source buffer to the same region of the destination buffer.
 		/// srcBuffer and dstBuffer can be the same buffer or alias the same memory, but the result is undefined if the copy regions overlap in memory.</param>
-		void copyBuffer(const tBuffer::SharedPtr& srcBuffer, const tBuffer::SharedPtr& dstBuffer,  const  vk::ArrayProxy<const BufferCopy>& regions);
+		void copyBuffer(const BufferHandle& srcBuffer, const BufferHandle& dstBuffer,  const  vk::ArrayProxy<const BufferCopy>& regions);
 
 		/// <summary>Copy buffer to image</summary>
 		/// <param name="buffer">Source Buffer</param>
@@ -323,7 +321,7 @@ namespace tEngine {
 		/// <param name="dstImageLayout">Destination image's current layout</param>
 		/// <param name="regionsCount">Copy regions</param>
 		/// <param name="regions">Number of regions</param>
-		void copyBufferToImage(const tBuffer::SharedPtr& buffer, const tImage::SharedPtr& image, ImageLayout dstImageLayout, const vk::ArrayProxy<const BufferImageCopy>& regions);
+		void copyBufferToImage(const BufferHandle& buffer, const ImageHandle& image, ImageLayout dstImageLayout, const vk::ArrayProxy<const BufferImageCopy>& regions);
 
 		/// <summary>Clear buffer data</summary>
 		/// <param name="dstBuffer">Destination buffer to be filled</param>
@@ -332,7 +330,7 @@ namespace tEngine {
 		/// The data word is written to memory according to the host endianness.</param>
 		/// <param name="size">The number of bytes to fill, and must be either a multiple of 4, or VK_WHOLE_SIZE to
 		/// fill the range from offset to the end of the buffer</param>
-		void fillBuffer(const tBuffer::SharedPtr& dstBuffer, uint32_t dstOffset, uint32_t data, uint64_t size = VK_WHOLE_SIZE);
+		void fillBuffer(const BufferHandle& dstBuffer, uint32_t dstOffset, uint32_t data, uint64_t size = VK_WHOLE_SIZE);
 
 		/// <summary>Set viewport</summary>
 		/// <param name="viewport">Viewport</param>
@@ -371,14 +369,14 @@ namespace tEngine {
 		/// <param name="offset">The byte offset into buffer where parameters begin.</param>
 		/// <param name="count">The number of draws to execute.</param>
 		/// <param name="stride">The byte stride between successive sets of draw commands.</param>
-		void drawIndirect(const tBuffer::SharedPtr& buffer, uint32_t offset, uint32_t count, uint32_t stride);
+		void drawIndirect(const BufferHandle& buffer, uint32_t offset, uint32_t count, uint32_t stride);
 
 		/// <summary>Non-indexed indirect drawing command.</summary>
 		/// <param name="buffer">The buffer containing draw parameters.</param>
 		/// <param name="offset">The byte offset into buffer where parameters begin.</param>
 		/// <param name="count">The number of draws to execute.</param>
 		/// <param name="stride">The byte stride between successive sets of draw commands.</param>
-		void drawIndexedIndirect(const tBuffer::SharedPtr& buffer, uint32_t offset, uint32_t count, uint32_t stride);
+		void drawIndexedIndirect(const BufferHandle& buffer, uint32_t offset, uint32_t count, uint32_t stride);
 
 		/// <summary>Dispatching work provokes work in a compute pipeline. A compute pipeline must be bound to the command buffer
 		/// before any dispatch commands are recorded.</summary>
@@ -393,7 +391,7 @@ namespace tEngine {
 		/// structure taken from buffer starting at offset</summary>
 		/// <param name="buffer">The buffer containing dispatch parameters.</param>
 		/// <param name="offset">The byte offset into buffer where parameters begin.</param>
-		void dispatchIndirect(tBuffer::SharedPtr& buffer, uint32_t offset);
+		void dispatchIndirect(BufferHandle& buffer, uint32_t offset);
 
 	
 
@@ -406,7 +404,7 @@ namespace tEngine {
 		/// <param name="baseArrayLayers">A pointer to an array of base array layers to clear.</param>
 		/// <param name="numLayers">A pointer to an array array layers to clear.</param>
 		/// <param name="numRanges">The number of elements in the baseMipLevel, numLevels, baseArrayLayers and numLayers arrays.</param>
-		void clearColorImage(vk::CommandBuffer cb, const tImage::SharedPtr& image, ClearColorValue clearColor, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
+		void clearColorImage(vk::CommandBuffer cb, const ImageHandle& image, ClearColorValue clearColor, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
 			const vk::ArrayProxy<const uint32_t>& numLevels, const  vk::ArrayProxy<const uint32_t>& baseArrayLayers, const vk::ArrayProxy<const uint32_t>& numLayers, ImageLayout layout);
 
 		/// <summary>Clear depth stencil image outside of a renderpass instance.</summary>
@@ -418,7 +416,7 @@ namespace tEngine {
 		/// <param name="baseArrayLayer">Base array layer to clear</param>
 		/// <param name="numLayers">Number of array layers to clear</param>
 		/// <param name="layout">Image current layout</param>
-		void clearDepthStencilImage(const tImage::SharedPtr& image,float clearDepth, uint32_t clearStencil, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
+		void clearDepthStencilImage(const ImageHandle& image,float clearDepth, uint32_t clearStencil, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
 			const vk::ArrayProxy<const uint32_t>& numLevels, const  vk::ArrayProxy<const uint32_t>& baseArrayLayers,
 			const vk::ArrayProxy<const uint32_t>& numLayers, ImageLayout layout);
 
@@ -444,7 +442,7 @@ namespace tEngine {
 		/// <param name="baseArrayLayer">Base array layer to clear</param>
 		/// <param name="numLayers">Number of array layers to clear</param>
 		/// <param name="layout">Image current layout</param>
-		void clearStencilImage(const tImage::SharedPtr& image, uint32_t clearStencil, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
+		void clearStencilImage(const ImageHandle& image, uint32_t clearStencil, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
 			const vk::ArrayProxy<const uint32_t>& numLevels, const  vk::ArrayProxy<const uint32_t>& baseArrayLayers,
 			const vk::ArrayProxy<const uint32_t>& numLayers, ImageLayout layout);
 
@@ -470,7 +468,7 @@ namespace tEngine {
 		/// <param name="numLayers">Number of array layers to clear</param>
 		/// <param name="layout">Current layout of the image</param>
 		void clearDepthImage(
-			const tImage::SharedPtr& image, float clearDepth, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
+			const ImageHandle& image, float clearDepth, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
 			const vk::ArrayProxy<const uint32_t>& numLevels, const  vk::ArrayProxy<const uint32_t>& baseArrayLayers,
 			const vk::ArrayProxy<const uint32_t>& numLayers, ImageLayout layout);
 
@@ -524,7 +522,12 @@ namespace tEngine {
 		/// <param name="filter">A Filter specifying the filter to apply if the blits require scaling</param>
 		/// <param name="srcLayout">The layout of the src image subresrcs for the blit.</param>
 		/// <param name="dstLayout">The layout of the dst image subresrcs for the blit.</param>
-		void blitImage(const tImage::SharedPtr& srcImage, const tImage::SharedPtr& dstImage, const std::vector<vk::ImageBlit>& regions, Filter filter, ImageLayout srcLayout, ImageLayout dstLayout);
+		void blitImage(const ImageHandle& srcImage, const ImageHandle& dstImage, const std::vector<vk::ImageBlit>& regions, Filter filter);
+		void blitImage(const ImageHandle& dst, const ImageHandle& src,
+			const vk::Offset3D& dst_offset,
+			const vk::Offset3D& dst_extent, const vk::Offset3D& src_offset, const vk::Offset3D& src_extent,
+			unsigned dst_level, unsigned src_level, unsigned dst_base_layer, unsigned src_base_layer,
+			unsigned num_layers, vk::Filter filter);
 
 		/// <summary>Copies regions of a src image into a dst image, potentially also performing format conversions, aritrary scaling and filtering.</summary>
 		/// <param name="srcImage">The src Image in the copy.</param>
@@ -533,7 +536,7 @@ namespace tEngine {
 		/// <param name="numRegions">The number of regions to blit.</param>
 		/// <param name="srcLayout">The layout of the src image subresrcs for the blit.</param>
 		/// <param name="dstLayout">The layout of the dst image subresrcs for the blit.</param>
-		void resolveImage(const tImage::SharedPtr& srcImage, const tImage::SharedPtr& dstImage, const std::vector<ImageResolve>& regions, ImageLayout srcLayout, ImageLayout dstLayout);
+		void resolveImage(const ImageHandle& srcImage, const ImageHandle& dstImage, const std::vector<ImageResolve>& regions, ImageLayout srcLayout, ImageLayout dstLayout);
 
 		/// <summary>Updates buffer data inline in a command buffer. The update is only allowed outside of a renderpass and is treated as a transfer operation
 		/// for the purposes of syncrhonization.</summary>
@@ -541,7 +544,7 @@ namespace tEngine {
 		/// <param name="data">A pointer to the src data for the buffer update. The data must be at least length bytes in size.</param>
 		/// <param name="offset">The byte offset into the buffer to start updating, and must be a multiple of 4.</param>
 		/// <param name="length">The number of bytes to update, and must be a multiple of 4.</param>
-		void updateBuffer(const tBuffer::SharedPtr& buffer, const void* data, uint32_t offset, uint32_t length);
+		void updateBuffer(const BufferHandle& buffer, const void* data, uint32_t offset, uint32_t length);
 
 		/// <summary>Updates the value of shader push constants at the offset specified.</summary>
 		/// <param name="pipelineLayout">The pipeline layout used to program the push constant updates.</param>
@@ -551,7 +554,7 @@ namespace tEngine {
 		/// <param name="data">An array of size bytes containing the new push constant values.</param>
 		void pushConstants(const tPipelineLayout::SharedPtr& pipelineLayout, ShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* data);
 
-		
+		void pushConstants(const tShader::SharedPtr& shader);
 		/// <summary>Records a non-indexed draw call, where the vertex count is based on a byte count read from a buffer and the passed in vertex stride parameter.</summary>
 		/// <param name="instanceCount">The number of instances to draw.</param>
 		/// <param name="firstInstance">The instance ID of the first instance to draw.</param>
@@ -560,7 +563,7 @@ namespace tEngine {
 		/// <param name="counterOffset">Is subtracted from the byte count read from the counterBuffer at the counterBufferOffset.</param>
 		/// <param name="vertexStride">The stride in bytes between each element of the vertex data that is used to calculate the vertex count from the counter value</param>
 		void drawIndirectByteCount(
-			uint32_t instanceCount, uint32_t firstInstance, tBuffer::SharedPtr& counterBuffer, VkDeviceSize counterBufferOffset, uint32_t counterOffset, uint32_t vertexStride);
+			uint32_t instanceCount, uint32_t firstInstance, BufferHandle& counterBuffer, VkDeviceSize counterBufferOffset, uint32_t counterOffset, uint32_t vertexStride);
 
 		/// <summary>Const getter for the command pool used to allocate this command buffer.</summary>
 		/// <returns>The command pool used to allocate this command buffer.</returns>
@@ -568,10 +571,10 @@ namespace tEngine {
 	};
 	struct SecondaryCommandBuffer :public CommandBufferBase_ {
 		using SharedPtr = std::shared_ptr<SecondaryCommandBuffer>;
-		static SharedPtr Create(const sharedDevice& device, const vk::CommandBuffer& cb) {
+		static SharedPtr Create(const uniqueDevice& device, const vk::CommandBuffer& cb) {
 			return std::make_shared<SecondaryCommandBuffer>(device,cb);
 		}
-		SecondaryCommandBuffer(const sharedDevice& device, const vk::CommandBuffer& cb) :CommandBufferBase_(device,cb) {}
+		SecondaryCommandBuffer(const Device* device, const vk::CommandBuffer& cb) :CommandBufferBase_(device,cb) {}
 		void begin(const tFrameBuffer::SharedPtr& framebuffer, uint32_t subpass, const vk::CommandBufferUsageFlags flags);
 		void begin(const tRenderPass::SharedPtr& renderPass, uint32_t subpass, const vk::CommandBufferUsageFlags flags);
 	};
@@ -579,11 +582,18 @@ namespace tEngine {
 	//using SecondaryCommandBuffer = std::shared_ptr<SecondaryCommandBuffer>;
 	class CommandBuffer :public CommandBufferBase_ {
 	public:
+		enum class Type {
+			Generic,
+			AsyncGraphics,
+			AsyncCompute,
+			AsyncTransfer,
+			Count
+		};
 		using SharedPtr = std::shared_ptr<CommandBuffer>;
-		static SharedPtr Create(const sharedDevice& device, const vk::CommandBuffer& cb) {
+		static SharedPtr Create(const uniqueDevice& device, const vk::CommandBuffer& cb) {
 			return std::make_shared<CommandBuffer>(device, cb);
 		}
-		CommandBuffer(const sharedDevice& device, const vk::CommandBuffer& cb) :CommandBufferBase_(device, cb) {}
+		CommandBuffer(const Device* device, const vk::CommandBuffer& cb) :CommandBufferBase_(device, cb) {}
 #ifdef DEBUG
 		tFrameBuffer::SharedPtr _currentlyBoundFramebuffer;
 		uint32_t _currentSubpass;
@@ -596,10 +606,12 @@ namespace tEngine {
 		void updatePerSubpassImageLayouts();
 	};
 	void setImageLayout(CommandBuffer::SharedPtr const& commandBuffer,
-		tImage::SharedPtr                 image,
-		vk::Format                format,
+		ImageHandle                 image,
 		vk::ImageLayout           oldImageLayout,
 		vk::ImageLayout           newImageLayout);
-	
+	void barrier_prepare_generate_mipmap(CommandBuffer::SharedPtr const& cb, const ImageHandle& image, vk::ImageLayout base_level_layout,
+		vk::PipelineStageFlags src_stage, vk::AccessFlags src_access,
+		bool need_top_level_barrier);
+	void generateMipmap(CommandBuffer::SharedPtr const& cb, ImageHandle image);
 	//using CommandBuffer = std::shared_ptr<CommandBuffer>;
 }

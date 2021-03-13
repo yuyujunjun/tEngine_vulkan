@@ -3,6 +3,7 @@
 #include <iomanip>
 #include <numeric>
 #include"tShader.h"
+#include"tMaterial.h"
 namespace tEngine {
 	//Each element belongs to a set
 	void MergeSet(std::vector<tDescSetsDataWithSetNumber>& setLayoutBinding) {
@@ -56,117 +57,90 @@ namespace tEngine {
 				return d1.set_number < d2.set_number;
 			});
 	}
-	void tDescriptorPool::CreatePool() {
-		auto& d = device.lock();
-		assert(poolInfo.size() > 0);
-		if (!descPool ) {
-			uint32_t maxSets =
-				std::accumulate(poolInfo.begin(), poolInfo.end(), 0, [](uint32_t sum, vk::DescriptorPoolSize const& dps) {
-				return sum + dps.descriptorCount;
-					});
-			assert(0 < maxSets);
-
-			vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo(
-				vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet, maxSets, poolInfo);
-			descPool = d->createDescriptorPool(descriptorPoolCreateInfo);
-
+	void tDescriptorSetAllocator::AllocatePool() {
+		uint32_t maxSets=0;
+		std::vector<vk::DescriptorPoolSize> poolSize;
+		for (auto& bi : layout->bindings.bindings) {
+			poolSize.emplace_back(bi.descriptorType,bi.descriptorCount* RingSize);
+			maxSets += bi.descriptorCount * RingSize;
 		}
-	}
-	
-	bool DescriptorSetResourceFitting(const tDescriptorSets*const descriptorSet, tDescriptorSetLayout*const descLayout, const std::unordered_map<uint32_t, tBuffer::SharedPtr>& buffers
-		, const std::unordered_map<uint32_t, tImageView::SharedPtr>& images) {
-
-		return (!descriptorSet->bInUse)
-			&&(descriptorSet->Setlayout->vkLayout == descLayout->vkLayout)
-			&& (descriptorSet->getBuffers() == buffers) 
-			&& (descriptorSet->getImages() == images);
-	}
-	//return ordered descriptorSets, nullptr for null set
-	std::vector<tDescriptorSets::SharedPtr> tDescriptorPool::AllocateDescriptorSets(const tShader::SharedPtr& shader,
-		const std::vector<std::unordered_map<uint32_t, tBuffer::SharedPtr>>& buffers
-		, const std::vector<std::unordered_map<uint32_t, tImageView::SharedPtr>>& images) {
-		const auto& set_num = shader->setsnumberData;
-		if (set_num.size() == 0)return std::vector<tDescriptorSets::SharedPtr>();
-		uint32_t maxSetSize=0;
-		for (int i = 0; i < set_num.size(); ++i) {
-			maxSetSize = maxSetSize < set_num[i].set_number ? set_num[i].set_number : maxSetSize;
+		assert(0 < maxSets);
+		vk::DescriptorPoolCreateInfo info;
+		info.setPoolSizes(poolSize);
+		
+		info.setMaxSets(maxSets);
+		pool= device->createDescriptorPool(info);
+		std::vector<vk::DescriptorSetLayout > descLayouts(minRingSize);
+		size_t idx = 0;
+		for (auto& lay : descLayouts) {
+			lay = layout->vkLayout;
 		}
-		maxSetSize += 1;
-		std::vector<tDescriptorSets::SharedPtr> results(maxSetSize);
-		auto ValidPopulate = [&results,this,&buffers,&images,&set_num,&shader]()->bool {
-			bool bValid = true;
-			size_t allocatedSize = allocatedDescSets.size();
-			for (size_t j = 0; j < set_num.size(); ++j) {
-				auto& setData = set_num[j];
-				auto& layout = shader->setlayouts[j];
-				size_t i = 0;
-				for (i = 0; i < allocatedSize; ++i) {
-					if (DescriptorSetResourceFitting(allocatedDescSets[i].get(), layout.get(), buffers[j], images[j])) {
-						results[setData.set_number] = allocatedDescSets[i];
-						break;
-					}
-				}
-				if (i == allocatedSize)
-				{
-					bValid = false; break;
-				}
-			}
-			return bValid;
-		};
-		if (ValidPopulate())return results;
-		std::lock_guard<std::mutex> lock(mtx);
-		if (ValidPopulate())return results;
-		//results.clear();
-		if (descPool) {
-			Log("Allocate DescriptorSets\n", LogLevel::Performance);
-			auto& d = device.lock();
-			std::vector<vk::DescriptorSet> vkSets;
-			std::vector<size_t> newIdx;
-			newIdx.reserve(set_num.size());
-			vkSets.reserve(set_num.size());
-			std::vector<vk::DescriptorSetLayout > descLayouts;
-			descLayouts.reserve(set_num.size());
+		vk::DescriptorSetAllocateInfo descSetInfo;
+		descSetInfo.setDescriptorPool(pool);
+		descSetInfo.setSetLayouts(descLayouts);
+		auto sets=device->allocateDescriptorSets(descSetInfo);
+		allocatedDescSets = sets;
+		resSetBinding.resize(sets.size());
+	}
+	void tDescriptorSetAllocator::allocate_DescriptorSet() {
+		if (allocatedDescSets.size() < RingSize) {
 			vk::DescriptorSetAllocateInfo descSetInfo;
-			descSetInfo.setDescriptorPool(descPool);
-			for (size_t i = 0; i < set_num.size(); ++i) {
-				if (results[set_num[i].set_number] == nullptr) {
-					descLayouts.emplace_back(shader->setlayouts[i]->vkLayout);
-					newIdx.emplace_back(i);
-				}
-			}
-			descSetInfo.setSetLayouts(descLayouts);
-			//Allocate sets
-			vkSets = d->allocateDescriptorSets(descSetInfo);
-			for (int i = 0; i < vkSets.size(); ++i) {
-				auto& set = vkSets[i];
-				auto& ori_idx = newIdx[i];
-				assert(results[set_num[ori_idx].set_number]==nullptr&&"repeat create");
-				results[set_num[ori_idx].set_number]=(tDescriptorSets::Create(d,set, shader->setlayouts[i]));
-				allocatedDescSets.emplace_back(results[set_num[i].set_number]);
-			}
-			for (int i = 0; i < results.size(); ++i) {
-				if (results[i] != nullptr) {
-					for (const auto& buf : buffers[i]) {
-						results[i]->SetBuffer(buf.first, buf.second);
-					}
-					for (const auto& img : images[i]) {
-						results[i]->SetImage(img.first, img.second);
-					}
-				}
-			}
+			descSetInfo.setDescriptorPool(pool);
+			descSetInfo.setSetLayouts(layout->vkLayout);
+			auto sets = device->allocateDescriptorSets(descSetInfo);
+			allocatedDescSets.emplace_back(sets);
+			resSetBinding.push_back(ResSetBinding());
 		}
-		assert(results.size() != 0);
-		return results;
 	}
-
-	void tDescriptorPool::clearAllSets(const sharedDevice& d) {
-		//const auto& d = device.lock();
-		std::vector<vk::DescriptorSet> sets(allocatedDescSets.size());
-		int idx = 0;
-		for (auto& set : allocatedDescSets) {
-			sets[idx++] = set->vkDescSet;
+	uint32_t tDescriptorSetAllocator::request_DescriptorSet(const ResSetBinding& rb) {
+		auto iter = std::find(resSetBinding.begin(), resSetBinding.end(), rb);
+		if (iter != resSetBinding.end()) {
+			return iter - resSetBinding.begin();
 		}
-		d->freeDescriptorSets(descPool,sets);
-		allocatedDescSets.clear();
+
+		uint32_t idx = nextIdx();
+
+		std::vector<vk::WriteDescriptorSet> write;
+		auto& vkDescSet = allocatedDescSets[idx];
+		std::vector< vk::DescriptorBufferInfo> bufferInfo;
+		std::vector<vk::DescriptorImageInfo> imageInfo;
+		auto& m_binding = resSetBinding[idx];
+		for (auto& b : rb.getBuffers()) {
+			auto& binding = b.first;
+			if (!m_binding.hasBuffer(binding) || resSetBinding[idx].getBuffers().at(binding) != b.second) {
+				m_binding.getBuffers()[binding] = b.second;
+				auto& buffer = b.second.buffer;
+				bufferInfo.emplace_back(buffer->getVkHandle(), 0, buffer->getSize());
+				write.emplace_back(vk::WriteDescriptorSet(vkDescSet, binding, 0, layout->bindings.bindingAt(binding).descriptorType, nullptr, bufferInfo.back(), {}));
+			}
+		}
+
+		StockSampler sampler;
+		sampler = StockSampler::LinearClamp;
+		for (auto& b : rb.getImages()) {
+			auto& binding = b.first;
+			if (!m_binding.hasImage(binding) || resSetBinding[idx].getImages().at(binding) != b.second) {
+				m_binding.getImages()[binding] = b.second;
+				auto type = layout->bindings.bindingAt(binding).descriptorType;
+				switch (type) {
+				case vk::DescriptorType::eCombinedImageSampler:
+					imageInfo.emplace_back(vk::DescriptorImageInfo(device->getSampler(sampler)->getVkHandle(), b.second.image->getVkHandle(), vk::ImageLayout::eShaderReadOnlyOptimal));
+					break;
+				case vk::DescriptorType::eSampledImage:
+					imageInfo.emplace_back(vk::DescriptorImageInfo({}, b.second.image->getVkHandle(), vk::ImageLayout::eShaderReadOnlyOptimal));
+					break;
+				case vk::DescriptorType::eSampler:
+					imageInfo.emplace_back(vk::DescriptorImageInfo(device->getSampler(sampler)->getVkHandle(), {}, vk::ImageLayout::eUndefined));
+					break;
+				default:
+					throw("Wrong image descriptor Type");
+				}
+				write.emplace_back(vk::WriteDescriptorSet(vkDescSet, binding, 0, type, imageInfo.back(), {}, {}));
+			}
+		}
+		if (write.size() != 0) {
+			device->updateDescriptorSets(write, {});
+		}
+
 	}
 }

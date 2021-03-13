@@ -5,15 +5,23 @@
 #include"utils.hpp"
 #include<unordered_map>
 #include"tResource.h"
+
 #include<mutex>
 namespace tEngine {
 	//Not ordered by binding
 	struct tDescLayoutData {
-		vk::DescriptorSetLayoutBinding& bindingAt(uint32_t idx) {
+		const vk::DescriptorSetLayoutBinding& bindingAt(uint32_t idx)const {
 			auto& result= std::find_if(bindings.begin(), bindings.end(),
 				[&idx](const vk::DescriptorSetLayoutBinding & b) {
 					return  idx == b.binding;
 				 });
+			return *result;
+		}
+		vk::DescriptorSetLayoutBinding& bindingAt(uint32_t idx) {
+			auto& result = std::find_if(bindings.begin(), bindings.end(),
+				[&idx](const vk::DescriptorSetLayoutBinding& b) {
+					return  idx == b.binding;
+				});
 			return *result;
 		}
 		std::vector<vk::DescriptorSetLayoutBinding> bindings;
@@ -28,7 +36,7 @@ namespace tEngine {
 	};
 
 	void MergeSet(std::vector<tDescSetsDataWithSetNumber>& setLayoutBinding);
-	class tDescriptorSets;
+	class ResSetBinding;
 
 	class tDescriptorSetLayout {
 	public:
@@ -37,18 +45,18 @@ namespace tEngine {
 		vk::DescriptorSetLayout vkLayout;
 		~tDescriptorSetLayout() {
 			if (vkLayout) {
-				device.lock()->destroyDescriptorSetLayout(vkLayout);
+				device->destroyDescriptorSetLayout(vkLayout);
 				vkLayout = vk::DescriptorSetLayout();
 			}
 		}
-		tDescriptorSetLayout(sharedDevice& device, const tDescLayoutData& bindings) :device(device), bindings(bindings) {
+		tDescriptorSetLayout(Device* device, const tDescLayoutData& bindings) :device(device), bindings(bindings) {
 			vk::DescriptorSetLayoutCreateInfo info;
 			info.setBindings(bindings.bindings);
 			vkLayout = device->createDescriptorSetLayout(info);
 		}
 	private:
 		friend class tDescriptorSetLayoutManager;
-		static SharedPtr Create(sharedDevice& device,const tDescLayoutData& bindings) {
+		static SharedPtr Create(Device*& device,const tDescLayoutData& bindings) {
 			return std::make_shared<tDescriptorSetLayout>(device, bindings);
 		}
 		
@@ -64,7 +72,7 @@ namespace tEngine {
 		static tDescriptorSetLayoutManager manager;
 		tDescriptorSetLayoutManager() {}
 	
-		tDescriptorSetLayout::SharedPtr createSetLayout(sharedDevice& device,const tDescLayoutData& bindings) {
+		tDescriptorSetLayout::SharedPtr createSetLayout(Device*& device,const tDescLayoutData& bindings) {
 			//find first
 			for (size_t i = 0; i < bindingInfoList.size(); ++i) {
 				if (bindings.bindings == bindingInfoList[i].bindings ) {
@@ -97,132 +105,180 @@ namespace tEngine {
 	private:
 		std::mutex mtx;
 		//using BindingInfo = std::vector<vk::DescriptorSetLayoutBinding>;
-		std::vector<tDescLayoutData > bindingInfoList;
+
+		std::vector<tDescLayoutData> bindingInfoList;
 		std::vector< std::weak_ptr<tDescriptorSetLayout>> layoutList;
 	};
-	class tDescriptorSets {
+	struct BufferBindInfo {
+		
+		uint32_t binding;
+		BufferHandle buffer;
+		bool operator==(const BufferBindInfo& a) {
+			return a.binding == binding && a.buffer->getVkHandle() == buffer->getVkHandle();
+		}
+		bool operator!=(const BufferBindInfo& a) {
+			return !(*this == a);
+		}
+	};
+	struct DynamicBindInfo :public BufferBindInfo {
+		uint32_t offset;
+		operator BufferBindInfo() {
+			return BufferBindInfo({ binding,buffer });
+		}
+		bool operator==(const DynamicBindInfo& a) {
+			return a.binding == binding && a.buffer->getVkHandle() == buffer->getVkHandle() &&a.offset==offset;
+		}
+		bool operator!=(const DynamicBindInfo& a) {
+			return !(*this == a);
+		}
+	};
+	
+	struct ImageBindInfo {
+		uint32_t binding;
+		ImageviewHandle image;
+		bool operator==(const ImageBindInfo& a) {
+			return a.binding == binding && a.image->getVkHandle() == image->getVkHandle();
+		}
+		bool operator!=(const ImageBindInfo& a) {
+			return !(*this == a);
+		}
+	};
+	class ResSetBinding {
 	public:
 		friend class tDescriptorPool;
-		using SharedPtr = std::shared_ptr<tDescriptorSets>;
-		static SharedPtr Create(sharedDevice& device, vk::DescriptorSet vkDescSet,
-			tDescriptorSetLayout::SharedPtr Setlayout) {
-			return std::make_shared<tDescriptorSets>(device,vkDescSet, Setlayout);
+	
+		ResSetBinding()  {
 		}
-		tDescriptorSets(sharedDevice& device,vk::DescriptorSet vkDescSet,
-				tDescriptorSetLayout::SharedPtr Setlayout
-			) :vkDescSet(vkDescSet), Setlayout(Setlayout),device(device) {
-			
+		void SetBuffer(uint32_t binding,BufferHandle buffer) {
+			auto& bindBuffer = getBuffer(binding);
+			if (bindBuffer->getVkHandle() == buffer->getVkHandle())return;
+			bindBuffer = buffer;
 		
 		}
-		void SetBuffer(uint32_t binding,tBuffer::SharedPtr buffer) {
-			
-			if (bindBuffer.count(binding) != 0 && bindBuffer.at(binding)->vkbuffer == buffer->vkbuffer)return;
-			bindBuffer[binding] = buffer;
-			//updatedBuffer.emplace_back(binding);
-			bufferInfos.emplace_back(buffer->vkbuffer, 0, buffer->deviceMemory->getSize());
-			writeDescriptorSets.emplace_back(vk::WriteDescriptorSet(vkDescSet, binding, 0, Setlayout->bindings.bindingAt(binding).descriptorType, nullptr, bufferInfos.back(), {}));
+		void SetImage(uint32_t binding, ImageviewHandle image) {
+
+			auto& bindImage = getImage(binding);
+			if (bindImage->getVkHandle() == image->getVkHandle())return;
+			bindImage = image;
 
 		}
-		void SetImage(uint32_t binding, tImageView::SharedPtr image) {
-			if (bindImage.count(binding) != 0 && bindImage.at(binding)->vkimageView == image->vkimageView)return;
-			bindImage[binding] = image;
-			auto type = Setlayout->bindings.bindingAt(binding).descriptorType;
-			switch (type) {
-			case vk::DescriptorType::eCombinedImageSampler:
-				imageInfos.emplace_back(vk::DescriptorImageInfo(image->sampler->vksampler, image->vkimageView, vk::ImageLayout::eShaderReadOnlyOptimal));
-				break;
-			case vk::DescriptorType::eSampledImage:
-				imageInfos.emplace_back(vk::DescriptorImageInfo({}, image->vkimageView, vk::ImageLayout::eShaderReadOnlyOptimal));
-				break;
-			case vk::DescriptorType::eSampler:
-				imageInfos.emplace_back(vk::DescriptorImageInfo(image->sampler->vksampler, {}, vk::ImageLayout::eUndefined));
-				break;
-			default:
-				throw("Wrong image descriptor Type");
-			}
-			writeDescriptorSets.emplace_back(vk::WriteDescriptorSet(vkDescSet, binding, 0, type, imageInfos.back(), {}, {}));
-
+		bool operator==(const ResSetBinding& b) {
+			return b.bindBuffer == bindBuffer&&bindImage==b.bindImage;
 		}
-		void UpdateDescriptorSets() {
-			if (writeDescriptorSets.size() != 0) {
-				device.lock()->updateDescriptorSets(writeDescriptorSets, nullptr);
-			}
-			bufferInfos.clear();
-			imageInfos.clear();
-			writeDescriptorSets.clear();
+		bool operator!=(const ResSetBinding& b) {
+			return !(*this == b);
 		}
-		tBuffer* getBuffer(uint32_t binding) {
-			return bindBuffer.at(binding).get();
+		bool hasBuffer(uint32_t binding) {
+			return bindBuffer.count(binding) != 0;
 		}
-		tImageView* getImage(uint32_t binding) {
-			return bindImage.at(binding).get();
+		bool hasImage(uint32_t binding) {
+			return bindImage.count(binding) != 0;
 		}
-		
-		
-		const std::unordered_map<uint32_t, tBuffer::SharedPtr> getBuffers()const{
+		 BufferHandle& getBuffer(uint32_t binding) {
+			return bindBuffer.at(binding).buffer;
+			
+		}
+		 ImageviewHandle& getImage(uint32_t binding) {
+			return bindImage.at(binding).image;
+		}
+	
+		const std::unordered_map<uint32_t, BufferBindInfo>& getBuffers()const {
 			return bindBuffer;
+
 		}
-		const std::unordered_map<uint32_t, tImageView::SharedPtr> getImages()const {
+		const std::unordered_map<uint32_t, ImageBindInfo>& getImages()const {
 			return bindImage;
 		}
-		tDescriptorSetLayout::SharedPtr Setlayout;
-		vk::DescriptorSet vkDescSet;
-		bool bInUse=false;
+		 std::unordered_map<uint32_t, BufferBindInfo>& getBuffers() {
+			return bindBuffer;
+
+		}
+		 std::unordered_map<uint32_t, ImageBindInfo>& getImages() {
+			return bindImage;
+		}
 	private:
-		std::unordered_map<uint32_t, tBuffer::SharedPtr> bindBuffer;
-		std::unordered_map<uint32_t, tImageView::SharedPtr> bindImage;
-		std::vector<vk::DescriptorBufferInfo> bufferInfos;
-		std::vector < vk::DescriptorImageInfo> imageInfos;
-		std::vector<vk::WriteDescriptorSet> writeDescriptorSets;
-		
-		weakDevice device;
-		
+		std::unordered_map<uint32_t,BufferBindInfo> bindBuffer;
+		std::unordered_map<uint32_t,ImageBindInfo> bindImage;
+
 	};
-	class tShader;
-	class tDescriptorPool {
-	public:
-		using SharedPtr = std::shared_ptr<tDescriptorPool>;
-		tDescriptorPool(sharedDevice device, std::vector<vk::DescriptorPoolSize> poolInfo) :device(device), poolInfo(poolInfo) {
-
-		}
-		tDescriptorPool(sharedDevice device) :device(device) {
-
-		}
-		//can add DescriptorInfo only before allocate
-		tDescriptorPool& addDescriptorInfo(vk::DescriptorType type, uint32_t count) {
-			if (descPool) { throw std::exception("cannot add DescriptorInfo after create descriptorPool"); }
-
-			poolInfo.emplace_back(vk::DescriptorPoolSize(type, count));
-			return *this;
-
-		}
-		void CreatePool();
-		std::vector<std::shared_ptr<tDescriptorSets>> AllocateDescriptorSets(
-			const std::shared_ptr<tShader>& shader,
-			const std::vector<std::unordered_map<uint32_t, tBuffer::SharedPtr>>& buffers
-			, const std::vector<std::unordered_map<uint32_t, tImageView::SharedPtr>>& images);
 	
-		void clearAllSets(const sharedDevice& d);
+	class tShader;
+	
+	
+	class tDescriptorSetAllocator {
+		tDescriptorSetAllocator(Device* device, tDescriptorSetLayout* layout):device(device), layout(layout){
+			AllocatePool();
+		}
+		void AllocatePool();
+		uint32_t request_DescriptorSet(const ResSetBinding& rb) {
+			auto iter=std::find(resSetBinding.begin(), resSetBinding.end(), rb);
+			if (iter != resSetBinding.end()) {
+				return iter - resSetBinding.begin();
+			}
+			uint32_t idx= nextIdx();
 
-		~tDescriptorPool() {
-			if (descPool) {
-				if (!device.expired()) {
-					const auto& d = device.lock();
-					clearAllSets(d);
-					d->destroyDescriptorPool(descPool);
+			std::vector<vk::WriteDescriptorSet> write;
+			auto& vkDescSet = allocatedDescSets[idx];
+			std::vector< vk::DescriptorBufferInfo> bufferInfo;
+			std::vector<vk::DescriptorImageInfo> imageInfo;
+			auto& m_binding = resSetBinding[idx];
+			for (auto& b : rb.getBuffers()) {
+				auto& binding = b.first;
+				if (!m_binding.hasBuffer(binding)|| resSetBinding[idx].getBuffers().at(binding) != b.second) {
+					m_binding.getBuffers()[binding] = b.second;
+					auto& buffer = b.second.buffer;
+					bufferInfo.emplace_back(buffer->getVkHandle(), 0, buffer->getSize());
+					write.emplace_back(vk::WriteDescriptorSet(vkDescSet, binding, 0, layout->bindings.bindingAt(binding).descriptorType, nullptr, bufferInfo.back(), {}));
 				}
-				else {
-					reportDestroyedAfterDevice();
-				}
+			}
 
+			StockSampler sampler;
+			sampler = StockSampler::LinearClamp;
+			for (auto& b : rb.getImages()) {
+				auto& binding = b.first;
+				if (!m_binding.hasImage(binding)|| resSetBinding[idx].getImages().at(binding) != b.second) {
+					m_binding.getImages()[binding] = b.second;
+					auto type = layout->bindings.bindingAt(binding).descriptorType;
+					switch (type) {
+					case vk::DescriptorType::eCombinedImageSampler:
+						imageInfo.emplace_back(vk::DescriptorImageInfo(device->getSampler(sampler)->getVkHandle(), b.second.image->getVkHandle(), vk::ImageLayout::eShaderReadOnlyOptimal));
+						break;
+					case vk::DescriptorType::eSampledImage:
+						imageInfo.emplace_back(vk::DescriptorImageInfo({}, b.second.image->getVkHandle(), vk::ImageLayout::eShaderReadOnlyOptimal));
+						break;
+					case vk::DescriptorType::eSampler:
+						imageInfo.emplace_back(vk::DescriptorImageInfo(device->getSampler(sampler)->getVkHandle(), {}, vk::ImageLayout::eUndefined));
+						break;
+					default:
+						throw("Wrong image descriptor Type");
+					}
+					write.emplace_back(vk::WriteDescriptorSet(vkDescSet, binding, 0, type, imageInfo.back(), {}, {}));
+				}
+			}
+			
+		}
+		~tDescriptorSetAllocator() {
+			if (pool) {
+				device->destroyDescriptorPool(pool);
 			}
 		}
-
+		uint32_t nextIdx() {
+			if (currentUse < allocatedDescSets.size())return currentUse++;
+			allocate_DescriptorSet();
+			if (currentUse < allocatedDescSets.size())return currentUse++;
+			return 0;
+		}
+		
 	private:
-		std::mutex mtx;
-		weakDevice device;
-		std::vector<vk::DescriptorPoolSize> poolInfo;
-		vk::DescriptorPool descPool;
-		std::vector<std::shared_ptr<tDescriptorSets>> allocatedDescSets;
+		void allocate_DescriptorSet();
+		uint32_t currentUse = 0;
+		const uint32_t minRingSize = 4;
+		const uint32_t RingSize = 8;
+		Device* device;
+		VkDescriptorPool pool;//We assume that pool is big enought 
+		std::vector<vk::DescriptorSet> allocatedDescSets;
+		std::vector<ResSetBinding> resSetBinding;
+		const tDescriptorSetLayout* layout;
 	};
+	
 }

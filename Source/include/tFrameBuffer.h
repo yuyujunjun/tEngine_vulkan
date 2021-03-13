@@ -99,13 +99,14 @@ namespace tEngine {
 
 	
 	};
+	
 	struct tFrameBuffer;
 	std::vector<vk::SubpassDependency> GetOnePassDependency();
 	std::vector<vk::SubpassDependency> GetTwoPassDependency();
 	class tRenderPass {
 	public:
 		using SharedPtr = std::shared_ptr<tRenderPass>;
-		tRenderPass(sharedDevice device):device(device) {
+		tRenderPass(uniqueDevice device):device(device) {
 
 		}
 		~tRenderPass() {
@@ -120,15 +121,7 @@ namespace tEngine {
 		}
 		vk::PipelineBindPoint pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 	
-		void AddAttachments(std::vector<vk::AttachmentDescription> Attachments) {
-			auto pushAttachmentDesc = [this](std::vector<vk::AttachmentDescription>& Attachments) {
-				for (int i = 0; i < Attachments.size(); ++i) {
-					UpdateEfficiency(Attachments[i]);
-				}
-			};
-
-			pushAttachmentDesc(Attachments);
-		}
+		
 		void AddPass(tSubpass& subpass) {
 
 			this->subpass.push_back(subpass);
@@ -148,7 +141,8 @@ namespace tEngine {
 		}
 		vk::RenderPass vkRenderPass;
 		std::vector<tSubpass> subpass;
-		std::vector<vk::AttachmentDescription> attachments;//Per attachment
+
+		
 		std::vector<vk::SubpassDependency> dependencies;
 		
 	
@@ -158,6 +152,15 @@ namespace tEngine {
 		void AddFBOObserver(std::shared_ptr<tFrameBuffer> frameBuffer);
 		void RemoveFBOObserver(std::shared_ptr<tFrameBuffer> frameBuffer);
 		std::vector<std::weak_ptr<tFrameBuffer>> frameBufferObserver;
+		void AddAttachments(std::vector<vk::AttachmentDescription> Attachments) {
+			auto pushAttachmentDesc = [this](std::vector<vk::AttachmentDescription>& Attachments) {
+				for (int i = 0; i < Attachments.size(); ++i) {
+					UpdateEfficiency(Attachments[i]);
+				}
+			};
+
+			pushAttachmentDesc(Attachments);
+		}
 		
 	private:
 		weakDevice device;
@@ -166,7 +169,7 @@ namespace tEngine {
 
 	public:
 		using SharedPtr = std::shared_ptr<tFrameBuffer>;
-		tFrameBuffer(sharedDevice device) :device(device) {
+		tFrameBuffer(uniqueDevice device) :device(device) {
 
 		}
 		~tFrameBuffer() {

@@ -26,83 +26,62 @@ namespace tEngine {
 		}
 	}
 #endif
-	vk::BufferMemoryBarrier bufferBarrier(const tBufferMemoryBarrier& buffBarrier)
-	{
-		VkBufferMemoryBarrier barrier;
-		barrier.sType = static_cast<VkStructureType>(vk::StructureType::eBufferMemoryBarrier);
-		barrier.pNext = 0;
-		barrier.srcAccessMask = static_cast<VkAccessFlags>(buffBarrier.getSrcAccessMask());
-		barrier.dstAccessMask = static_cast<VkAccessFlags>(buffBarrier.getDstAccessMask());
-
-		barrier.dstQueueFamilyIndex = static_cast<uint32_t>(-1);
-		barrier.srcQueueFamilyIndex = static_cast<uint32_t>(-1);
-
-		barrier.buffer = buffBarrier.getBuffer()->vkbuffer;
-		barrier.offset = buffBarrier.getOffset();
-		barrier.size = buffBarrier.getSize();
-		return barrier;
-	}
-	vk::ImageMemoryBarrier imageBarrier(const tImageMemoryBarrier& imgBarrier)
-	{
-		using StructureType = vk::StructureType;
-		VkImageMemoryBarrier barrier = {};
-		barrier.sType = static_cast<VkStructureType>(StructureType::eImageMemoryBarrier);
-		barrier.srcAccessMask = static_cast<VkAccessFlags>(imgBarrier.getSrcAccessMask());
-		barrier.dstAccessMask = static_cast<VkAccessFlags>(imgBarrier.getDstAccessMask());
-
-		barrier.srcQueueFamilyIndex = imgBarrier.getSrcQueueFamilyIndex();
-		barrier.dstQueueFamilyIndex = imgBarrier.getDstQueueFamilyIndex();
-
-		barrier.image = imgBarrier.getImage()->vkImage;
-		barrier.newLayout = static_cast<VkImageLayout>(imgBarrier.getNewLayout());
-		barrier.oldLayout = static_cast<VkImageLayout>(imgBarrier.getOldLayout());
-		barrier.subresourceRange = imgBarrier.getSubresourceRange();
-		return barrier;
-	}
+	
 	void CommandBufferBase_::pipelineBarrier(PipelineStageFlags srcStage, PipelineStageFlags dstStage, DependencyFlags dependencyFlags, const MemoryBarrierSet& barriers)
 	{
-		std::vector<vk::MemoryBarrier> memoryBarriers(barriers.getMemoryBarriers().size());
-		std::vector<vk::ImageMemoryBarrier> imageBarriers(barriers.getImageBarriers().size());
-		std::vector<vk::BufferMemoryBarrier> bufferBarriers(barriers.getBufferBarriers().size());
-		for (int i = 0; i < memoryBarriers.size(); ++i)memoryBarriers[i] = barriers.getMemoryBarriers()[i];
-		for (int i = 0; i < bufferBarriers.size(); ++i) bufferBarriers[i] = bufferBarrier(barriers.getBufferBarriers()[i]);
-		for (int i = 0; i < imageBarriers.size(); ++i) imageBarriers[i] = imageBarrier(barriers.getImageBarriers()[i]);
-
-		cb.pipelineBarrier(srcStage, dstStage, dependencyFlags, memoryBarriers, bufferBarriers, imageBarriers);
-
-
-#ifdef DEBUG
-		//const auto& imageBarriers = barriers.getImageBarriers();
-		for (uint32_t i = 0; i < barriers.getImageBarriers().size(); ++i)
-		{
-			const auto& currentImageMemoryBarrier = barriers.getImageBarriers()[i];
-			currentImageMemoryBarrier.getImage()->setImageLayout(currentImageMemoryBarrier.getNewLayout());
-		}
-#endif
+		cb.pipelineBarrier(srcStage, dstStage, dependencyFlags, barriers.getMemoryBarriers(), barriers.getBufferBarriers(), barriers.getImageBarriers());
 	}
 
 	void CommandBufferBase_::waitForEvent(const Event& event, PipelineStageFlags srcStage, PipelineStageFlags dstStage, const MemoryBarrierSet& barriers)
 	{
-		std::vector<vk::MemoryBarrier> memoryBarriers(barriers.getMemoryBarriers().size());
-		std::vector<vk::ImageMemoryBarrier> imageBarriers(barriers.getImageBarriers().size());
-		std::vector<vk::BufferMemoryBarrier> bufferBarriers(barriers.getBufferBarriers().size());
-		for (int i = 0; i < memoryBarriers.size(); ++i)memoryBarriers[i] = barriers.getMemoryBarriers()[i];
-		for (int i = 0; i < bufferBarriers.size(); ++i) bufferBarriers[i] = bufferBarrier(barriers.getBufferBarriers()[i]);
-		for (int i = 0; i < imageBarriers.size(); ++i) imageBarriers[i] = imageBarrier(barriers.getImageBarriers()[i]);
-		cb.waitEvents(event, srcStage, dstStage, memoryBarriers, bufferBarriers, imageBarriers);
+			cb.waitEvents(event, srcStage, dstStage, barriers.getMemoryBarriers(), barriers.getBufferBarriers(), barriers.getImageBarriers());
 	}
 
 	void CommandBufferBase_::waitForEvents(const std::vector<Event> events, PipelineStageFlags srcStage, PipelineStageFlags dstStage, const MemoryBarrierSet& barriers)
 	{
-		std::vector<vk::MemoryBarrier> memoryBarriers(barriers.getMemoryBarriers().size());
-		std::vector<vk::ImageMemoryBarrier> imageBarriers(barriers.getImageBarriers().size());
-		std::vector<vk::BufferMemoryBarrier> bufferBarriers(barriers.getBufferBarriers().size());
-		for (int i = 0; i < memoryBarriers.size(); ++i)memoryBarriers[i] = barriers.getMemoryBarriers()[i];
-		for (int i = 0; i < bufferBarriers.size(); ++i) bufferBarriers[i] = bufferBarrier(barriers.getBufferBarriers()[i]);
-		for (int i = 0; i < imageBarriers.size(); ++i) imageBarriers[i] = imageBarrier(barriers.getImageBarriers()[i]);
-		cb.waitEvents(events, srcStage, dstStage, memoryBarriers, bufferBarriers, imageBarriers);
-	}
 
+		cb.waitEvents(events, srcStage, dstStage, barriers.getMemoryBarriers(), barriers.getBufferBarriers(), barriers.getImageBarriers());
+	}
+	void CommandBufferBase_::bindDescriptorSets(tDescriptorPool::SharedPtr& descPool, PipelineBindPoint bindingPoint, tShaderInterface* mat) {
+
+		//Get all tobindsets from set 0 to size
+		auto tobindsets = descPool->AllocateDescriptorSets(mat->getShader(), mat->getBuffers(), mat->getImages());
+		//No need for tobindsets
+		if (tobindsets.size() == 0)return;
+
+		//first ensure that same descriptorSet not binded
+		for (int set_number = 0; set_number < tobindsets.size(); ) {
+			if (tobindsets[set_number] == nullptr)continue;
+			tobindsets[set_number]->UpdateDescriptorSets();
+
+		}
+		std::vector<tDescriptorSets::SharedPtr> sets;
+		std::vector<uint32_t> dynamicOffsets;
+		//bind tobindsets
+		for (int set_number = 0; set_number <= tobindsets.size(); ++set_number) {
+			//Bind DescriptorSets when meets interval sets or at last
+			if (set_number == tobindsets.size() || tobindsets[set_number] == nullptr) {
+				if (sets.size() != 0) {
+					bindDescriptorSets(bindingPoint, mat->getShader()->pipelinelayout, static_cast<uint32_t>(set_number - sets.size()), sets, dynamicOffsets);
+					dynamicOffsets.clear();
+					sets.clear();
+				}
+				continue;
+			}
+			sets.emplace_back(tobindsets[set_number]);
+			for (const auto& binding : sets.back()->Setlayout->bindings.bindings) {
+				switch (binding.descriptorType) {
+				case vk::DescriptorType::eUniformBufferDynamic:
+				case vk::DescriptorType::eStorageBufferDynamic:
+					dynamicOffsets.emplace_back(mat->getOffsets().at(set_number).at(binding.binding));
+					break;
+				}
+			}
+		}
+		//Finally upload uniform buffer and update offset
+		mat->uploadUniformBuffer();
+
+	}
 	// bind pipelines, sets, vertex/index buffers
 	void CommandBufferBase_::bindDescriptorSets(PipelineBindPoint bindingPoint, const tPipelineLayout::SharedPtr& pipelineLayout, uint32_t firstSet,
 		const std::vector<tDescriptorSets::SharedPtr>& sets, const std::vector<uint32_t>& dynamicOffsets)
@@ -135,6 +114,7 @@ namespace tEngine {
 		vk::CommandBufferInheritanceInfo inheritanceInfo;// = {};
 		info.pInheritanceInfo = &inheritanceInfo;
 		cb.begin(info);
+		
 
 	}
 
@@ -232,10 +212,10 @@ namespace tEngine {
 
 
 	// buffers, textures, images, push constants
-	void CommandBufferBase_::updateBuffer(const tBuffer::SharedPtr& buffer, const void* data, uint32_t offset, uint32_t length)
+	void CommandBufferBase_::updateBuffer(const BufferHandle& buffer, const void* data, uint32_t offset, uint32_t length)
 	{
 		_objectReferences.emplace_back(buffer);
-		cb.updateBuffer(buffer->vkbuffer, offset, length, data);
+		cb.updateBuffer(buffer->getVkHandle(), offset, length, data);
 
 	}
 
@@ -244,59 +224,84 @@ namespace tEngine {
 		_objectReferences.emplace_back(pipelineLayout);
 		cb.pushConstants(pipelineLayout->vkLayout, stageFlags, offset, size, data);
 	}
-
-	void CommandBufferBase_::resolveImage(const tImage::SharedPtr& srcImage, const tImage::SharedPtr& dstImage, const std::vector<ImageResolve>& regions, ImageLayout srcLayout, ImageLayout dstLayout)
+	void  CommandBufferBase_::pushConstants(const std::shared_ptr<tShader>& shader) {
+		
+			if (shader->getInterface()->pushConstantBlock.size() > 0) {
+				pushConstants(shader->pipelinelayout, shader->stageFlags, 0, static_cast<uint32_t>(shader->getInterface()->pushConstantBlock.size()), shader->getInterface()->pushConstantBlock.data());
+			}
+		
+	}
+	void CommandBufferBase_::resolveImage(const ImageHandle& srcImage, const ImageHandle& dstImage, const std::vector<ImageResolve>& regions, ImageLayout srcLayout, ImageLayout dstLayout)
 	{
 		_objectReferences.emplace_back(srcImage);
 		_objectReferences.emplace_back(dstImage);
 		assert(sizeof(ImageResolve) == sizeof(VkImageResolve));
-		cb.resolveImage(srcImage->vkImage, srcLayout, dstImage->vkImage, dstLayout, regions);
+		cb.resolveImage(srcImage->getVkHandle(), srcLayout, dstImage->getVkHandle(), dstLayout, regions);
 
 	}
 
-	void CommandBufferBase_::blitImage(const tImage::SharedPtr& srcImage, const tImage::SharedPtr& dstImage, const std::vector<vk::ImageBlit>& regions, Filter filter, ImageLayout srcLayout, ImageLayout dstLayout)
+	void CommandBufferBase_::blitImage(const ImageHandle& srcImage, const ImageHandle& dstImage, const std::vector<vk::ImageBlit>& regions, Filter filter)
 	{
 		_objectReferences.emplace_back(srcImage);
 		_objectReferences.emplace_back(dstImage);
-		cb.blitImage(srcImage->vkImage, srcLayout, dstImage->vkImage, dstLayout, regions, filter);
+		cb.blitImage(srcImage->getVkHandle(), vk::ImageLayout::eTransferSrcOptimal, dstImage->getVkHandle(), vk::ImageLayout::eTransferDstOptimal, regions, filter);
 
 	}
+	void CommandBufferBase_::blitImage(const ImageHandle& dst, const ImageHandle& src,
+		const vk::Offset3D& dst_offset,
+		const vk::Offset3D& dst_extent, const vk::Offset3D& src_offset, const vk::Offset3D& src_extent,
+		unsigned dst_level, unsigned src_level, unsigned dst_base_layer, unsigned src_base_layer,
+		unsigned num_layers, vk::Filter filter)
+	{
+		const auto add_offset = [](const vk::Offset3D& a, const vk::Offset3D& b) -> vk::Offset3D {
+			return { a.x + b.x, a.y + b.y, a.z + b.z };
+		};
 
-	void CommandBufferBase_::copyImage(const tImage::SharedPtr& srcImage, const tImage::SharedPtr& dstImage, ImageLayout srcImageLayout, ImageLayout dstImageLayout, const std::vector<ImageCopy>& regions)
+		;
+		const vk::ImageBlit blit = {
+			{ (vk::ImageAspectFlags)format_to_aspect_mask(src->get_format()), src_level, src_base_layer, num_layers },
+			{ src_offset, add_offset(src_offset, src_extent) },
+			{ (vk::ImageAspectFlags)format_to_aspect_mask(dst->get_format()), dst_level, dst_base_layer, num_layers },
+			{ dst_offset, add_offset(dst_offset, dst_extent) },
+		};
+		blitImage(src, dst, { blit }, filter);
+
+	}
+	void CommandBufferBase_::copyImage(const ImageHandle& srcImage, const ImageHandle& dstImage, ImageLayout srcImageLayout, ImageLayout dstImageLayout, const std::vector<ImageCopy>& regions)
 	{
 		_objectReferences.emplace_back(srcImage);
 		_objectReferences.emplace_back(dstImage);
 		// Try to avoid heap allocation
-		cb.copyImage(srcImage->vkImage, srcImageLayout, dstImage->vkImage, dstImageLayout, regions);
+		cb.copyImage(srcImage->getVkHandle(), srcImageLayout, dstImage->getVkHandle(), dstImageLayout, regions);
 	}
 
-	void CommandBufferBase_::copyImageToBuffer(const tImage::SharedPtr& srcImage, ImageLayout srcImageLayout, tBuffer::SharedPtr& dstBuffer, vk::ArrayProxy<const vk::BufferImageCopy> const& regions)
+	void CommandBufferBase_::copyImageToBuffer(const ImageHandle& srcImage, ImageLayout srcImageLayout, BufferHandle& dstBuffer, vk::ArrayProxy<const vk::BufferImageCopy> const& regions)
 	{
 		_objectReferences.emplace_back(srcImage);
 		_objectReferences.emplace_back(dstBuffer);
 
-		cb.copyImageToBuffer(srcImage->vkImage, srcImageLayout, dstBuffer->vkbuffer, regions);
+		cb.copyImageToBuffer(srcImage->getVkHandle(), srcImageLayout, dstBuffer->getVkHandle(), regions);
 
 	}
 
-	void CommandBufferBase_::copyBuffer(const tBuffer::SharedPtr& srcBuffer, const tBuffer::SharedPtr& dstBuffer, vk::ArrayProxy<const vk::BufferCopy>const& regions)
+	void CommandBufferBase_::copyBuffer(const BufferHandle& srcBuffer, const BufferHandle& dstBuffer, vk::ArrayProxy<const vk::BufferCopy>const& regions)
 	{
 		_objectReferences.emplace_back(srcBuffer);
 		_objectReferences.emplace_back(dstBuffer);
-		cb.copyBuffer(srcBuffer->vkbuffer, dstBuffer->vkbuffer, regions);
+		cb.copyBuffer(srcBuffer->getVkHandle(), dstBuffer->getVkHandle(), regions);
 	}
-	void CommandBufferBase_::copyBufferToImage(const tBuffer::SharedPtr& buffer, const tImage::SharedPtr& image, vk::ImageLayout dstImageLayout, const vk::ArrayProxy<const BufferImageCopy>& regions)
+	void CommandBufferBase_::copyBufferToImage(const BufferHandle& buffer, const ImageHandle& image, vk::ImageLayout dstImageLayout, const vk::ArrayProxy<const BufferImageCopy>& regions)
 	{
 
 		_objectReferences.emplace_back(buffer);
 		_objectReferences.emplace_back(image);
-		cb.copyBufferToImage(buffer->vkbuffer, image->vkImage, dstImageLayout, regions);
+		cb.copyBufferToImage(buffer->getVkHandle(), image->getVkHandle(), dstImageLayout, regions);
 	}
 
-	void CommandBufferBase_::fillBuffer(const tBuffer::SharedPtr& dstBuffer, uint32_t dstOffset, uint32_t data, uint64_t size)
+	void CommandBufferBase_::fillBuffer(const BufferHandle& dstBuffer, uint32_t dstOffset, uint32_t data, uint64_t size)
 	{
 		_objectReferences.emplace_back(dstBuffer);
-		cb.fillBuffer(dstBuffer->vkbuffer, dstOffset, size, data);
+		cb.fillBuffer(dstBuffer->getVkHandle(), dstOffset, size, data);
 	}
 
 	// dynamic commands
@@ -336,7 +341,7 @@ namespace tEngine {
 
 	void CommandBufferBase_::setLineWidth(float lineWidth) { cb.setLineWidth(lineWidth); }
 
-	inline void clearcolorimage( vk::CommandBuffer cb, const tImage::SharedPtr& image, vk::ClearColorValue clearColor, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
+	inline void clearcolorimage( vk::CommandBuffer cb, const ImageHandle& image, vk::ClearColorValue clearColor, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
 		const vk::ArrayProxy<const uint32_t>& numLevels, const  vk::ArrayProxy<const uint32_t>& baseArrayLayers, const vk::ArrayProxy<const uint32_t>& numLayers, vk::ImageLayout layout)
 	{
 		assert(layout == vk::ImageLayout::eGeneral || layout == vk::ImageLayout::eTransferDstOptimal);
@@ -355,11 +360,11 @@ namespace tEngine {
 			subResourceRanges[i].layerCount = reinterpret_cast<const uint32_t*>(numLayers.data())[i];
 		}
 
-		cb.clearColorImage(image->vkImage, layout, clearColor, subResourceRanges);
+		cb.clearColorImage(image->getVkHandle(), layout, clearColor, subResourceRanges);
 	}
 
 	
-	void CommandBufferBase_::clearColorImage(vk::CommandBuffer cb, const tImage::SharedPtr& image, ClearColorValue clearColor, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
+	void CommandBufferBase_::clearColorImage(vk::CommandBuffer cb, const ImageHandle& image, ClearColorValue clearColor, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
 		const vk::ArrayProxy<const uint32_t>& numLevels, const  vk::ArrayProxy<const uint32_t>& baseArrayLayers, const vk::ArrayProxy<const uint32_t>& numLayers, ImageLayout layout)
 	{
 		_objectReferences.emplace_back(image);
@@ -379,9 +384,9 @@ namespace tEngine {
 			subResourceRanges[i].layerCount = reinterpret_cast<const uint32_t*>(numLayers.data())[i];
 		}
 
-		cb.clearColorImage(image->vkImage, layout, clearColor, subResourceRanges);
+		cb.clearColorImage(image->getVkHandle(), layout, clearColor, subResourceRanges);
 	}
-	inline static void clearDepthStencilImageHelper( vk::CommandBuffer cb, const tImage::SharedPtr& image, vk::ImageLayout layout, vk::ImageAspectFlags imageAspect,
+	inline static void clearDepthStencilImageHelper( vk::CommandBuffer cb, const ImageHandle& image, vk::ImageLayout layout, vk::ImageAspectFlags imageAspect,
 		float clearDepth, uint32_t clearStencil, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
 		const vk::ArrayProxy<const uint32_t>& numLevels, const  vk::ArrayProxy<const uint32_t>& baseArrayLayers, const vk::ArrayProxy<const uint32_t>& numLayers)
 	{
@@ -405,12 +410,12 @@ namespace tEngine {
 			subResourceRanges[i].baseArrayLayer = reinterpret_cast<const uint32_t*>(baseArrayLayers.data())[i];
 			subResourceRanges[i].layerCount = reinterpret_cast<const uint32_t*>(numLayers.data())[i];
 		}
-		cb.clearDepthStencilImage(image->vkImage, layout, clearDepthStencilValue, subResourceRanges);
+		cb.clearDepthStencilImage(image->getVkHandle(), layout, clearDepthStencilValue, subResourceRanges);
 		
 	}
 
 	void CommandBufferBase_::clearDepthImage(
-		const tImage::SharedPtr& image, float clearDepth, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
+		const ImageHandle& image, float clearDepth, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
 		const vk::ArrayProxy<const uint32_t>& numLevels, const  vk::ArrayProxy<const uint32_t>& baseArrayLayers, const vk::ArrayProxy<const uint32_t>& numLayers, ImageLayout layout)
 	{
 		_objectReferences.emplace_back(image);
@@ -420,7 +425,7 @@ namespace tEngine {
 
 
 	void CommandBufferBase_::clearStencilImage(
-		const tImage::SharedPtr& image, uint32_t clearStencil, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
+		const ImageHandle& image, uint32_t clearStencil, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
 		const vk::ArrayProxy<const uint32_t>& numLevels, const  vk::ArrayProxy<const uint32_t>& baseArrayLayers,
 		const vk::ArrayProxy<const uint32_t>& numLayers, ImageLayout layout)
 	{
@@ -431,7 +436,7 @@ namespace tEngine {
 
 
 
-	void CommandBufferBase_::clearDepthStencilImage(const tImage::SharedPtr& image, float clearDepth, uint32_t clearStencil, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
+	void CommandBufferBase_::clearDepthStencilImage(const ImageHandle& image, float clearDepth, uint32_t clearStencil, const vk::ArrayProxy<const uint32_t>& baseMipLevel,
 		const vk::ArrayProxy<const uint32_t>& numLevels, const  vk::ArrayProxy<const uint32_t>& baseArrayLayers,
 		const vk::ArrayProxy<const uint32_t>& numLayers, ImageLayout layout)
 	{
@@ -460,16 +465,16 @@ namespace tEngine {
 		cb.draw(numVertices, numInstances, firstVertex, firstInstance);
 	}
 
-	void CommandBufferBase_::drawIndexedIndirect(const tBuffer::SharedPtr& buffer, uint32_t offset, uint32_t count, uint32_t stride)
+	void CommandBufferBase_::drawIndexedIndirect(const BufferHandle& buffer, uint32_t offset, uint32_t count, uint32_t stride)
 	{
 		_objectReferences.emplace_back(buffer);
-		cb.drawIndexedIndirect(buffer->vkbuffer, offset, count, stride);
+		cb.drawIndexedIndirect(buffer->getVkHandle(), offset, count, stride);
 	}
 
-	void CommandBufferBase_::drawIndirect(const tBuffer::SharedPtr& buffer, uint32_t offset, uint32_t count, uint32_t stride)
+	void CommandBufferBase_::drawIndirect(const BufferHandle& buffer, uint32_t offset, uint32_t count, uint32_t stride)
 	{
 		_objectReferences.emplace_back(buffer);
-		cb.drawIndirect(buffer->vkbuffer, offset, count, stride);
+		cb.drawIndirect(buffer->getVkHandle(), offset, count, stride);
 	}
 
 	void CommandBufferBase_::dispatch(uint32_t numGroupX, uint32_t numGroupY, uint32_t numGroupZ)
@@ -478,7 +483,7 @@ namespace tEngine {
 		
 	}
 
-	void CommandBufferBase_::dispatchIndirect(tBuffer::SharedPtr& buffer, uint32_t offset) { cb.dispatchIndirect(buffer->vkbuffer, offset); }
+	void CommandBufferBase_::dispatchIndirect(BufferHandle& buffer, uint32_t offset) { cb.dispatchIndirect(buffer->getVkHandle(), offset); }
 
 	void CommandBufferBase_::resetQueryPool(QueryPool& queryPool, uint32_t firstQuery, uint32_t queryCount)
 	{
@@ -516,103 +521,12 @@ namespace tEngine {
 
 
 	void CommandBufferBase_::drawIndirectByteCount(
-		uint32_t instanceCount, uint32_t firstInstance, tBuffer::SharedPtr& counterBuffer, VkDeviceSize counterBufferOffset, uint32_t counterOffset, uint32_t vertexStride)
+		uint32_t instanceCount, uint32_t firstInstance, BufferHandle& counterBuffer, VkDeviceSize counterBufferOffset, uint32_t counterOffset, uint32_t vertexStride)
 	{
 		_objectReferences.emplace_back(counterBuffer);
-		cb.drawIndirectByteCountEXT(instanceCount, firstInstance, counterBuffer->vkbuffer, counterBufferOffset, counterOffset, vertexStride);
+		cb.drawIndirectByteCountEXT(instanceCount, firstInstance, counterBuffer->getVkHandle(), counterBufferOffset, counterOffset, vertexStride);
 
 	}
-	void setImageLayout(CommandBuffer::SharedPtr const& commandBuffer,
-		tImage::SharedPtr                 image,
-		vk::Format                format,
-		vk::ImageLayout           oldImageLayout,
-		vk::ImageLayout           newImageLayout)
-	{
-		vk::AccessFlags sourceAccessMask;
-		switch (oldImageLayout)
-		{
-		case vk::ImageLayout::eTransferDstOptimal: sourceAccessMask = vk::AccessFlagBits::eTransferWrite; break;
-		case vk::ImageLayout::ePreinitialized: sourceAccessMask = vk::AccessFlagBits::eHostWrite; break;
-		case vk::ImageLayout::eGeneral:  // sourceAccessMask is empty
-		case vk::ImageLayout::eUndefined: break;
-		default: assert(false); break;
-		}
 
-		vk::PipelineStageFlags sourceStage;
-		switch (oldImageLayout)
-		{
-		case vk::ImageLayout::eGeneral:
-		case vk::ImageLayout::ePreinitialized: sourceStage = vk::PipelineStageFlagBits::eHost; break;
-		case vk::ImageLayout::eTransferDstOptimal: sourceStage = vk::PipelineStageFlagBits::eTransfer; break;
-		case vk::ImageLayout::eUndefined: sourceStage = vk::PipelineStageFlagBits::eTopOfPipe; break;
-		default: assert(false); break;
-		}
 
-		vk::AccessFlags destinationAccessMask;
-		switch (newImageLayout)
-		{
-		case vk::ImageLayout::eColorAttachmentOptimal:
-			destinationAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-			break;
-		case vk::ImageLayout::eDepthStencilAttachmentOptimal:
-			destinationAccessMask =
-				vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-			break;
-		case vk::ImageLayout::eGeneral:  // empty destinationAccessMask
-		case vk::ImageLayout::ePresentSrcKHR: break;
-		case vk::ImageLayout::eShaderReadOnlyOptimal: destinationAccessMask = vk::AccessFlagBits::eShaderRead; break;
-		case vk::ImageLayout::eTransferSrcOptimal: destinationAccessMask = vk::AccessFlagBits::eTransferRead; break;
-		case vk::ImageLayout::eTransferDstOptimal: destinationAccessMask = vk::AccessFlagBits::eTransferWrite; break;
-		default: assert(false); break;
-		}
-
-		vk::PipelineStageFlags destinationStage;
-		switch (newImageLayout)
-		{
-		case vk::ImageLayout::eColorAttachmentOptimal:
-			destinationStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-			break;
-		case vk::ImageLayout::eDepthStencilAttachmentOptimal:
-			destinationStage = vk::PipelineStageFlagBits::eEarlyFragmentTests;
-			break;
-		case vk::ImageLayout::eGeneral: destinationStage = vk::PipelineStageFlagBits::eHost; break;
-		case vk::ImageLayout::ePresentSrcKHR: destinationStage = vk::PipelineStageFlagBits::eBottomOfPipe; break;
-		case vk::ImageLayout::eShaderReadOnlyOptimal:
-			destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
-			break;
-		case vk::ImageLayout::eTransferDstOptimal:
-		case vk::ImageLayout::eTransferSrcOptimal: destinationStage = vk::PipelineStageFlagBits::eTransfer; break;
-		default: assert(false); break;
-		}
-
-		vk::ImageAspectFlags aspectMask;
-		if (newImageLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal)
-		{
-			aspectMask = vk::ImageAspectFlagBits::eDepth;
-			if (format == vk::Format::eD32SfloatS8Uint || format == vk::Format::eD24UnormS8Uint)
-			{
-				aspectMask |= vk::ImageAspectFlagBits::eStencil;
-			}
-		}
-		else
-		{
-			aspectMask = vk::ImageAspectFlagBits::eColor;
-		}
-
-		vk::ImageSubresourceRange imageSubresourceRange(aspectMask, 0, 1, 0, 1);
-
-		tImageMemoryBarrier imageBarrier;
-		imageBarrier.setImage(image);
-		imageBarrier.setDstAccessMask(destinationAccessMask);
-		imageBarrier.setSrcAccessMask(sourceAccessMask);
-		imageBarrier.setDstQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
-		imageBarrier.setSrcQueueFamilyIndex(VK_QUEUE_FAMILY_IGNORED);
-		imageBarrier.setOldLayout(oldImageLayout);
-		imageBarrier.setNewLayout(newImageLayout);
-		imageBarrier.setSubresourceRange(imageSubresourceRange);
-
-		MemoryBarrierSet barrier;
-		barrier.addBarrier(imageBarrier);
-		commandBuffer->pipelineBarrier(sourceStage, destinationStage, {}, barrier);
-	}
 }

@@ -11,6 +11,7 @@ INCLUDE_DIRECTORIES(
     3rdParty/glm
     3rdParty/vulkan/include
     3rdParty/termcolor/
+    3rdParty/vma/src
     ${VULKAN_INCLUDE_DIRS}
     Source/include)
 

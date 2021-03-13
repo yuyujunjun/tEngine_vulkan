@@ -2,23 +2,23 @@
 #include"utils.hpp"
 #include"CommandBufferBase.h"
 namespace tEngine {
-      bool operator==(const tImageView::SharedPtr& a, const tImageView::SharedPtr& b) {
-        return a->vkimageView == b->vkimageView;
-    }
-      bool operator != (const tImageView::SharedPtr& a, const tImageView::SharedPtr& b) {
-        return !(a->vkimageView == b->vkimageView);
-    }
-     tImageView::SharedPtr CreateImageViewWithImage(sharedDevice& device, vk::ImageCreateInfo imageInfo, vk::ImageViewCreateInfo viewInfo, vk::MemoryPropertyFlags& memoryProperties) {
-        //Create Image
-        auto image = tImage::Create(device, imageInfo);
-        //Allocate mappedMemory
-        image->AllocateMemory(device, memoryProperties);
-        //Create imageView
-        auto imageView = std::make_shared<tImageView>(device, image, viewInfo);
+    VkImageView tImageView::get_render_target_view(unsigned layer) const
+    {
+        // Transient images just have one layer.
+        if (info.image->get_create_info().domain == ImageDomain::Transient)
+            return view;
 
-        return imageView;
+        VK_ASSERT(layer < get_create_info().layers);
+
+        if (render_target_views.empty())
+            return view;
+        else
+        {
+            VK_ASSERT(layer < render_target_views.size());
+            return render_target_views[layer];
+        }
     }
-     void CopyBufferToImage(const CommandBuffer::SharedPtr& cb, tBuffer::SharedPtr buffer, tImageView::SharedPtr imageView, vk::ImageLayout initialLayout, vk::ImageLayout finalLayout) {
+     void CopyBufferToImage(const CommandBuffer::SharedPtr& cb, BufferHandle buffer, ImageviewHandle imageView, vk::ImageLayout initialLayout, vk::ImageLayout finalLayout) {
         if (initialLayout != vk::ImageLayout::eTransferDstOptimal) {
             setImageLayout(cb, imageView->getImage(), imageView->getFormat(), initialLayout, vk::ImageLayout::eTransferDstOptimal);
         }
@@ -35,7 +35,7 @@ namespace tEngine {
 
 
     }
-     tImageView::SharedPtr CreateImageViewWithImage(sharedDevice& device, std::shared_ptr<ImageAsset>& asset, const CommandBuffer::SharedPtr& cb) {
+     ImageviewHandle CreateImageViewWithImage(sharedDevice& device, std::shared_ptr<ImageAsset>& asset, const CommandBuffer::SharedPtr& cb) {
         vk::ImageCreateInfo imageCreateInfo(vk::ImageCreateFlags(),
             asset->imageType,
             asset->format,

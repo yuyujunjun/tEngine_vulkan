@@ -92,16 +92,23 @@ namespace tEngine {
 			auto physicalDevice = context->instance.enumeratePhysicalDevices().front();
 			auto pair = vk::su::findGraphicsAndPresentQueueFamilyIndex(physicalDevice, context->surfaceData.surface);
 			
-
-			context->device =
-				std::make_shared<Device>(vk::su::createDevice(physicalDevice, pair.first, vk::su::getDeviceExtensions()));
+			vk::Device vkdevice = vk::su::createDevice(physicalDevice, pair.first, vk::su::getDeviceExtensions());
+			VmaAllocatorCreateInfo allocatorInfo = {};
+			allocatorInfo.vulkanApiVersion = VK_API_VERSION_1_2;
+			allocatorInfo.physicalDevice = physicalDevice;
+			allocatorInfo.device = vkdevice;
+			allocatorInfo.instance = context->instance;
+			VmaAllocator allocator;
+			vmaCreateAllocator(&allocatorInfo, &allocator);
+			context->device =std::make_unique<Device>(vkdevice,allocator);
 			context->device->physicalDevice.SetPhysicalDevice( physicalDevice);
 			auto& device = context->device;
-			
+			device->init_stock_samplers();
 			device->physicalDevice.graphicsQueuefamilyId = pair.first;
 			device->physicalDevice.presentQueuefamilyId = pair.second;
-			std::vector<vk::QueueFamilyProperties> queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
+			auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
 			device->physicalDevice.computeQueuefamilyId = findQueueFamilyIndex(queueFamilyProperties, vk::QueueFlagBits::eCompute);
+			device->physicalDevice.transferQueuefamilyId = findQueueFamilyIndex(queueFamilyProperties, vk::QueueFlagBits::eTransfer);
 
 			context->graphicsQueue = device->getQueue(device->physicalDevice.graphicsQueuefamilyId,0);
 			context->computeQueue = device->getQueue(device->physicalDevice.computeQueuefamilyId, 0);
@@ -110,7 +117,7 @@ namespace tEngine {
 			context->swapChainData = std::make_shared<tSwapChain>(context->device, context->surfaceData.surface, context->surfaceData.extent,
 				vk::ImageUsageFlagBits::eColorAttachment |
 				vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst, vk::SwapchainKHR(), device->physicalDevice.graphicsQueuefamilyId, device->physicalDevice.presentQueuefamilyId);
-
+			context->pipelineCache = device->createPipelineCache(vk::PipelineCacheCreateInfo());
 		}
 		return context.get();
 	}
@@ -122,6 +129,7 @@ namespace tEngine {
 		descriptorPool->addDescriptorInfo(vk::DescriptorType::eStorageBufferDynamic, 10);
 		descriptorPool->addDescriptorInfo(vk::DescriptorType::eStorageBufferDynamic, 10);
 		descriptorPool->CreatePool();
+		//table = std::make_unique<currentDescriptorTable>(descriptorPool);
 		//CommandPool
 		vk::CommandPoolCreateInfo poolInfo;
 		poolInfo.queueFamilyIndex = context->device->physicalDevice.graphicsQueuefamilyId;

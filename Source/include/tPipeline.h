@@ -5,10 +5,10 @@ namespace tEngine {
 	class tPipelineLayout {
 	public:
 		DECLARE_SHARED(tPipelineLayout)
-		static SharedPtr Create(sharedDevice& device,std::vector<tDescriptorSetLayout::SharedPtr>& desclayouts,GpuBlockBuffer& pushConstant,vk::ShaderStageFlags  stageFlags){
+		static SharedPtr Create(uniqueDevice& device,std::vector<tDescriptorSetLayout::SharedPtr>& desclayouts,GpuBlockBuffer& pushConstant,vk::ShaderStageFlags  stageFlags){
 			return std::make_shared<tPipelineLayout>(device,desclayouts,pushConstant,stageFlags);
 		}
-		tPipelineLayout(sharedDevice& device, std::vector<tDescriptorSetLayout::SharedPtr>& desclayouts, GpuBlockBuffer& pushConstant, vk::ShaderStageFlags  stageFlags):device(device) {
+		tPipelineLayout(uniqueDevice& device, std::vector<tDescriptorSetLayout::SharedPtr>& desclayouts, GpuBlockBuffer& pushConstant, vk::ShaderStageFlags  stageFlags):device(device) {
 			vk::PipelineLayoutCreateInfo  info;
 			
 			std::vector<vk::PushConstantRange> ranges(pushConstant.size());

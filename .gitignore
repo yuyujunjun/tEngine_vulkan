@@ -38,7 +38,7 @@ build/
 CMakeFiles/
 cmake-resources/
 CMakeCache.txt
-
+3rdParty/vma/
 *.vs/
 *.zip
 *.rar

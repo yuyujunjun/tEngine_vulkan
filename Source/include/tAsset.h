@@ -33,7 +33,8 @@ namespace tEngine {
 		vk::MemoryPropertyFlags memoryProperty = vk::MemoryPropertyFlagBits::eDeviceLocal;
 		int width, height, channels;
 		int depth = 1;
-
+	//	unsigned row_length;
+	//	unsigned image_height;
 		~ImageAsset() {
 			stbi_image_free(pixels);
 		}
