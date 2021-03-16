@@ -14,8 +14,7 @@ namespace tEngine {
 		glm::vec3 Normal=glm::vec3(0,1,0);
 		glm::vec2 TexCoords=glm::vec2(0,0);
 		glm::vec4 Color=glm::vec4(1,1,1,1);
-		glm::vec4 Weight = glm::vec4(0, 0, 0,0);
-		glm::ivec4 BoneIndices = glm::ivec4(0, 0, 0, 0);
+	
 		bool operator==(const Vertex& v)const {
 			return v.Position == Position && v.TexCoords == TexCoords && v.Color == Color ;
 		}

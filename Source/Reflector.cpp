@@ -28,7 +28,7 @@ namespace tEngine {
 	void Reflector::reflectionShader(std::string jsonfile,std::vector<tDescSetsDataWithSetNumber>& descSetsData,GpuBlockBuffer& pushConstant, vk::ShaderStageFlags stageFlag) {
 	//	std::unordered_map<std::string, GpuBlockBuffer> blocks;
 		rapidjson::Document document;
-		//std::unordered_map<uint32_t, tDescLayoutData> sets;
+		//std::unordered_map<uint32_t, DescriptorLayoutCreateInfo> sets;
 
 		document.Parse(jsonfile.data(), jsonfile.size());
 		const rapidjson::Value& descriptors = document["descriptor_sets"];

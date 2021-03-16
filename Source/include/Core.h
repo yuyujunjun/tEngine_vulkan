@@ -6,6 +6,7 @@
 #include<iostream>
 #include<mutex>
 #include"vma/src/vk_mem_alloc.h"
+#include"../PriorityAllocator.h"
 #define VULKAN_DEBUG DEBUG
 namespace tEngine {
 #define VK_ASSERT(T) assert(T)
@@ -160,7 +161,22 @@ namespace tEngine {
 	class InitialImageBuffer;
 	class SamplerCreateInfo;
 	class ResSetBinding;
-
+	class tDescriptorSetLayout;
+	using DescriptorSetLayoutHandle = std::shared_ptr<tDescriptorSetLayout>;
+	class DescriptorLayoutCreateInfo;
+	class tDescriptorSetAllocatorManager;
+	using DescSetAllocManagerHandle = std::shared_ptr<tDescriptorSetAllocatorManager>;
+	class tDescriptorSetAllocator;
+	using DescSetAllocHandle = std::shared_ptr<tDescriptorSetAllocator>;
+	class tSwapChain;
+	using SwapChainHandle = std::shared_ptr<tSwapChain>;
+	class tRenderPass;
+	using RenderPassHandle = std::shared_ptr<tRenderPass>;
+	class tFrameBuffer;
+	class tPipelineLayout;
+	using PipelineLayoutHandle = std::shared_ptr<tPipelineLayout>;
+	class tShaderInterface;
+	//using FrameBufferHandle = std::unique_ptr<tFrameBuffer>;
 	enum class StockSampler
 	{
 		NearestClamp,
@@ -176,31 +192,32 @@ namespace tEngine {
 		LinearYUV444P,
 		Count
 	};
+
+
 	struct Device:public vk::Device {
 	public:
-		Device(vk::Device device, VmaAllocator allocator);
-		void Device::init_stock_samplers();
-		void free_allocation(VmaAllocation allocation)const;
-		bool image_format_is_supported(VkFormat format, VkFormatFeatureFlags required, VkImageTiling tiling) const;
-		VkFormat Device::get_default_depth_stencil_format() const;
-		VkFormat Device::get_default_depth_format() const;
-		inline  uint32_t minBufferAlignment()const;
-		bool memory_type_is_host_visible(uint32_t type) const;
-		BufferHandle create_buffer(const BufferCreateInfo& createInfo,const void* initial=nullptr,CommandBufferHandle cb=nullptr)const;
-		ImageHandle create_image(const ImageCreateInfo& info, std::shared_ptr<ImageAsset> initial = nullptr, CommandBufferHandle cb = nullptr)const;
-		ImageHandle create_image_from_staging_buffer(const ImageCreateInfo& info, const InitialImageBuffer* buffer=nullptr, CommandBufferHandle cb = nullptr)const;
-		
+		Device(VkDevice device, VkPhysicalDevice phyDevice, VmaAllocator allocator);
+
+		void Device::initStockSamplers();
+		void freeAllocation(VmaAllocation allocation)const;
+		SamplerHandle Device::createSampler(const SamplerCreateInfo& sampler_info);
+		SamplerHandle Device::getSampler(const StockSampler& sampler)const;
+		BufferHandle createBuffer(const BufferCreateInfo& createInfo, const void* initial = nullptr, CommandBufferHandle cb = nullptr)const;
+		ImageHandle createImage(const ImageCreateInfo& info, std::shared_ptr<ImageAsset> initial = nullptr, CommandBufferHandle cb = nullptr)const;
+		ImageHandle create_image_from_staging_buffer(const ImageCreateInfo& info, const InitialImageBuffer* buffer = nullptr, CommandBufferHandle cb = nullptr)const;
 		InitialImageBuffer create_image_staging_buffer(const ImageCreateInfo& info, const ImageAsset* initial)const;
 		InitialImageBuffer create_image_staging_buffer(const TextureFormatLayout& layout)const;
-		
-		SamplerHandle Device::create_sampler(const SamplerCreateInfo& sampler_info);
-		SamplerHandle Device::getSampler(const StockSampler& sampler)const;
+		PipelineLayoutHandle createPipelineLayout(std::vector<DescriptorSetLayoutHandle>& descLayouts, GpuBlockBuffer& pushConstant, vk::ShaderStageFlags shaderStage);;
+		const tPhysicalDevice& getPhysicalDevice()const { return physicalDevice; }
+		tPhysicalDevice& getPhysicalDevice() { return physicalDevice; }
+		const VmaAllocator& getAllocator()const { return allocator; ; }
+		const vk::PipelineCache& getPipelineCache()const { return pipelineCache; }
+		SwapChainHandle swapChain;
+	private:
+		vk::PipelineCache pipelineCache;
 		tPhysicalDevice physicalDevice;
 		VmaAllocator allocator;
-	private:
 		std::array<SamplerHandle, static_cast<unsigned>(StockSampler::Count)> samplers;
-		void fill_buffer_sharing_indices(VkBufferCreateInfo& info, uint32_t* sharing_indices)const;
-
 	};
 	using weakDevice = const Device*;
 	using uniqueDevice = std::unique_ptr<Device>;
@@ -216,8 +233,8 @@ namespace tEngine {
 		None = 100,
 	};
 	struct Logger {
-		template<typename T>
-		static void Log(const T& info,LogLevel level) {
+		template<typename Attribute>
+		static void Log(const Attribute& info,LogLevel level) {
 			std::stringstream temp;
 			temp<< info;
 			
@@ -229,17 +246,19 @@ namespace tEngine {
 		static std::stringstream stream;
 	};
 	
-	template<typename T>
-	void LOGI(T args) {
+
+
+	template<typename Attribute>
+	void LOGI(Attribute args) {
 		Logger::Log(args);
 	}
-	template<typename T, typename ...Args>
-	void LOGI(T value, Args... args) {
+	template<typename Attribute, typename ...Args>
+	void LOGI(Attribute value, Args... args) {
 		LOGI(value);
 		LOGI(args...);
 	}
-	template<typename T>
-	void Log(T info, LogLevel level=LogLevel::Information) {
+	template<typename Attribute>
+	void Log(Attribute info, LogLevel level=LogLevel::Information) {
 		Logger::Log(info, level);
 	}
 	inline void SetRange(const VmaAllocation allocation, void* data, size_t size, size_t offset = 0) {
@@ -247,4 +266,14 @@ namespace tEngine {
 		memcpy(static_cast<char*>(allocation->GetMappedData()) + offset, data, size);
 	}
 
+	bool imageFormat_is_supported(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatFeatureFlags required, VkImageTiling tiling);
+	VkFormat default_depth_format(VkPhysicalDevice physicalDevice);
+	VkFormat default_depth_stencil_format(VkPhysicalDevice physicalDevice);
+	inline  uint32_t minBufferAlignment(const tPhysicalDevice& physicalDevice);
+	void fill_buffer_sharing_indices(const tPhysicalDevice& physicalDevice, VkBufferCreateInfo& info, uint32_t* sharing_indices);
+	bool memory_type_is_host_visible(const tPhysicalDevice& physicalDevice, uint32_t type);
+	SwapChainHandle createSwapChain(Device* device,vk::SurfaceKHR const& surface,vk::Extent2D const& extent,vk::ImageUsageFlags usage,vk::SwapchainKHR const& oldSwapChain,uint32_t graphicsQueueFamilyIndex,uint32_t presentQueueFamilyIndex);
+	VkFormat default_depth_format(VkPhysicalDevice physicalDevice);
+	GraphicsPipelineCreateInfo getDefaultPipelineCreateInfo(tShaderInterface* shader, const tRenderPass* renderPass, uint32_t subpass, const tFrameBuffer* frameBuffer);
+	void fill_buffer_sharing_indices(const tPhysicalDevice& physicalDevice, VkBufferCreateInfo& info, uint32_t* sharing_indices);
 }

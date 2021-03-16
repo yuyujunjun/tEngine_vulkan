@@ -9,10 +9,16 @@
 #include"tShader.h"
 #include<memory>
 namespace tEngine {
+	enum QueueFamily {
 
+	};
+	struct CommandPoolCreateInfo {
+
+	};
 	struct tCommandPool {
 		using SharedPtr = std::shared_ptr<tCommandPool>;
-		static SharedPtr Create(const uniqueDevice& device, const vk::CommandPool& vkPool) {
+		static SharedPtr Create(const Device* device, const vk::CommandPool& vkPool) {
+			
 			return std::make_shared<tCommandPool>(device,vkPool);
 		}
 		tCommandPool(const uniqueDevice& device, const vk::CommandPool& vkPool) :device(device.get()),vkCommandPool(vkPool) {}
@@ -162,19 +168,7 @@ namespace tEngine {
 
 		/// <summary>Bind a graphics pipeline.</summary>
 		/// <param name="pipeline">The GraphicsPipeline to bind.</param>
-		void bindPipeline(const GraphicsPipeline::SharedPtr& pipeline)
-		{
-			_objectReferences.emplace_back(pipeline);
-			cb.bindPipeline(pipeline->getBindPoint(), pipeline->VkHandle());
-		}
-
-		/// <summary>Bind a compute pipeline</summary>
-		/// <param name="pipeline">The ComputePipeline to bind</param>
-		void bindPipeline(const ComputePipeline::SharedPtr& pipeline)
-		{
-			_objectReferences.emplace_back(pipeline);
-			cb.bindPipeline(pipeline->getBindPoint(), pipeline->VkHandle());
-		}
+		
 
 		/// <summary>Bind descriptorsets</summary>
 		/// <param name="bindingPoint">Pipeline binding point</param>
@@ -184,8 +178,8 @@ namespace tEngine {
 		/// <param name="numDescriptorSets">Number of descriptor sets</param>
 		/// <param name="dynamicOffsets">Pointer to an array of uint</param>32_t values specifying dynamic offsets
 		/// <param name="numDynamicOffsets">Number of dynamic offsets</param>
-		void bindDescriptorSets(PipelineBindPoint bindingPoint, const tPipelineLayout::SharedPtr& pipelineLayout, uint32_t firstSet, const std::vector<tDescriptorSets::SharedPtr>& sets,const std::vector<uint32_t>& dynamicOffsets);
-		void bindDescriptorSets(tDescriptorPool::SharedPtr& descPool, PipelineBindPoint bindingPoint, tShaderInterface* mat);
+		//void bindDescriptorSets(PipelineBindPoint bindingPoint, const tPipelineLayout::SharedPtr& pipelineLayout, uint32_t firstSet, const std::vector<ResSetBinding>& sets,const std::vector<uint32_t>& dynamicOffsets);
+	//	void bindDescriptorSets(tDescriptorPool::SharedPtr& descPool, PipelineBindPoint bindingPoint, tShaderInterface* mat);
 		/// <summary>Bind descriptorset</summary>
 		/// <param name="bindingPoint">Pipeline binding point</param>
 		/// <param name="pipelineLayout">Pipeline layout</param>
@@ -193,10 +187,10 @@ namespace tEngine {
 		/// <param name="set">Descriptor set to be bound</param>
 		/// <param name="dynamicOffsets">Pointer to an array of uint</param>32_t values specifying dynamic offsets
 		/// <param name="numDynamicOffsets">Number of dynamic offsets</param>
-		void bindDescriptorSet(PipelineBindPoint bindingPoint, const tPipelineLayout::SharedPtr& pipelineLayout, uint32_t firstSet, const tDescriptorSets::SharedPtr& set,
-			const uint32_t dynamicOffsets = 0)
+		void bindDescriptorSet(vk::PipelineBindPoint bindingPoint, const vk::PipelineLayout& pipelineLayout, uint32_t firstSet, const std::vector<vk::DescriptorSet>& sets,
+			const std::vector<uint32_t>& dynamicOffsets)
 		{
-			bindDescriptorSets(bindingPoint, pipelineLayout, firstSet, { set }, { dynamicOffsets });
+			cb.bindDescriptorSets(bindingPoint, pipelineLayout, firstSet, sets, dynamicOffsets);
 		}
 
 		/// <summary>Bind vertex buffer</summary>
@@ -545,16 +539,18 @@ namespace tEngine {
 		/// <param name="offset">The byte offset into the buffer to start updating, and must be a multiple of 4.</param>
 		/// <param name="length">The number of bytes to update, and must be a multiple of 4.</param>
 		void updateBuffer(const BufferHandle& buffer, const void* data, uint32_t offset, uint32_t length);
-
+		void bindPipeline(const tPipeline& pipeline) {
+			cb.bindPipeline(pipeline.getBindPoint(), pipeline.getVkHandle());
+		}
 		/// <summary>Updates the value of shader push constants at the offset specified.</summary>
 		/// <param name="pipelineLayout">The pipeline layout used to program the push constant updates.</param>
-		/// <param name="stageFlags">A bitmask of ShaderStageFlag specifying the shader stages that will use the push constants in the updated range.</param>
+		/// <param name="allstageFlags">A bitmask of ShaderStageFlag specifying the shader stages that will use the push constants in the updated range.</param>
 		/// <param name="offset">The start offset of the push constant range to update, in units of bytes.</param>
 		/// <param name="size">The size of the push constant range to update, in units of bytes.</param>
 		/// <param name="data">An array of size bytes containing the new push constant values.</param>
-		void pushConstants(const tPipelineLayout::SharedPtr& pipelineLayout, ShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* data);
-
-		void pushConstants(const tShader::SharedPtr& shader);
+		void pushConstants(const VkPipelineLayout layout, VkShaderStageFlags stage, uint32_t offset, uint32_t size, const void* data);
+		void pushConstants(const VkPipelineLayout layout, VkShaderStageFlags stage, std::vector<uint8_t> block);
+		//void pushConstants(const tShader::SharedPtr& shader);
 		/// <summary>Records a non-indexed draw call, where the vertex count is based on a byte count read from a buffer and the passed in vertex stride parameter.</summary>
 		/// <param name="instanceCount">The number of instances to draw.</param>
 		/// <param name="firstInstance">The instance ID of the first instance to draw.</param>
@@ -575,8 +571,8 @@ namespace tEngine {
 			return std::make_shared<SecondaryCommandBuffer>(device,cb);
 		}
 		SecondaryCommandBuffer(const Device* device, const vk::CommandBuffer& cb) :CommandBufferBase_(device,cb) {}
-		void begin(const tFrameBuffer::SharedPtr& framebuffer, uint32_t subpass, const vk::CommandBufferUsageFlags flags);
-		void begin(const tRenderPass::SharedPtr& renderPass, uint32_t subpass, const vk::CommandBufferUsageFlags flags);
+	//	void begin(const tFrameBuffer::SharedPtr& framebuffer, uint32_t subpass, const vk::CommandBufferUsageFlags flags);
+		void begin(const tRenderPass* renderPass, uint32_t subpass, const vk::CommandBufferUsageFlags flags);
 	};
 
 	//using SecondaryCommandBuffer = std::shared_ptr<SecondaryCommandBuffer>;
@@ -590,7 +586,7 @@ namespace tEngine {
 			Count
 		};
 		using SharedPtr = std::shared_ptr<CommandBuffer>;
-		static SharedPtr Create(const uniqueDevice& device, const vk::CommandBuffer& cb) {
+		static SharedPtr Create(const Device* device, const vk::CommandBuffer& cb) {
 			return std::make_shared<CommandBuffer>(device, cb);
 		}
 		CommandBuffer(const Device* device, const vk::CommandBuffer& cb) :CommandBufferBase_(device, cb) {}
@@ -601,7 +597,7 @@ namespace tEngine {
 		void executeCommands(const SecondaryCommandBuffer::SharedPtr& secondaryCmdBuffer);
 		void executeCommands(const std::vector< SecondaryCommandBuffer::SharedPtr>& secondaryCmdBuffer);
 		void beginRenderPass(
-			const tFrameBuffer::SharedPtr& framebuffer, const vk::Rect2D& renderArea, bool inlineFirstSubpass, const vk::ClearValue* clearValues, uint32_t numClearValues);
+			const tRenderPass* renderPass, const tFrameBuffer* frameBuffer, bool inlineFirstSubpass, const vk::ClearValue* clearValues, uint32_t numClearValues);
 	private:
 		void updatePerSubpassImageLayouts();
 	};

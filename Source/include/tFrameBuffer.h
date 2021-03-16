@@ -1,76 +1,57 @@
 #pragma once
 #include"Core.h"
 #include"tResource.h"
+#include<unordered_set>
+#include<unordered_map>
 namespace tEngine {
 
-	inline vk::AttachmentDescription createDepthStencilDescription(vk::Format format, vk::ImageLayout initialLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
-		vk::ImageLayout finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::AttachmentLoadOp loadOp = vk::AttachmentLoadOp::eClear,
-		vk::AttachmentStoreOp storeOp = vk::AttachmentStoreOp::eDontCare, vk::AttachmentLoadOp stencilLoadOp = vk::AttachmentLoadOp::eClear,
-		vk::AttachmentStoreOp stencilStoreOp = vk::AttachmentStoreOp::eDontCare, vk::SampleCountFlagBits numSamples = vk::SampleCountFlagBits::e1)
+
+	
+	enum SizeClass
 	{
-		vk::AttachmentDescription attach = { {}, format, numSamples, loadOp, storeOp, stencilLoadOp, stencilStoreOp, initialLayout, finalLayout };
-		return attach;
-	}
-	inline vk::AttachmentDescription createColorDescription(vk::Format format, vk::ImageLayout initialLayout = vk::ImageLayout::eColorAttachmentOptimal,
-		vk::ImageLayout finalLayout = vk::ImageLayout::eColorAttachmentOptimal, vk::AttachmentLoadOp loadOp = vk::AttachmentLoadOp::eClear,
-		vk::AttachmentStoreOp storeOp = vk::AttachmentStoreOp::eStore, vk::SampleCountFlagBits numSamples = vk::SampleCountFlagBits::e1)
+		Absolute,
+		SwapchainRelative,
+		InputRelative
+	};
+
+	struct AttachmentInfo
 	{
-		vk::AttachmentDescription attach = { {}, format, numSamples, loadOp, storeOp, vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare, initialLayout, finalLayout };
-		return attach;
-	}
+		uint32_t idx;
+		vk::AttachmentDescription description;
 
+	};
 
-	//Advice by Nvidia tips
-	//Use VK_IMAGE_LAYOUT_UNDEFINED when the previous content of the image is not needed.
-	inline void UpdateEfficiency(vk::AttachmentDescription& description) {
-		auto loadOp = description.loadOp;
-		if (description.initialLayout == vk::ImageLayout::eUndefined) {
-			description.setLoadOp(vk::AttachmentLoadOp::eClear);
+	struct BufferInfo
+	{
+		VkDeviceSize size = 0;
+		VkBufferUsageFlags usage = 0;
+		bool persistent = true;
+
+		bool operator==(const BufferInfo& other) const
+		{
+			return size == other.size &&
+				usage == other.usage &&
+				persistent == other.persistent;
 		}
-		else {
-			description.setLoadOp(vk::AttachmentLoadOp::eLoad);
-		}
-		if (loadOp == vk::AttachmentLoadOp::eClear || loadOp == vk::AttachmentLoadOp::eDontCare) {
-			description.setInitialLayout(vk::ImageLayout::eUndefined);
-		}
 
-	}
-	static vk::AttachmentDescription StartColorInfo(vk::Format format) {
+		bool operator!=(const BufferInfo& other) const
+		{
+			return !(*this == other);
+		}
+	};
 
-		auto info = createColorDescription(format);
-		info.setInitialLayout(vk::ImageLayout::eUndefined);
-		info.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-		info.setLoadOp(vk::AttachmentLoadOp::eClear);
-		info.setStoreOp(vk::AttachmentStoreOp::eStore);
-		return info;
-	}
-	static vk::AttachmentDescription EndColorInfo(vk::Format format) {
-		auto info = createColorDescription(format);
-		info.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
-		info.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
-		info.setLoadOp(vk::AttachmentLoadOp::eLoad);
-		info.setStoreOp(vk::AttachmentStoreOp::eStore);
-		return info;
-	}
-	static vk::AttachmentDescription StartDepthInfo(vk::Format format) {
-		auto info = createDepthStencilDescription(format);
-		info.setInitialLayout(vk::ImageLayout::eUndefined);
-		//info.description.setFinalLayout(vk::ImageLayout::e_COLOR_ATTACHMENT_OPTIMAL);
-		info.setLoadOp(vk::AttachmentLoadOp::eClear);
-		info.setStoreOp(vk::AttachmentStoreOp::eStore);
-		return info;
-	}
-	static vk::AttachmentDescription  EndDepthInfo(std::string name, vk::Format format) {
-		auto info = createDepthStencilDescription(format);
-		info.setLoadOp(vk::AttachmentLoadOp::eLoad);
-		info.setStoreOp(vk::AttachmentStoreOp::eDontCare);
-		return info;
-	}
+
+
 	struct tSubpass {
 		friend class tRenderPass;
 	
-		tSubpass(std::vector<vk::AttachmentReference>& color, vk::AttachmentReference depth = {}, const std::vector<vk::AttachmentReference>& input_ = {}, const std::vector<vk::AttachmentReference>& resolved = {}, const std::vector<uint32_t> preserve = {}) :input(input_), color(color), depth(depth), resolved(resolved), preserve(preserve) {}
-		tSubpass() {}
+		tSubpass(uint32_t idx,tRenderPass& renderPass):renderPass(renderPass), passIdx(idx){}
+
+	
+		void addColorOutput(std::string name, vk::ImageLayout layout=vk::ImageLayout::eColorAttachmentOptimal);
+		void setDepth(std::string name, vk::ImageLayout layout = vk::ImageLayout::eDepthStencilAttachmentOptimal);
+		void addResolvedOutput(std::string name, vk::ImageLayout layout);
+		void addPreserve(std::string name);
 		bool operator==(const tSubpass& subpass) const {
 
 			return (vkSubpassDescription == subpass.vkSubpassDescription)
@@ -82,137 +63,212 @@ namespace tEngine {
 		bool operator!=(const tSubpass& subpass)const {
 			return !(operator==(subpass));
 		}
-		void createDescription(vk::PipelineBindPoint pipelineBindPoint) {
-			vkSubpassDescription.setPipelineBindPoint(pipelineBindPoint);
+		vk::SubpassDescription createDescription(VkPipelineBindPoint pipelineBindPoint) {
+			vkSubpassDescription.setPipelineBindPoint((vk::PipelineBindPoint)pipelineBindPoint);
 			vkSubpassDescription.setColorAttachments(color);
 			vkSubpassDescription.setInputAttachments(input);
 			vkSubpassDescription.setPDepthStencilAttachment(&depth);
 			vkSubpassDescription.setPreserveAttachments(preserve);
 			vkSubpassDescription.setResolveAttachments(resolved);
+			return vkSubpassDescription;
 		}
+		uint32_t getColorAttachmentCount()const {
+			return color.size();
+		}
+
+
+		
+	private:
 		vk::SubpassDescription vkSubpassDescription;
 		std::vector<vk::AttachmentReference> input;
 		std::vector<vk::AttachmentReference> color;
-		std::vector<uint32_t> preserve;
 		vk::AttachmentReference depth;
 		std::vector<vk::AttachmentReference> resolved;
+		std::vector<uint32_t> preserve;
 
-	
+		uint32_t passIdx;
+		tRenderPass& renderPass;
+
 	};
 	
 	struct tFrameBuffer;
-	std::vector<vk::SubpassDependency> GetOnePassDependency();
-	std::vector<vk::SubpassDependency> GetTwoPassDependency();
+	std::vector<vk::SubpassDependency> SingleDependencies();
+	std::vector<vk::SubpassDependency> WriteBeforeShaderReadDependencies();
 	class tRenderPass {
 	public:
+		const uint32_t allocatedFrameBufferCount = 8;
 		using SharedPtr = std::shared_ptr<tRenderPass>;
-		tRenderPass(uniqueDevice device):device(device) {
+		tRenderPass(Device* device) :device(device) {
 
 		}
 		~tRenderPass() {
 			if (vkRenderPass) {
-				if (!device.expired()) {
-					device.lock()->destroyRenderPass(vkRenderPass);
-				}
-				else {
-					reportDestroyedAfterDevice();
-				}
+				device->destroyRenderPass(vkRenderPass);
 			}
 		}
-		vk::PipelineBindPoint pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
-	
-		
-		void AddPass(tSubpass& subpass) {
 
-			this->subpass.push_back(subpass);
-		}
-		void AddPass(const std::vector<vk::AttachmentReference>& colorAttachments, const vk::AttachmentReference& depthAttachment = {}) {
-			tSubpass spass;
-			spass.color = colorAttachments;
-			spass.depth = depthAttachment;
-			this->subpass.push_back(spass);
-		}
-		void AddDependencies(const std::vector<vk::SubpassDependency>& dependency) {
-			dependencies = dependency;
-		}
-		void CreateRenderPass();
-		uint32_t attachmentsCount() {
-			return static_cast<uint32_t>(attachments.size());
-		}
-		vk::RenderPass vkRenderPass;
-		std::vector<tSubpass> subpass;
 
-		
-		std::vector<vk::SubpassDependency> dependencies;
-		
-	
-	protected:
-	
-	
-		void AddFBOObserver(std::shared_ptr<tFrameBuffer> frameBuffer);
-		void RemoveFBOObserver(std::shared_ptr<tFrameBuffer> frameBuffer);
-		std::vector<std::weak_ptr<tFrameBuffer>> frameBufferObserver;
-		void AddAttachments(std::vector<vk::AttachmentDescription> Attachments) {
-			auto pushAttachmentDesc = [this](std::vector<vk::AttachmentDescription>& Attachments) {
-				for (int i = 0; i < Attachments.size(); ++i) {
-					UpdateEfficiency(Attachments[i]);
-				}
-			};
+		const vk::RenderPass getVkHandle()const {
+			return vkRenderPass;
+		}
 
-			pushAttachmentDesc(Attachments);
+		tSubpass& getPass(std::string name) {
+			auto iter = pass_to_idx.find(name);
+			if (iter != pass_to_idx.end()) {
+				return *passes[iter->second].get();
+			}
+			else {
+				auto idx = passes.size();
+				passes.emplace_back(std::make_unique<tSubpass>(idx, this));
+				return *passes.back().get();
+			}
+
+		}
+		void SetAttachmentDescription(std::string name, vk::AttachmentDescription& description) {
+			getAttachment(name).description = description;
+		}
+		AttachmentInfo getAttachment(std::string name) {
+			auto iter = resource_to_idx.find(name);
+			if (iter != resource_to_idx.end()) {
+				return resource[iter->second];
+			}
+			else {
+				resource_to_idx[name] = resource.size();
+
+				resource.emplace_back(AttachmentInfo());
+				resource.back().idx = resource.size() - 1;
+				return resource.back();
+			}
+		}
+
+
+		void SetDependencies(std::vector<vk::SubpassDependency>& dependencies) {
+			this->dependencies = dependencies;
+		}
+		void setupRenderPass(VkPipelineBindPoint bindp = VK_PIPELINE_BIND_POINT_GRAPHICS) {
+			vk::RenderPassCreateInfo info;
+			std::vector<vk::AttachmentDescription> attachments;
+			for (auto& re : resource) {
+				attachments.emplace_back(re.description);
+			}
+			info.setAttachments(attachments);
+			info.setDependencies(dependencies);
+			std::vector<vk::SubpassDescription> subPass;
+			for (auto& pa : passes) {
+				subPass.emplace_back(pa->createDescription(bindp));
+			}
+			info.setSubpasses(subPass);
+			vkRenderPass = device->createRenderPass(info);
+			renderFunction.resize(passes.size());
+		}
+		void SetImageView(std::string name, ImageviewHandle& handle) {
+			
+			assert(resource_to_idx.count(name) != 0);
+			if (images.size() < resource.size())images.resize(resource.size());
+			images[resource_to_idx[name]] = handle;
+			
+			
+		}
+		void SetRenderFunctor(uint32_t subpass,std::function<void(CommandBufferHandle&, tRenderPass*,uint32_t subpass)> fun) {
+			//if (renderFunction.size() <= subpass) { renderFunction.resize(subpass + 1); }
+			renderFunction[subpass] = std::move(fun);
+		}
+
+		void Render(CommandBufferHandle& cb) {
+			for (uint32_t pass = 0; pass < passes.size(); ++pass) {
+				renderFunction[pass](cb, this,pass);
+			}
+			
+		}
+		vk::RenderPass getVkHandle() {
+			return vkRenderPass;
+		}
+		tFrameBuffer* requestFrameBuffer() {
+			
+
+			auto result = frameBuffersPool.request(images);
+			if (result == nullptr) {
+				result = frameBuffersPool.allocate(images, device);
+				result->frameBufferImages = images;
+				result->setupFrameBuffer();
+			}
+
+			return result;
+		}
+		const uint32_t getSubpassId(std::string name)const {
+			return pass_to_idx.at(name);
 		}
 		
+		const tSubpass* getSubpass(uint32_t idx)const {
+			return passes[idx].get();
+		}
+		const tSubpass* getSubpass(std::string name)const {
+			return getSubpass(getSubpassId(name));
+		}
 	private:
+
+		vk::RenderPass vkRenderPass;
 		weakDevice device;
+		std::vector<vk::SubpassDependency> dependencies;
+		std::vector<std::unique_ptr<tSubpass>> passes;
+		std::vector<AttachmentInfo> resource;
+		//std::vector<std::unique_ptr<RenderResource>> resources;
+		std::unordered_map<std::string, uint32_t>pass_to_idx;
+		std::unordered_map<std::string, uint32_t> resource_to_idx;
+		std::vector<ImageviewHandle> images;
+		//allocate
+		RingPool<tFrameBuffer,std::vector<ImageviewHandle>> frameBuffersPool;
+
+		//Function
+		std::vector<std::function<void(CommandBufferHandle&,tRenderPass*, uint32_t subpass)>> renderFunction;
+		//bool imageViewDirty = false;
 	};
 	struct tFrameBuffer {
 
 	public:
+		friend class tRenderPass;
 		using SharedPtr = std::shared_ptr<tFrameBuffer>;
-		tFrameBuffer(uniqueDevice device) :device(device) {
+		tFrameBuffer(Device* device) :device(device) {
 
 		}
 		~tFrameBuffer() {
 			if (vkFrameBuffer) {
-				if (!device.expired()) {
-					device.lock()->destroyFramebuffer(vkFrameBuffer);
-				}
-				else {
-					reportDestroyedAfterDevice();
-				}
+				
+				device->destroyFramebuffer(vkFrameBuffer);
+				
 			}
 		}
-
 	
-	
-		vk::Rect2D RenderArea() {
+		vk::Rect2D getRenderArea() const{
 			return vk::Rect2D({ 0, 0 }, { width, height });
 		}
-
-		tFrameBuffer(tRenderPass::SharedPtr renderPass_) :renderPass(renderPass_) {
-			//frameBufferCreateInfo.setRenderPass(renderPass->renderPass);
-			frameBufferImages.resize(renderPass->attachmentsCount());
+		vk::Viewport getViewPort()const {
+			return vk::Viewport(0,0,width,height,0,1);
 		}
-		//To do, resize frameBuffer count
-		//Add big array first
-		/*void SetImageForAttachment(std::string attachementName, tImage::SharedPtr image) {
-			frameBufferImage[renderPass->GetAttachmentIdx(attachementName)] = image;
-		}*/
-
-
-		
-
-		const tRenderPass* GetRenderPass() {
-			return renderPass.get();
+		void setupFrameBuffer() {
+			std::vector<vk::ImageView> viewList;
+			for (auto& frame : frameBufferImages) {
+				viewList.emplace_back(frame->getDefaultView());
+			}
+			width = frameBufferImages[0]->get_image()->get_width();
+			height = frameBufferImages[0]->get_image()->get_height();
+			vk::FramebufferCreateInfo info;
+			info.setAttachments(viewList);
+			info.setHeight(height);
+			info.setLayers(frameBufferImages[0]->get_create_info().layers);
+			info.setRenderPass(pass->getVkHandle());
+			info.setWidth(width);
+			vkFrameBuffer=device->createFramebuffer(info);
+			
 		}
-		vk::Framebuffer vkFrameBuffer;
-
-		tRenderPass::SharedPtr renderPass;
-		std::vector<std::shared_ptr<tImageView>> frameBufferImages;
+		const vk::Framebuffer getVkHandle() const{
+			return vkFrameBuffer;
+		}
 	private:
-		void SetUpFrameBuffer(std::string name = "tFrameBuffer");
+		std::vector<ImageviewHandle> frameBufferImages;
+		vk::Framebuffer vkFrameBuffer;
 		
-		vk::FramebufferCreateInfo frameBufferCreateInfo;//per frame resource
+		//vk::FramebufferCreateInfo frameBufferCreateInfo;//per frame resource
 	
 		
 		uint32_t width =(uint32_t) -1;
@@ -220,6 +276,8 @@ namespace tEngine {
 		
 		
 	private:
+		tRenderPass* pass;
 		weakDevice device;
 	};
+	RenderPassHandle getSingleRenderpass(Device* device);
 }

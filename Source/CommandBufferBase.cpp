@@ -42,65 +42,9 @@ namespace tEngine {
 
 		cb.waitEvents(events, srcStage, dstStage, barriers.getMemoryBarriers(), barriers.getBufferBarriers(), barriers.getImageBarriers());
 	}
-	void CommandBufferBase_::bindDescriptorSets(tDescriptorPool::SharedPtr& descPool, PipelineBindPoint bindingPoint, tShaderInterface* mat) {
-
-		//Get all tobindsets from set 0 to size
-		auto tobindsets = descPool->AllocateDescriptorSets(mat->getShader(), mat->getBuffers(), mat->getImages());
-		//No need for tobindsets
-		if (tobindsets.size() == 0)return;
-
-		//first ensure that same descriptorSet not binded
-		for (int set_number = 0; set_number < tobindsets.size(); ) {
-			if (tobindsets[set_number] == nullptr)continue;
-			tobindsets[set_number]->UpdateDescriptorSets();
-
-		}
-		std::vector<tDescriptorSets::SharedPtr> sets;
-		std::vector<uint32_t> dynamicOffsets;
-		//bind tobindsets
-		for (int set_number = 0; set_number <= tobindsets.size(); ++set_number) {
-			//Bind DescriptorSets when meets interval sets or at last
-			if (set_number == tobindsets.size() || tobindsets[set_number] == nullptr) {
-				if (sets.size() != 0) {
-					bindDescriptorSets(bindingPoint, mat->getShader()->pipelinelayout, static_cast<uint32_t>(set_number - sets.size()), sets, dynamicOffsets);
-					dynamicOffsets.clear();
-					sets.clear();
-				}
-				continue;
-			}
-			sets.emplace_back(tobindsets[set_number]);
-			for (const auto& binding : sets.back()->Setlayout->bindings.bindings) {
-				switch (binding.descriptorType) {
-				case vk::DescriptorType::eUniformBufferDynamic:
-				case vk::DescriptorType::eStorageBufferDynamic:
-					dynamicOffsets.emplace_back(mat->getOffsets().at(set_number).at(binding.binding));
-					break;
-				}
-			}
-		}
-		//Finally upload uniform buffer and update offset
-		mat->uploadUniformBuffer();
-
-	}
+	
 	// bind pipelines, sets, vertex/index buffers
-	void CommandBufferBase_::bindDescriptorSets(PipelineBindPoint bindingPoint, const tPipelineLayout::SharedPtr& pipelineLayout, uint32_t firstSet,
-		const std::vector<tDescriptorSets::SharedPtr>& sets, const std::vector<uint32_t>& dynamicOffsets)
-	{
-		_objectReferences.push_back(pipelineLayout);
-		auto numDescriptorSets = sets.size();
-		const int MaxDescriptorSets = 8;
-		assert(numDescriptorSets < static_cast<uint32_t>(MaxDescriptorSets) && "Attempted to bind more than 8 descriptor sets");
-		if (numDescriptorSets < static_cast<uint32_t>(MaxDescriptorSets))
-		{
-			std::vector<vk::DescriptorSet> native_sets(numDescriptorSets);
-			for (uint32_t i = 0; i < numDescriptorSets; ++i)
-			{
-				_objectReferences.emplace_back(sets[i]);
-				native_sets[i] = sets[i]->vkDescSet;
-			}
-			cb.bindDescriptorSets(bindingPoint, pipelineLayout->vkLayout, firstSet, native_sets, dynamicOffsets);
-		}
-	}
+
 
 
 
@@ -118,25 +62,8 @@ namespace tEngine {
 
 	}
 
-	void SecondaryCommandBuffer::begin(const tFrameBuffer::SharedPtr& framebuffer, uint32_t subpass, const vk::CommandBufferUsageFlags flags)
-	{
-		if (_isRecording) { throw ("Called CommandBuffer::begin while a recording was already in progress. Call CommandBuffer::end first"); }
-		_objectReferences.emplace_back(framebuffer);
-		_isRecording = true;
-		vk::CommandBufferBeginInfo info;// = {};
-		vk::CommandBufferInheritanceInfo inheritanceInfo;// = {};
-
-		info.flags = flags;
-
-		inheritanceInfo.renderPass = framebuffer->renderPass->vkRenderPass;
-		inheritanceInfo.framebuffer = framebuffer->vkFrameBuffer;
-		inheritanceInfo.subpass = subpass;
-		inheritanceInfo.occlusionQueryEnable = VK_FALSE;
-		info.pInheritanceInfo = &inheritanceInfo;
-		cb.begin(info);
-	}
-
-	void SecondaryCommandBuffer::begin(const tRenderPass::SharedPtr& renderPass, uint32_t subpass, const vk::CommandBufferUsageFlags flags)
+	
+	void SecondaryCommandBuffer::begin(const tRenderPass* renderPass, uint32_t subpass, const vk::CommandBufferUsageFlags flags)
 	{
 		if (_isRecording)
 		{
@@ -149,7 +76,7 @@ namespace tEngine {
 		vk::CommandBufferInheritanceInfo inheritInfo;// = {};
 		info.flags = flags;
 
-		inheritInfo.renderPass = renderPass->vkRenderPass;
+		inheritInfo.renderPass = renderPass->getVkHandle();
 		inheritInfo.subpass = subpass;
 		inheritInfo.occlusionQueryEnable = VK_FALSE;
 		info.pInheritanceInfo = &inheritInfo;
@@ -187,18 +114,17 @@ namespace tEngine {
 
 	// RenderPasses, Subpasses
 	void CommandBuffer::beginRenderPass(
-		const tFrameBuffer::SharedPtr& framebuffer, const Rect2D& renderArea, bool inlineFirstSubpass, const ClearValue* clearValues, uint32_t numClearValues)
+		const tRenderPass* renderPass,const tFrameBuffer* frameBuffer, bool inlineFirstSubpass, const ClearValue* clearValues, uint32_t numClearValues)
 	{
-		_objectReferences.emplace_back(framebuffer);
+	//	_objectReferences.emplace_back(framebuffer);
 		vk::RenderPassBeginInfo nfo;// = {};
 		//nfo.sType = static_cast<VkStructureType>(StructureType::e_RENDER_PASS_BEGIN_INFO);
 		nfo.pClearValues = clearValues;
 		nfo.clearValueCount = numClearValues;
-		nfo.framebuffer = framebuffer->vkFrameBuffer;
-		nfo.renderPass = framebuffer->renderPass->vkRenderPass;
-		nfo.renderArea = renderArea;
+		nfo.framebuffer = frameBuffer->getVkHandle();
+		nfo.renderPass = renderPass->getVkHandle();// ->renderPass->vkRenderPass;
+		nfo.renderArea = frameBuffer->getRenderArea();
 		//	copyRectangleToVulkan(renderArea, nfo.renderArea);
-
 
 		cb.beginRenderPass(nfo, vk::SubpassContents(inlineFirstSubpass ? vk::SubpassContents::eInline : vk::SubpassContents::eSecondaryCommandBuffers));
 
@@ -219,17 +145,13 @@ namespace tEngine {
 
 	}
 
-	void CommandBufferBase_::pushConstants(const tPipelineLayout::SharedPtr& pipelineLayout, ShaderStageFlags stageFlags, uint32_t offset, uint32_t size, const void* data)
+	void CommandBufferBase_::pushConstants(const VkPipelineLayout layout, VkShaderStageFlags stage,uint32_t offset, uint32_t size, const void* data)
 	{
-		_objectReferences.emplace_back(pipelineLayout);
-		cb.pushConstants(pipelineLayout->vkLayout, stageFlags, offset, size, data);
+	//	_objectReferences.emplace_back(pipelineLayout);
+		cb.pushConstants(layout, (vk::ShaderStageFlags)stage, offset, size, data);
 	}
-	void  CommandBufferBase_::pushConstants(const std::shared_ptr<tShader>& shader) {
-		
-			if (shader->getInterface()->pushConstantBlock.size() > 0) {
-				pushConstants(shader->pipelinelayout, shader->stageFlags, 0, static_cast<uint32_t>(shader->getInterface()->pushConstantBlock.size()), shader->getInterface()->pushConstantBlock.data());
-			}
-		
+	void CommandBufferBase_::pushConstants(const VkPipelineLayout layout, VkShaderStageFlags stage, std::vector<uint8_t> block) {
+		pushConstants(layout, stage, 0, block.size(), block.data());
 	}
 	void CommandBufferBase_::resolveImage(const ImageHandle& srcImage, const ImageHandle& dstImage, const std::vector<ImageResolve>& regions, ImageLayout srcLayout, ImageLayout dstLayout)
 	{
@@ -305,7 +227,7 @@ namespace tEngine {
 	}
 
 	// dynamic commands
-	void CommandBufferBase_::setViewport(const Viewport& viewport) { cb.setViewport(0, viewport); }//; getDevice()->getVkBindings().vkCmdSetViewport(getVkHandle(), 0, 1, &viewport.get());
+	void CommandBufferBase_::setViewport(const Viewport& viewport) { cb.setViewport(0, viewport); }//; getDevice()->getVkBindings().vkCmdSetViewport(getDefaultView(), 0, 1, &viewport.get());
 
 
 	void CommandBufferBase_::setScissor(uint32_t firstScissor, vk::ArrayProxy< const vk::Rect2D>const& scissors)
@@ -490,7 +412,7 @@ namespace tEngine {
 		//_objectReferences.emplace_back(queryPool);
 	//	assert(firstQuery + queryCount <= queryPool->getNumQueries() && "Attempted to reset a query with index larger than the number of queries available to the QueryPool");
 		cb.resetQueryPool(queryPool, firstQuery, queryCount);
-	//	getDevice()->getVkBindings().vkCmdResetQueryPool(getVkHandle(), queryPool->getVkHandle(), firstQuery, queryCount);
+	//	getDevice()->getVkBindings().vkCmdResetQueryPool(getDefaultView(), queryPool->getDefaultView(), firstQuery, queryCount);
 	}
 
 	void CommandBufferBase_::resetQueryPool(QueryPool& queryPool, uint32_t queryIndex)
@@ -514,7 +436,7 @@ namespace tEngine {
 	{
 		
 		//_objectReferences.emplace_back(queryPool);
-	//	getDevice()->getVkBindings().vkCmdEndQuery(getVkHandle(), queryPool->getVkHandle(), queryIndex);
+	//	getDevice()->getVkBindings().vkCmdEndQuery(getDefaultView(), queryPool->getDefaultView(), queryIndex);
 		cb.endQuery(queryPool, queryIndex);
 	}
 

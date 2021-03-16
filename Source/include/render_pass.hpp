@@ -21,14 +21,12 @@
  */
 
 #pragma once
-
 #include"Core.h"
-#include"tResource.h"
-#include"tEngineFunctional.h"
-#include <tFormatInterfacce.h>
-namespace tEngine {
+#include"tFormatInterfacce.h"
 
-	constexpr uint32_t VULKAN_NUM_ATTACHMENTS = 8;
+namespace tEngine
+{
+	constexpr int VULKAN_NUM_ATTACHMENTS = 8;
 	enum RenderPassOp
 	{
 		RENDER_PASS_OP_CLEAR_DEPTH_STENCIL_BIT = 1 << 0,
@@ -40,7 +38,7 @@ namespace tEngine {
 	};
 	using RenderPassOpFlags = uint32_t;
 
-	//	class ImageView;
+	class tImageView;
 	struct RenderPassInfo
 	{
 		const tImageView* color_attachments[VULKAN_NUM_ATTACHMENTS];
@@ -81,10 +79,9 @@ namespace tEngine {
 		unsigned num_subpasses = 0;
 	};
 
-	class RenderPass
+	class RenderPass 
 	{
 	public:
-		DECLARE_NO_COPY_SEMANTICS(RenderPass)
 		struct SubpassInfo
 		{
 			VkAttachmentReference color_attachments[VULKAN_NUM_ATTACHMENTS];
@@ -96,8 +93,8 @@ namespace tEngine {
 			unsigned samples;
 		};
 
-		RenderPass(Device* device, const RenderPassInfo& info);
-		RenderPass(Device* device, const VkRenderPassCreateInfo& create_info);
+		RenderPass( Device* device, const RenderPassInfo& info);
+		RenderPass( Device* device, const VkRenderPassCreateInfo& create_info);
 		~RenderPass();
 
 		unsigned get_num_subpasses() const
@@ -169,10 +166,9 @@ namespace tEngine {
 		void fixup_render_pass_workaround(VkRenderPassCreateInfo& create_info, VkAttachmentDescription* attachments);
 	};
 
-	class Framebuffer
+	class Framebuffer 
 	{
 	public:
-		DECLARE_NO_COPY_SEMANTICS(Framebuffer)
 		Framebuffer(Device* device, const RenderPass& rp, const RenderPassInfo& info);
 		~Framebuffer();
 
@@ -220,7 +216,8 @@ namespace tEngine {
 		void clear();
 
 	private:
-		struct FramebufferNode : Framebuffer
+		struct FramebufferNode:
+			Framebuffer
 		{
 			FramebufferNode(Device* device_, const RenderPass& rp, const RenderPassInfo& info_)
 				: Framebuffer(device_, rp, info_)
@@ -251,7 +248,7 @@ namespace tEngine {
 		void clear();
 
 	private:
-		struct TransientNode
+		struct TransientNode 
 		{
 			explicit TransientNode(ImageHandle handle_)
 				: handle(std::move(handle_))
@@ -287,6 +284,5 @@ namespace tEngine {
 		}
 	};
 
-
-
 }
+

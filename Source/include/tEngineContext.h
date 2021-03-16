@@ -23,7 +23,7 @@ namespace tEngine {
 		uniqueDevice device;
 		//vk::tPhysicalDevice physicalDevice;
 		vk::su::SurfaceData surfaceData;
-		tSwapChain::SharedPtr swapChainData;
+		
 		vk::Queue graphicsQueue;
 		vk::Queue presentQueue;
 		vk::Queue computeQueue;
@@ -34,7 +34,7 @@ namespace tEngine {
 			device->destroyPipelineCache(pipelineCache);
 			device->waitIdle();
 			//descriptorPool.reset();
-			swapChainData.reset();
+			//swapChainData.reset();
 		
 			device->destroy();
 			instance.destroySurfaceKHR(surfaceData.surface);
@@ -51,7 +51,7 @@ namespace tEngine {
 		ThreadContext(const tEngineContext*const context);
 
 
-		tDescriptorPool::SharedPtr descriptorPool;
+		//tDescriptorPool::SharedPtr descriptorPool;
 		//std::unique_ptr<currentDescriptorTable> table;
 		tEngine::tCommandPool::SharedPtr cmdPool;
 		std::vector<tEngine::CommandBuffer::SharedPtr> cmdBuffers;

@@ -57,10 +57,10 @@ namespace tEngine {
 				return d1.set_number < d2.set_number;
 			});
 	}
-	void tDescriptorSetAllocator::AllocatePool() {
+	void tDescriptorSetAllocator::createPool() {
 		uint32_t maxSets=0;
 		std::vector<vk::DescriptorPoolSize> poolSize;
-		for (auto& bi : layout->bindings.bindings) {
+		for (auto& bi : layout->getCreateInfo().bindings) {
 			poolSize.emplace_back(bi.descriptorType,bi.descriptorCount* RingSize);
 			maxSets += bi.descriptorCount * RingSize;
 		}
@@ -73,7 +73,7 @@ namespace tEngine {
 		std::vector<vk::DescriptorSetLayout > descLayouts(minRingSize);
 		size_t idx = 0;
 		for (auto& lay : descLayouts) {
-			lay = layout->vkLayout;
+			lay = layout->getVkHandle();
 		}
 		vk::DescriptorSetAllocateInfo descSetInfo;
 		descSetInfo.setDescriptorPool(pool);
@@ -82,55 +82,49 @@ namespace tEngine {
 		allocatedDescSets = sets;
 		resSetBinding.resize(sets.size());
 	}
-	void tDescriptorSetAllocator::allocate_DescriptorSet() {
-		if (allocatedDescSets.size() < RingSize) {
-			vk::DescriptorSetAllocateInfo descSetInfo;
-			descSetInfo.setDescriptorPool(pool);
-			descSetInfo.setSetLayouts(layout->vkLayout);
-			auto sets = device->allocateDescriptorSets(descSetInfo);
-			allocatedDescSets.emplace_back(sets);
-			resSetBinding.push_back(ResSetBinding());
-		}
-	}
-	uint32_t tDescriptorSetAllocator::request_DescriptorSet(const ResSetBinding& rb) {
-		auto iter = std::find(resSetBinding.begin(), resSetBinding.end(), rb);
-		if (iter != resSetBinding.end()) {
-			return iter - resSetBinding.begin();
-		}
 
-		uint32_t idx = nextIdx();
-
+	vk::DescriptorSet tDescriptorSetAllocator::requestDescriptorSet(const ResSetBinding& rb) {
+		if (rb.getBuffers().size() == 0 && rb.getImages().size() == 0)return vk::DescriptorSet();
+		auto re=descriptorSetPool.request(rb);
+		if (re != nullptr) {
+			return *re;
+		}
+		vk::DescriptorSetAllocateInfo descSetInfo;
+		descSetInfo.setDescriptorPool(pool);
+		descSetInfo.setSetLayouts(layout->getVkHandle());
+		auto set = device->allocateDescriptorSets(descSetInfo);
+		re = descriptorSetPool.allocate(rb,set.begin());
 		std::vector<vk::WriteDescriptorSet> write;
-		auto& vkDescSet = allocatedDescSets[idx];
+		auto& vkDescSet = *re;
 		std::vector< vk::DescriptorBufferInfo> bufferInfo;
 		std::vector<vk::DescriptorImageInfo> imageInfo;
-		auto& m_binding = resSetBinding[idx];
+	//	auto m_binding = descriptorSetPool.getFirstAttribute();
 		for (auto& b : rb.getBuffers()) {
-			auto& binding = b.first;
-			if (!m_binding.hasBuffer(binding) || resSetBinding[idx].getBuffers().at(binding) != b.second) {
-				m_binding.getBuffers()[binding] = b.second;
-				auto& buffer = b.second.buffer;
+			auto& binding = b.binding;
+			{
+			//	m_binding.getBuffers()[binding] = b;
+				auto& buffer = b.buffer;
 				bufferInfo.emplace_back(buffer->getVkHandle(), 0, buffer->getSize());
-				write.emplace_back(vk::WriteDescriptorSet(vkDescSet, binding, 0, layout->bindings.bindingAt(binding).descriptorType, nullptr, bufferInfo.back(), {}));
+				write.emplace_back(vk::WriteDescriptorSet(vkDescSet, binding, 0, layout->getCreateInfo().bindingAt(binding).descriptorType, nullptr, bufferInfo.back(), {}));
 			}
 		}
 
-		StockSampler sampler;
-		sampler = StockSampler::LinearClamp;
+		
 		for (auto& b : rb.getImages()) {
-			auto& binding = b.first;
-			if (!m_binding.hasImage(binding) || resSetBinding[idx].getImages().at(binding) != b.second) {
-				m_binding.getImages()[binding] = b.second;
-				auto type = layout->bindings.bindingAt(binding).descriptorType;
+			auto& binding = b.binding;
+			 {
+			//	m_binding.getImages()[binding] = b;
+				auto type = layout->getCreateInfo().bindingAt(binding).descriptorType;
+				
 				switch (type) {
 				case vk::DescriptorType::eCombinedImageSampler:
-					imageInfo.emplace_back(vk::DescriptorImageInfo(device->getSampler(sampler)->getVkHandle(), b.second.image->getVkHandle(), vk::ImageLayout::eShaderReadOnlyOptimal));
+					imageInfo.emplace_back(vk::DescriptorImageInfo(device->getSampler(b.getSampler())->getVkHandle(), b.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal));
 					break;
 				case vk::DescriptorType::eSampledImage:
-					imageInfo.emplace_back(vk::DescriptorImageInfo({}, b.second.image->getVkHandle(), vk::ImageLayout::eShaderReadOnlyOptimal));
+					imageInfo.emplace_back(vk::DescriptorImageInfo({}, b.getImageView(), vk::ImageLayout::eShaderReadOnlyOptimal));
 					break;
 				case vk::DescriptorType::eSampler:
-					imageInfo.emplace_back(vk::DescriptorImageInfo(device->getSampler(sampler)->getVkHandle(), {}, vk::ImageLayout::eUndefined));
+					imageInfo.emplace_back(vk::DescriptorImageInfo(device->getSampler(b.getSampler())->getVkHandle(), {}, vk::ImageLayout::eUndefined));
 					break;
 				default:
 					throw("Wrong image descriptor Type");
@@ -141,6 +135,6 @@ namespace tEngine {
 		if (write.size() != 0) {
 			device->updateDescriptorSets(write, {});
 		}
-
+		return *re;
 	}
 }

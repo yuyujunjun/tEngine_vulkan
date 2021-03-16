@@ -10,7 +10,7 @@
 
 namespace tEngine {
 	std::unique_ptr<tEngineContext> tEngineContext::context;
-	tDescriptorSetLayoutManager tDescriptorSetLayoutManager::manager;
+	tDescriptorSetAllocatorManager tDescriptorSetAllocatorManager::manager;
 	uint32_t findQueueFamilyIndex(std::vector<vk::QueueFamilyProperties>const& queueFamilyProperties, vk::QueueFlagBits bits) {
 		std::vector<vk::QueueFamilyProperties>::const_iterator graphicsQueueFamilyProperty = std::find_if(
 			queueFamilyProperties.begin(), queueFamilyProperties.end(), [bits](vk::QueueFamilyProperties const& qfp) {
@@ -81,8 +81,6 @@ namespace tEngine {
 			
 	
 			context = std::make_unique<tEngineContext>(vk::su::createInstance("AppName", "tEngine",GetInstanceLayers(),GetInstanceExtensions()), vk::Extent2D(600, 800));
-
-			
 #if !defined( NDEBUG )
 				context->debugUtilsMessenger =
 				context->instance.createDebugUtilsMessengerEXT(vk::su::makeDebugUtilsMessengerCreateInfoEXT());
@@ -100,49 +98,43 @@ namespace tEngine {
 			allocatorInfo.instance = context->instance;
 			VmaAllocator allocator;
 			vmaCreateAllocator(&allocatorInfo, &allocator);
-			context->device =std::make_unique<Device>(vkdevice,allocator);
-			context->device->physicalDevice.SetPhysicalDevice( physicalDevice);
-			auto& device = context->device;
-			device->init_stock_samplers();
-			device->physicalDevice.graphicsQueuefamilyId = pair.first;
-			device->physicalDevice.presentQueuefamilyId = pair.second;
-			auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
-			device->physicalDevice.computeQueuefamilyId = findQueueFamilyIndex(queueFamilyProperties, vk::QueueFlagBits::eCompute);
-			device->physicalDevice.transferQueuefamilyId = findQueueFamilyIndex(queueFamilyProperties, vk::QueueFlagBits::eTransfer);
+			context->device =std::make_unique<Device>(vkdevice, physicalDevice,allocator);
 
-			context->graphicsQueue = device->getQueue(device->physicalDevice.graphicsQueuefamilyId,0);
-			context->computeQueue = device->getQueue(device->physicalDevice.computeQueuefamilyId, 0);
-			context->presentQueue = device->getQueue(device->physicalDevice.presentQueuefamilyId, 0);
-		
-			context->swapChainData = std::make_shared<tSwapChain>(context->device, context->surfaceData.surface, context->surfaceData.extent,
-				vk::ImageUsageFlagBits::eColorAttachment |
-				vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst, vk::SwapchainKHR(), device->physicalDevice.graphicsQueuefamilyId, device->physicalDevice.presentQueuefamilyId);
+			auto& device = context->device;
+			device->initStockSamplers();
+			device->getPhysicalDevice().graphicsQueuefamilyId = pair.first;
+			device->getPhysicalDevice().presentQueuefamilyId = pair.second;
+			auto queueFamilyProperties = physicalDevice.getQueueFamilyProperties();
+			device->getPhysicalDevice().computeQueuefamilyId = findQueueFamilyIndex(queueFamilyProperties, vk::QueueFlagBits::eCompute);
+			device->getPhysicalDevice().transferQueuefamilyId = findQueueFamilyIndex(queueFamilyProperties, vk::QueueFlagBits::eTransfer);
+
+			context->graphicsQueue = device->getQueue(device->getPhysicalDevice().graphicsQueuefamilyId,0);
+			context->computeQueue = device->getQueue(device->getPhysicalDevice().computeQueuefamilyId, 0);
+			context->presentQueue = device->getQueue(device->getPhysicalDevice().presentQueuefamilyId, 0);
+			device->swapChain = createSwapChain(context->device.get(), context->surfaceData.surface, context->surfaceData.extent, vk::ImageUsageFlagBits::eColorAttachment |
+					vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst, vk::SwapchainKHR(), device->getPhysicalDevice().graphicsQueuefamilyId, device->getPhysicalDevice().presentQueuefamilyId);
+
 			context->pipelineCache = device->createPipelineCache(vk::PipelineCacheCreateInfo());
 		}
 		return context.get();
 	}
 	ThreadContext::ThreadContext(const tEngineContext* const context):context(context) {
 		//DescriptorPool
-		descriptorPool = std::make_shared<tDescriptorPool>(context->device);
-		descriptorPool->addDescriptorInfo(vk::DescriptorType::eCombinedImageSampler, 10);
-		descriptorPool->addDescriptorInfo(vk::DescriptorType::eUniformBufferDynamic, 10);
-		descriptorPool->addDescriptorInfo(vk::DescriptorType::eStorageBufferDynamic, 10);
-		descriptorPool->addDescriptorInfo(vk::DescriptorType::eStorageBufferDynamic, 10);
-		descriptorPool->CreatePool();
+		
 		//table = std::make_unique<currentDescriptorTable>(descriptorPool);
 		//CommandPool
 		vk::CommandPoolCreateInfo poolInfo;
-		poolInfo.queueFamilyIndex = context->device->physicalDevice.graphicsQueuefamilyId;
+		poolInfo.queueFamilyIndex = context->device->getPhysicalDevice().graphicsQueuefamilyId;
 		
-		cmdPool = tCommandPool::Create(context->device, context->device->createCommandPool(poolInfo));
+		cmdPool = tCommandPool::Create(context->device.get(), context->device->createCommandPool(poolInfo));
 		//CommandBuffer
 		vk::CommandBufferAllocateInfo cbInfo;
-		cbInfo.commandBufferCount = static_cast<uint32_t>(context->swapChainData->getSwapchainLength());
+		cbInfo.commandBufferCount = static_cast<uint32_t>(context->device->swapChain->getSwapchainLength());
 		cbInfo.commandPool = cmdPool->vkCommandPool;
 		auto& cbs = context->device->allocateCommandBuffers(cbInfo);
 
 		for (const auto& cb : cbs) {
-			cmdBuffers.emplace_back( CommandBuffer::Create(context->device,cb));
+			cmdBuffers.emplace_back( CommandBuffer::Create(context->device.get(),cb));
 		}
 		
 	}

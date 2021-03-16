@@ -34,12 +34,13 @@ namespace tEngine {
 	class tBuffer {
 	public:
 		
-		tBuffer(uniqueDevice device,vk::Buffer buffer,const VmaAllocation& alloc, BufferCreateInfo& bufferInfo):device(device.get()), bufferInfo(bufferInfo),alloc(alloc), vkHandle(buffer){
+		tBuffer(Device* device,vk::Buffer buffer,const VmaAllocation& alloc, BufferCreateInfo& bufferInfo):device(device), bufferInfo(bufferInfo),alloc(alloc), vkHandle(buffer){
 		}
 		~tBuffer() {
 			
 			if (vkHandle) {
-				device->free_allocation(alloc);
+				device->freeAllocation(alloc);
+	
 				device->destroyBuffer(vkHandle);
 				vkHandle = vk::Buffer();
 			}
@@ -58,6 +59,9 @@ namespace tEngine {
 		}
 		const vk::DeviceSize getSize()const {
 			return alloc->GetSize();
+		}
+		void Flush() {
+			vmaFlushAllocation(device->getAllocator(), alloc, 0, bufferInfo.size);
 		}
 	private:
 		vk::Buffer vkHandle;
@@ -149,12 +153,13 @@ namespace tEngine {
 				VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A,
 		};
 	};
-
+	//Must depend on the specifical image, so createde from the image
+	//One image can have different views, tImageView include all views the image have
 	class tImageView {
 	public:
 		
 		
-		tImageView(Device* device,vk::ImageView vkImageView, ImageViewCreateInfo& info) :device(device),view(vkImageView), info(info) {
+		tImageView(Device* device,vk::ImageView default_view, ImageViewCreateInfo& info) :device(device),view(default_view), info(info) {
 		}
 		~tImageView() {
 			if (view) {
@@ -162,6 +167,21 @@ namespace tEngine {
 					device->destroyImageView(view);
 					view = vk::ImageView();
 				
+			}
+			if (depth_view) {
+				device->destroyImageView(depth_view);
+			}
+			if (stencil_view) {
+				device->destroyImageView(stencil_view);
+			}
+			if (unorm_view) {
+				device->destroyImageView(unorm_view);
+			}
+			if (srgb_view) {
+				device->destroyImageView(srgb_view);
+			}
+			for (auto& view : render_target_views) {
+				device->destroyImageView(view);
 			}
 		}
 		VkFormat getFormat() const {
@@ -226,9 +246,9 @@ namespace tEngine {
 			return info.format;
 		}
 
-		const tImage* get_image() const
+		const tImage& get_image() const
 		{
-			return info.image;
+			return *info.image;
 		}
 
 		tImage* get_image()
@@ -242,8 +262,17 @@ namespace tEngine {
 		}
 		// By default, gets a combined view which includes all aspects in the image.
 // This would be used mostly for render targets.
-		const vk::ImageView& getVkHandle()const {
+		const vk::ImageView& getDefaultView()const {
 			return view;
+		}
+		bool operator==(const tImageView& v)const {
+			return v.view == view &&
+				v.render_target_views == render_target_views && depth_view == v.depth_view && stencil_view == v.stencil_view
+				&& srgb_view == v.srgb_view;
+
+		}
+		bool operator!=(const tImageView& v)const {
+			return !(*this == v);
 		}
 	private:
 		vk::ImageView view;
@@ -438,9 +467,18 @@ namespace tEngine {
 		DECLARE_NO_COPY_SEMANTICS(tImage)
 		friend class tImageView;
 		
-	
+		
 		tImage(Device* device, vk::Image image, vk::ImageView default_view, const VmaAllocation& alloc,
-			const ImageCreateInfo& info, vk::ImageViewType view_type) :vkImage(image), device(device), create_info(info), alloc(alloc){
+			const ImageCreateInfo& cinfo,VkImageViewType view_type) :vkImage(image), device(device), create_info(cinfo), alloc(alloc),view(view){
+			ImageViewCreateInfo info;
+			info.image = this;
+			info.view_type = view_type;
+			info.format = create_info.format;
+			info.base_level = 0;
+			info.levels = create_info.levels;
+			info.base_layer = 0;
+			info.layers = create_info.layers;
+			view = std::make_shared<tImageView>(device, default_view,info);
 			
 		}
 		
@@ -450,10 +488,10 @@ namespace tEngine {
 			return view.get();
 		}
 
-		tImageView* get_view()
+		ImageviewHandle get_view()
 		{
 			VK_ASSERT(view);
-			return view.get();
+			return view;
 		}
 
 		VkImage get_image() const
@@ -531,15 +569,16 @@ namespace tEngine {
 			
 			if (vkImage) {
 					device->destroyImage(vkImage);
+					if (alloc != nullptr) {
+						device->getAllocator()->FreeMemory(1, &alloc);
+					}
+				
 					vkImage = vk::Image();
 				
 			}
 
 		}
 		
-		vk::Image& VKHandle() {
-			return vkImage;
-		}
 
 		
 		void _bakeImageAsset(std::shared_ptr<ImageAsset>& asset) {
@@ -557,11 +596,8 @@ namespace tEngine {
 		VkPipelineStageFlags stage_flags = 0;
 		VkAccessFlags access_flags = 0;
 		VkImageLayout swapchain_layout = VK_IMAGE_LAYOUT_UNDEFINED;
-	//	VkSurfaceTransformFlagBitsKHR surface_transform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
 		bool owns_image = true;
 		bool owns_memory_allocation = true;
-	//	vk::ImageLayout imageLayout;
-	//	vk::Extent3D extent3D;
 		Device* device;
 	
 		std::shared_ptr<ImageAsset> asset;
@@ -577,16 +613,15 @@ namespace tEngine {
 	class tSwapChain {
 	public:
 		using SharedPtr = std::shared_ptr<tSwapChain>;
-		tSwapChain(
-			uniqueDevice device,
-			vk::SurfaceKHR const& surface,
-			vk::Extent2D const& extent,
-			vk::ImageUsageFlags        usage,
-			vk::SwapchainKHR const& oldSwapChain,
-			uint32_t                   graphicsFamilyIndex,
-			uint32_t                   presentFamilyIndex);
+		tSwapChain(	Device* device,vk::SwapchainKHR const& surface);
+		void setImages(std::vector<ImageHandle>& images) {
+			imageList = images;
+		}
 		size_t getSwapchainLength() {
 			return imageList.size();
+		}
+		vk::Format getFormat() {
+			imageList[0]->get_format();
 		}
 		~tSwapChain() {
 			if (swapChain) {
@@ -596,7 +631,7 @@ namespace tEngine {
 	private:
 		weakDevice device;
 		vk::SwapchainKHR swapChain;
-		std::vector<ImageviewHandle> imageList;
+		std::vector<ImageHandle> imageList;
 	};
 
 }

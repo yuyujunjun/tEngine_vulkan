@@ -8,7 +8,7 @@ INCLUDE_DIRECTORIES(
     3rdParty/imgui
     3rdParty/imgui/impl
     3rdParty/tinyObjLoader
-    3rdParty/glm
+    3rdParty/glm 
     3rdParty/vulkan/include
     3rdParty/termcolor/
     3rdParty/vma/src
