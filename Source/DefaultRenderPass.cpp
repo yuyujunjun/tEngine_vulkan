@@ -113,9 +113,13 @@ namespace tEngine {
 		auto& handle = std::make_shared<tRenderPass>(device);
 		auto& pass= handle->getPass("Single");
 		pass.addColorOutput("back", (vk::ImageLayout)VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-		pass.setDepth("Depth",(vk::ImageLayout)VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
+		pass.setDepth("depth", vk::ImageLayout::eDepthStencilAttachmentOptimal);
+	//	pass.addColorOutput("debug", (vk::ImageLayout)VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		handle->SetAttachmentDescription("back", StartColorDescription(device->swapChain->getFormat()));
-		handle->SetAttachmentDescription("Depth", SingleDepthDescription((vk::Format)default_depth_stencil_format(device->getPhysicalDevice().physicalDevice)));
+	//	handle->SetAttachmentDescription("debug", StartColorDescription(vk::Format::eR8G8B8A8Srgb));
+		handle->SetAttachmentDescription("depth", StartDepthDescription(vk::Format::eD16Unorm));
+		handle->SetDependencies(SingleDependencies());
+		
 		handle->setupRenderPass();
 		return handle;
 	}

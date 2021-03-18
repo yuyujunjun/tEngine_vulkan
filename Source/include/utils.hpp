@@ -51,38 +51,38 @@ namespace vk
       oneTimeSubmit( commandBuffer, queue, func );
     }
 
-    template <class T>
+    template <class Attribute>
     void copyToDevice( vk::Device const &       device,
                        vk::DeviceMemory const & deviceMemory,
-                       T const *                pData,
+                       Attribute const *                pData,
                        size_t                   count,
-                       vk::DeviceSize           stride = sizeof( T ) )
+                       vk::DeviceSize           stride = sizeof( Attribute ) )
     {
-      assert( sizeof( T ) <= stride );
+      assert( sizeof( Attribute ) <= stride );
       uint8_t * deviceData = static_cast<uint8_t *>( device.mapMemory( deviceMemory, 0, count * stride ) );
-      if ( stride == sizeof( T ) )
+      if ( stride == sizeof( Attribute ) )
       {
-        memcpy( deviceData, pData, count * sizeof( T ) );
+        memcpy( deviceData, pData, count * sizeof( Attribute ) );
       }
       else
       {
         for ( size_t i = 0; i < count; i++ )
         {
-          memcpy( deviceData, &pData[i], sizeof( T ) );
+          memcpy( deviceData, &pData[i], sizeof( Attribute ) );
           deviceData += stride;
         }
       }
       device.unmapMemory( deviceMemory );
     }
 
-    template <class T>
-    void copyToDevice( vk::Device const & device, vk::DeviceMemory const & deviceMemory, T const & data )
+    template <class Attribute>
+    void copyToDevice( vk::Device const & device, vk::DeviceMemory const & deviceMemory, Attribute const & data )
     {
-      copyToDevice<T>( device, deviceMemory, &data, 1 );
+      copyToDevice<Attribute>( device, deviceMemory, &data, 1 );
     }
 
-    template <class T>
-    VULKAN_HPP_INLINE constexpr const T & clamp( const T & v, const T & lo, const T & hi )
+    template <class Attribute>
+    VULKAN_HPP_INLINE constexpr const Attribute & clamp( const Attribute & v, const Attribute & lo, const Attribute & hi )
     {
       return v < lo ? lo : hi < v ? hi : v;
     }

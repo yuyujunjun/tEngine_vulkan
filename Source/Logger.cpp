@@ -1,4 +1,4 @@
-#include"Core.h"
+#include"tDevice.h"
 #include"termcolor/termcolor.hpp"
 namespace tEngine {
 	 std::stringstream Logger::stream;

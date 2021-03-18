@@ -1,23 +1,26 @@
 cmake_minimum_required(VERSION 3.3)
-project(tEngineLib)
+project(Tgine)
 find_package(vulkan REQUIRED FATAL_ERROR)
-
+find_package(glfw3 CONFIG REQUIRED)
+  
 INCLUDE_DIRECTORIES(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR})
 INCLUDE_DIRECTORIES(
 	3rdParty
-    3rdParty/imgui
-    3rdParty/imgui/impl
+ #   3rdParty/imgui
+ #   3rdParty/imgui/impl
     3rdParty/tinyObjLoader
     3rdParty/glm 
     3rdParty/vulkan/include
     3rdParty/termcolor/
     3rdParty/vma/src
     ${VULKAN_INCLUDE_DIRS}
-    Source/include)
+  
+    Source/include
+    Source/)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
-set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT tEngineLib)
+set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Tgine)
 #Engine source
 file(GLOB USER_SRC_PATH ./Source/*.cpp)
 set(SRC_FILES ${USER_SRC_PATH} )
@@ -27,10 +30,10 @@ set(SRC_FILES ${SRC_FILES} ${USER_HEADER_PATH})
 
 
 # Imgui
-file(GLOB USER_SRC_PATH 3rdParty/imgui/*.cpp)
-set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
+#file(GLOB USER_SRC_PATH 3rdParty/imgui/*.cpp)
+#set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
 # Imgui for vulkan
-set(SRC_FILES ${SRC_FILES} "3rdParty/imgui/impl/imgui_impl_vulkan.cpp")
+#set(SRC_FILES ${SRC_FILES} "3rdParty/imgui/impl/imgui_impl_vulkan.cpp")
 
 # file(GLOB_RECURSE USER_SRC_PATH 3rdParty/assimp/code/*.*)
 # set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
@@ -54,13 +57,9 @@ assign_source_group(${SRC_FILES})
 
 add_definitions(-DVULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1)
 add_definitions(-DGLFW_INCLUDE_VULKAN)
-
 add_executable(${PROJECT_NAME} ${SRC_FILES})
 
 option (VK_USE_PLATFORM_ANDROID_KHR "VK_USE_PLATFORM_ANDROID_KHR" ON)
 
-set(tlibrary ${Vulkan_LIBRARIES})
 
-target_link_libraries(${PROJECT_NAME}
-		${tlibrary}
-		)
+target_link_libraries(${PROJECT_NAME} PRIVATE glfw ${Vulkan_LIBRARIES})

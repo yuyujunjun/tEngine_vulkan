@@ -1,11 +1,7 @@
 #pragma once
-#include"Core.h"
+#include"tDevice.h"
 #include"tResource.h"
 namespace tEngine {
-	
-	
-
-	
 	struct MemoryBarrierSet
 	{
 	private:

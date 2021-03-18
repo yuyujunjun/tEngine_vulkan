@@ -581,6 +581,7 @@ namespace vk
 #elif defined( VK_USE_PLATFORM_XLIB_XRANDR_EXT )
       extensions.push_back( VK_EXT_ACQUIRE_XLIB_DISPLAY_EXTENSION_NAME );
 #endif
+   
       return extensions;
     }
 
@@ -636,7 +637,7 @@ namespace vk
       {
         // request several formats, the first found will be used
         vk::Format requestedFormats[] = {
-          vk::Format::eB8G8R8A8Unorm, vk::Format::eR8G8B8A8Unorm, vk::Format::eB8G8R8Unorm, vk::Format::eR8G8B8Unorm
+          vk::Format::eR8G8B8A8Unorm, vk::Format::eB8G8R8A8Unorm, vk::Format::eB8G8R8Unorm, vk::Format::eR8G8B8Unorm
         };
         vk::ColorSpaceKHR requestedColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
         for ( size_t i = 0; i < sizeof( requestedFormats ) / sizeof( requestedFormats[0] ); i++ )

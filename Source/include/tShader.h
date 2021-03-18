@@ -1,5 +1,5 @@
 #pragma once
-#include"Core.h"
+#include"tDevice.h"
 #include"tDescriptorPool.h"
 #include"tPipeline.h"
 #include<unordered_map>
@@ -12,25 +12,10 @@ namespace tEngine {
 		BufferRangeManager(BufferHandle handle, size_t initialOff = 0):handle(handle),initialOff(initialOff),offset(initialOff) {
 
 		}
-		size_t SetRangeIncremental(void* data, size_t size) {
-			std::lock_guard<std::mutex> m(mtx);
-			return SetRangeIncrementalNoLock(data, size);
-		}
-		size_t SetRangeIncrementalNoLock(void* data,size_t size) {
-
-			size_t off = offset;
-			if (off + size >= handle->getSize()) {
-				off = initialOff;
-			}
-			assert(off+size<handle->getSize());
-			memcpy(static_cast<uint8_t*>(handle->getAllocation()->GetMappedData())+off, data, size);
-			offset += size;
-			return off;
-		}
-		void SetBufferOffset(BufferHandle& handl,const size_t off) {
-			initialOff = offset = off;
-			handle = handl;
-		}
+		size_t SetRangeIncremental(void* data, size_t size);
+		//return current offset
+		size_t SetRangeIncrementalNoLock(void* data, size_t size);
+		void SetBufferOffset(BufferHandle& handl, const size_t off);
 		const  BufferHandle& buffer() const{
 			return handle;
 		}
@@ -45,11 +30,11 @@ namespace tEngine {
 	public:
 		friend class tShaderInterface;
 		using SharedPtr = std::shared_ptr<tShader>;
-		static SharedPtr Create(uniqueDevice& device) {
+		static SharedPtr Create(Device* device) {
 			return std::make_shared<tShader>(device);
 		}
 		tShader(Device* device) :device(device) {}
-		void SetShaderModule(const vk::ArrayProxy<const std::string>& fileName, vk::ShaderStageFlags stageFlag);
+		void SetShaderModule(const vk::ArrayProxy<const std::string>& fileName, const vk::ArrayProxy<const vk::ShaderStageFlagBits>& stageFlag);
 		
 		~tShader() {
 			if (shaderModule.size() > 0) {
@@ -71,7 +56,7 @@ namespace tEngine {
 				return VK_PIPELINE_BIND_POINT_COMPUTE;
 			}
 		}
-		tShaderInterface getInterface();
+		std::shared_ptr<tShaderInterface> getInterface();
 		
 		std::vector<vk::ShaderModule> shaderModule;
 		std::vector<vk::ShaderStageFlagBits> shaderStage;
@@ -85,24 +70,26 @@ namespace tEngine {
 	private:
 		void CreateShaderLayout();
 		void CreateUniformBuffers();
-		void AddShaderModule(std::string fileName, vk::ShaderStageFlags stageFlag);
+		void AddShaderModule(std::string fileName, vk::ShaderStageFlagBits stageFlag);
 		bool isCreate = false;
 		std::vector<std::shared_ptr<ShaderAsset>> shaderAsset;
-		std::vector<std::unordered_map<uint32_t, BufferRangeManager>> uniformBuffers;
+	
+		std::vector<std::unordered_map<uint32_t, std::shared_ptr<BufferRangeManager>>> uniformBuffers;
 //		std::shared_ptr<tShaderInterface> interface;
 		Device* device;
 	};
 	class tShaderInterface {
 	public:
 		struct PipelineBinding {
+		
 			ResSetBinding resSetBinding;
-			std::unordered_map<uint32_t, uint32_t> offsets;
+			std::unordered_map<uint32_t, size_t> offsets;
 			std::unordered_map<uint32_t, std::vector<char>>buffer_data;
 			bool isEmpty() {
-				return resSetBinding.getBuffers().size() == 0 && resSetBinding.getImages().size() == 0;
+				return resSetBinding.isEmpty();
 			}
 		};
-		friend class CommandBufferBase_;
+		friend class CommandBuffer;
 		tShaderInterface(const tShader* shader);
 
 		
@@ -115,26 +102,14 @@ namespace tEngine {
 			BindingInfo[group.first].offsets[group.second] = 0;
 		}
 		//Copy value to buffer just before binding descriptorset
-		void uploadUniformBuffer() {
-			for (int set_number = 0; set_number < setCount(); ++set_number) {
-				auto& buffers = const_cast<tShader*>(base_shader)->uniformBuffers[set_number];
-				auto& buffer_data = BindingInfo[set_number].buffer_data;
-				auto& offsets = BindingInfo[set_number].offsets;
-				for (const auto& buf : buffers) {
-					auto& data = buffer_data[buf.first];
-					offsets[buf.first]= buffers.at(buf.first).SetRangeIncremental(data.data(),data.size());
-					buf.second.buffer()->Flush();
-				
-				}
-			}
-		}
+		void uploadUniformBuffer();
 		//只是缓存，仅有拷贝操作
 
 		//fake viewInfo
-		void SetImage(std::string name, ImageviewHandle image, StockSampler sampler=StockSampler::LinearClamp, uint32_t viewInfo=0) {
+		void SetImage(std::string name, ImageHandle image, vk::ImageView vkView = {}, StockSampler sampler = StockSampler::LinearClamp) {
 			assert(BindMap.count(name) != 0);
 			auto group = BindMap[name];
-			BindingInfo[group.first].resSetBinding.SetImage(group.second, image,image->get_unorm_view(),sampler);
+			BindingInfo[group.first].resSetBinding.SetImage(group.second, image, vkView, sampler);
 		}
 		template <typename Attribute>
 		void SetValue(std::string valueName, Attribute value, int RangeId) {
@@ -209,57 +184,11 @@ namespace tEngine {
 
 	};
 	
-	void collectDescriptorSets(std::vector<vk::DescriptorSet>& bindedSets, std::vector<uint32_t>& offsets,
-		const tShaderInterface::PipelineBinding& setBindings, const DescSetAllocHandle& setAllocator) 
-	{
-		if (0 == setBindings.resSetBinding.getBuffers().size() || 0 == setBindings.resSetBinding.getImages().size()) {
-			return;
-		}
-		bindedSets.emplace_back(setAllocator->requestDescriptorSet(setBindings.resSetBinding));
-		for (const auto& bindBufer : setBindings.resSetBinding.getBuffers()) {
-			offsets.emplace_back(setBindings.offsets.at(bindBufer.binding));
-		}
-	}
-	void flushDescriptorSet(const CommandBufferHandle& cb,tShaderInterface& state) {
-		state.uploadUniformBuffer();
-		std::vector<vk::DescriptorSet> bindedSets;
-		std::vector<uint32_t> offsets;
-		uint32_t firstSet = 0;
-		auto bindNow = [&bindedSets,&cb,&offsets,&firstSet,&state]() {
-			if (bindedSets.size() != 0) {
-				cb->bindDescriptorSet(static_cast<vk::PipelineBindPoint>(state.getShader()->getPipelineBindPoint()),
-					state.getShader()->pipelinelayout->getVkHandle(), firstSet, bindedSets, offsets);
-				bindedSets.clear();
-				offsets.clear();
-			}
-		};
-		for (uint32_t i = 0; i < state.setCount(); ++i,++firstSet) {
-			if (state.set_isEmpty(i)) {
-				bindNow();
-			}
-			collectDescriptorSets(bindedSets,offsets,state.getBindings()[i],state.getDescSetAllocator(i));
-		}
-		bindNow();
-	}
-	void flushGraphicsPipeline(const CommandBufferHandle& cb, tShaderInterface& state,tRenderPass* renderPass,uint32_t subpass) {
-		auto createInfo=getDefaultPipelineCreateInfo(&state, renderPass, subpass, renderPass->requestFrameBuffer());
-		cb->bindPipeline(*state.getShader()->pipelinelayout->requestGraphicsPipeline(createInfo));
-		cb->pushConstants(state.getShader()->pipelinelayout->getVkHandle(),(VkShaderStageFlags)state.getShader()->allstageFlags,state.getPushConstantBlock());
-	}
-	void flushComptuePipeline(const CommandBufferHandle& cb, tShaderInterface& state) {
-		ComputePipelineCreateInfo info;
-		info.setShader(state.getShader()->shaderModule[0], state.getShader()->shaderStage[0]);
-		info.setLayout(state.getShader()->pipelinelayout->getVkHandle());
-		cb->bindPipeline(*state.getShader()->pipelinelayout->requestComputePipeline(info));
-		cb->pushConstants(state.getShader()->pipelinelayout->getVkHandle(), (VkShaderStageFlags)state.getShader()->allstageFlags, state.getPushConstantBlock());
-
-	}
-	void flushGraphicsShaderState(tShaderInterface& state,CommandBufferHandle& cb,tRenderPass* renderPass, uint32_t subpass) {
-		flushGraphicsPipeline(cb, state, renderPass, subpass);
-		flushDescriptorSet(cb,state);
-	}
-	void flushComputeShaderState(tShaderInterface& state, CommandBufferHandle& cb) {
-		flushComptuePipeline(cb, state);
-		flushDescriptorSet(cb, state);
-	}
+	void collectDescriptorSets(std::vector<DescriptorSetHandle>& bindedSets, std::vector<uint32_t>& offsets,
+		const tShaderInterface::PipelineBinding& setBindings, const DescSetAllocHandle& setAllocator);
+	void flushDescriptorSet(const CommandBufferHandle& cb, tShaderInterface& state);
+	void flushGraphicsPipeline(const CommandBufferHandle& cb, tShaderInterface& state, tRenderPass* renderPass, uint32_t subpass);
+	void flushComptuePipeline(const CommandBufferHandle& cb, tShaderInterface& state);
+	void flushGraphicsShaderState(tShaderInterface& state, CommandBufferHandle& cb, tRenderPass* renderPass, uint32_t subpass);
+	void flushComputeShaderState(tShaderInterface& state, CommandBufferHandle& cb);
 }

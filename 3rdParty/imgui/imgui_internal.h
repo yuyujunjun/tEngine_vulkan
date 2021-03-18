@@ -347,13 +347,13 @@ static inline double ImPow(double x, double y)  { return pow(x, y); }
 #endif
 // - ImMin/ImMax/ImClamp/ImLerp/ImSwap are used by widgets which support variety of types: signed/unsigned int/long long float/double
 // (Exceptionally using templates here but we could also redefine them for those types)
-template<typename T> static inline T ImMin(T lhs, T rhs)                        { return lhs < rhs ? lhs : rhs; }
-template<typename T> static inline T ImMax(T lhs, T rhs)                        { return lhs >= rhs ? lhs : rhs; }
-template<typename T> static inline T ImClamp(T v, T mn, T mx)                   { return (v < mn) ? mn : (v > mx) ? mx : v; }
-template<typename T> static inline T ImLerp(T a, T b, float t)                  { return (T)(a + (b - a) * t); }
-template<typename T> static inline void ImSwap(T& a, T& b)                      { T tmp = a; a = b; b = tmp; }
-template<typename T> static inline T ImAddClampOverflow(T a, T b, T mn, T mx)   { if (b < 0 && (a < mn - b)) return mn; if (b > 0 && (a > mx - b)) return mx; return a + b; }
-template<typename T> static inline T ImSubClampOverflow(T a, T b, T mn, T mx)   { if (b > 0 && (a < mn + b)) return mn; if (b < 0 && (a > mx + b)) return mx; return a - b; }
+template<typename Attribute> static inline Attribute ImMin(Attribute lhs, Attribute rhs)                        { return lhs < rhs ? lhs : rhs; }
+template<typename Attribute> static inline Attribute ImMax(Attribute lhs, Attribute rhs)                        { return lhs >= rhs ? lhs : rhs; }
+template<typename Attribute> static inline Attribute ImClamp(Attribute v, Attribute mn, Attribute mx)                   { return (v < mn) ? mn : (v > mx) ? mx : v; }
+template<typename Attribute> static inline Attribute ImLerp(Attribute a, Attribute b, float t)                  { return (Attribute)(a + (b - a) * t); }
+template<typename Attribute> static inline void ImSwap(Attribute& a, Attribute& b)                      { Attribute tmp = a; a = b; b = tmp; }
+template<typename Attribute> static inline Attribute ImAddClampOverflow(Attribute a, Attribute b, Attribute mn, Attribute mx)   { if (b < 0 && (a < mn - b)) return mn; if (b > 0 && (a > mx - b)) return mx; return a + b; }
+template<typename Attribute> static inline Attribute ImSubClampOverflow(Attribute a, Attribute b, Attribute mn, Attribute mx)   { if (b > 0 && (a < mn + b)) return mn; if (b < 0 && (a > mx + b)) return mx; return a - b; }
 // - Misc maths helpers
 static inline ImVec2 ImMin(const ImVec2& lhs, const ImVec2& rhs)                { return ImVec2(lhs.x < rhs.x ? lhs.x : rhs.x, lhs.y < rhs.y ? lhs.y : rhs.y); }
 static inline ImVec2 ImMax(const ImVec2& lhs, const ImVec2& rhs)                { return ImVec2(lhs.x >= rhs.x ? lhs.x : rhs.x, lhs.y >= rhs.y ? lhs.y : rhs.y); }
@@ -471,23 +471,23 @@ struct IMGUI_API ImBitVector
 // Basic keyed storage for contiguous instances, slow/amortized insertion, O(1) indexable, O(Log N) queries by ID over a dense/hot vkbuffer,
 // Honor constructor/destructor. Add/remove invalidate all pointers. Indexes have the same lifetime as the associated object.
 typedef int ImPoolIdx;
-template<typename T>
+template<typename Attribute>
 struct IMGUI_API ImPool
 {
-    ImVector<T>     Buf;        // Contiguous mappedMemory
+    ImVector<Attribute>     Buf;        // Contiguous mappedMemory
     ImGuiStorage    Map;        // ID->Index
     ImPoolIdx       FreeIdx;    // Next free idx to use
 
     ImPool()    { FreeIdx = 0; }
     ~ImPool()   { Clear(); }
-    T*          GetByKey(ImGuiID key)               { int idx = Map.GetInt(key, -1); return (idx != -1) ? &Buf[idx] : NULL; }
-    T*          GetByIndex(ImPoolIdx n)             { return &Buf[n]; }
-    ImPoolIdx   GetIndex(const T* p) const          { IM_ASSERT(p >= Buf.Data && p < Buf.Data + Buf.Size); return (ImPoolIdx)(p - Buf.Data); }
-    T*          GetOrAddByKey(ImGuiID key)          { int* p_idx = Map.GetIntRef(key, -1); if (*p_idx != -1) return &Buf[*p_idx]; *p_idx = FreeIdx; return Add(); }
-    bool        Contains(const T* p) const          { return (p >= Buf.Data && p < Buf.Data + Buf.Size); }
+    Attribute*          GetByKey(ImGuiID key)               { int idx = Map.GetInt(key, -1); return (idx != -1) ? &Buf[idx] : NULL; }
+    Attribute*          GetByIndex(ImPoolIdx n)             { return &Buf[n]; }
+    ImPoolIdx   GetIndex(const Attribute* p) const          { IM_ASSERT(p >= Buf.Data && p < Buf.Data + Buf.Size); return (ImPoolIdx)(p - Buf.Data); }
+    Attribute*          GetOrAddByKey(ImGuiID key)          { int* p_idx = Map.GetIntRef(key, -1); if (*p_idx != -1) return &Buf[*p_idx]; *p_idx = FreeIdx; return Add(); }
+    bool        Contains(const Attribute* p) const          { return (p >= Buf.Data && p < Buf.Data + Buf.Size); }
     void        Clear()                             { for (int n = 0; n < Map.Data.Size; n++) { int idx = Map.Data[n].val_i; if (idx != -1) Buf[idx].~T(); } Map.Clear(); Buf.clear(); FreeIdx = 0; }
-    T*          Add()                               { int idx = FreeIdx; if (idx == Buf.Size) { Buf.resize(Buf.Size + 1); FreeIdx++; } else { FreeIdx = *(int*)&Buf[idx]; } IM_PLACEMENT_NEW(&Buf[idx]) T(); return &Buf[idx]; }
-    void        Remove(ImGuiID key, const T* p)     { Remove(key, GetIndex(p)); }
+    Attribute*          Add()                               { int idx = FreeIdx; if (idx == Buf.Size) { Buf.resize(Buf.Size + 1); FreeIdx++; } else { FreeIdx = *(int*)&Buf[idx]; } IM_PLACEMENT_NEW(&Buf[idx]) Attribute(); return &Buf[idx]; }
+    void        Remove(ImGuiID key, const Attribute* p)     { Remove(key, GetIndex(p)); }
     void        Remove(ImGuiID key, ImPoolIdx idx)  { Buf[idx].~T(); *(int*)&Buf[idx] = FreeIdx; FreeIdx = idx; Map.SetInt(key, -1); }
     void        Reserve(int capacity)               { Buf.reserve(capacity); Map.Data.reserve(capacity); }
     int         GetSize() const                     { return Buf.Size; }
@@ -498,7 +498,7 @@ struct IMGUI_API ImPool
 // This is used by Settings to store persistent mappedMemory while reducing allocation count.
 // We store the chunk size first, and align the final size on 4 bytes boundaries (this what the '(X + 3) & ~3' statement is for)
 // The tedious/zealous amount of casting is to avoid -Wcast-align warnings.
-template<typename T>
+template<typename Attribute>
 struct IMGUI_API ImChunkStream
 {
     ImVector<char>  Buf;
@@ -506,13 +506,13 @@ struct IMGUI_API ImChunkStream
     void    clear()                     { Buf.clear(); }
     bool    empty() const               { return Buf.Size == 0; }
     int     size() const                { return Buf.Size; }
-    T*      alloc_chunk(size_t sz)      { size_t HDR_SZ = 4; sz = ((HDR_SZ + sz) + 3u) & ~3u; int off = Buf.Size; Buf.resize(off + (int)sz); ((int*)(void*)(Buf.Data + off))[0] = (int)sz; return (T*)(void*)(Buf.Data + off + (int)HDR_SZ); }
-    T*      begin()                     { size_t HDR_SZ = 4; if (!Buf.Data) return NULL; return (T*)(void*)(Buf.Data + HDR_SZ); }
-    T*      next_chunk(T* p)            { size_t HDR_SZ = 4; IM_ASSERT(p >= begin() && p < end()); p = (T*)(void*)((char*)(void*)p + chunk_size(p)); if (p == (T*)(void*)((char*)end() + HDR_SZ)) return (T*)0; IM_ASSERT(p < end()); return p; }
-    int     chunk_size(const T* p)      { return ((const int*)p)[-1]; }
-    T*      end()                       { return (T*)(void*)(Buf.Data + Buf.Size); }
-    int     offset_from_ptr(const T* p) { IM_ASSERT(p >= begin() && p < end()); const ptrdiff_t off = (const char*)p - Buf.Data; return (int)off; }
-    T*      ptr_from_offset(int off)    { IM_ASSERT(off >= 4 && off < Buf.Size); return (T*)(void*)(Buf.Data + off); }
+    Attribute*      alloc_chunk(size_t sz)      { size_t HDR_SZ = 4; sz = ((HDR_SZ + sz) + 3u) & ~3u; int off = Buf.Size; Buf.resize(off + (int)sz); ((int*)(void*)(Buf.Data + off))[0] = (int)sz; return (Attribute*)(void*)(Buf.Data + off + (int)HDR_SZ); }
+    Attribute*      begin()                     { size_t HDR_SZ = 4; if (!Buf.Data) return NULL; return (Attribute*)(void*)(Buf.Data + HDR_SZ); }
+    Attribute*      next_chunk(Attribute* p)            { size_t HDR_SZ = 4; IM_ASSERT(p >= begin() && p < end()); p = (Attribute*)(void*)((char*)(void*)p + chunk_size(p)); if (p == (Attribute*)(void*)((char*)end() + HDR_SZ)) return (Attribute*)0; IM_ASSERT(p < end()); return p; }
+    int     chunk_size(const Attribute* p)      { return ((const int*)p)[-1]; }
+    Attribute*      end()                       { return (Attribute*)(void*)(Buf.Data + Buf.Size); }
+    int     offset_from_ptr(const Attribute* p) { IM_ASSERT(p >= begin() && p < end()); const ptrdiff_t off = (const char*)p - Buf.Data; return (int)off; }
+    Attribute*      ptr_from_offset(int off)    { IM_ASSERT(off >= 4 && off < Buf.Size); return (Attribute*)(void*)(Buf.Data + off); }
 };
 
 //-----------------------------------------------------------------------------
@@ -1975,10 +1975,10 @@ namespace ImGui
     // Template functions are instantiated in imgui_widgets.cpp for a finite number of types.
     // To use them externally (for custom widget) you may need an "extern template" statement in your code in order to link to existing instances and silence Clang warnings (see #2036).
     // e.g. " extern template IMGUI_API float RoundScalarWithFormatT<float, float>(const char* format, ImGuiDataType data_type, float v); "
-    template<typename T, typename SIGNED_T, typename FLOAT_T>   IMGUI_API bool  DragBehaviorT(ImGuiDataType data_type, T* v, float v_speed, T v_min, T v_max, const char* format, float power, ImGuiDragFlags flags);
-    template<typename T, typename SIGNED_T, typename FLOAT_T>   IMGUI_API bool  SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, T* v, T v_min, T v_max, const char* format, float power, ImGuiSliderFlags flags, ImRect* out_grab_bb);
-    template<typename T, typename FLOAT_T>                      IMGUI_API float SliderCalcRatioFromValueT(ImGuiDataType data_type, T v, T v_min, T v_max, float power, float linear_zero_pos);
-    template<typename T, typename SIGNED_T>                     IMGUI_API T     RoundScalarWithFormatT(const char* format, ImGuiDataType data_type, T v);
+    template<typename Attribute, typename SIGNED_T, typename FLOAT_T>   IMGUI_API bool  DragBehaviorT(ImGuiDataType data_type, Attribute* v, float v_speed, Attribute v_min, Attribute v_max, const char* format, float power, ImGuiDragFlags flags);
+    template<typename Attribute, typename SIGNED_T, typename FLOAT_T>   IMGUI_API bool  SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, Attribute* v, Attribute v_min, Attribute v_max, const char* format, float power, ImGuiSliderFlags flags, ImRect* out_grab_bb);
+    template<typename Attribute, typename FLOAT_T>                      IMGUI_API float SliderCalcRatioFromValueT(ImGuiDataType data_type, Attribute v, Attribute v_min, Attribute v_max, float power, float linear_zero_pos);
+    template<typename Attribute, typename SIGNED_T>                     IMGUI_API Attribute     RoundScalarWithFormatT(const char* format, ImGuiDataType data_type, Attribute v);
 
     // Data type helpers
     IMGUI_API const ImGuiDataTypeInfo*  DataTypeGetInfo(ImGuiDataType data_type);

@@ -20,6 +20,7 @@ namespace tEngine {
 		}
 	};
 	struct Mesh {
+		
 		Mesh(std::vector<Vertex> _vertices, std::vector<uint32_t> _indices) :vertices(_vertices), indices(_indices) {}
 		Mesh() {};
 		size_t VertexBufferSize() {
@@ -122,29 +123,30 @@ namespace tEngine {
 			using namespace std;
 			vector<Vertex>vertices;
 			vector<unsigned int>indices;
-			Vertex temp[6];
+			Vertex temp[4];
 			temp[0].Position = glm::vec3(-1.0f, -1.0f, 0.0f);
 			temp[0].TexCoords = glm::vec2(0, 0);
 			temp[1].Position = glm::vec3(1.0f, -1.0f, 0.0f);
 			temp[1].TexCoords = glm::vec2(1, 0);
 			temp[2].Position = glm::vec3(-1.0f, 1.0f, 0.0f);
 			temp[2].TexCoords = glm::vec2(0, 1);
-			temp[3].Position = glm::vec3(-1.0f, 1.0f, 0.0f);
-			temp[3].TexCoords = glm::vec2(0, 1);
-			temp[4].Position = glm::vec3(1.0f, -1.0f, 0.0f);
-			temp[4].TexCoords = glm::vec2(1, 0);
-			temp[5].Position = glm::vec3(1.0f, 1.0f, 0.0f);
-			temp[5].TexCoords = glm::vec2(1, 1);
-			for (int i = 0; i < 6; i++) {
+			temp[3].Position = glm::vec3(1.0f, 1.0f, 0.0f);
+			temp[3].TexCoords = glm::vec2(1, 1);
+			for (int i = 0; i < 4; i++) {
 				vertices.push_back(temp[i]);
-				indices.push_back(i);
+				
 			}
+			indices = {0,2,1,2,3,1};
 			Mesh mesh(vertices, indices);
 			return mesh;
 		}
 	};
 	
-
+	inline void FlipFace(Mesh& mesh) {
+		for (size_t i = 0; i < mesh.indices.size(); i+=3) {
+			std::reverse(mesh.indices.begin() + i, mesh.indices.begin() + i + 2);
+		}
+	}
 	
 }
 namespace std {

@@ -1,17 +1,18 @@
 #pragma once
-#include"Core.h"
+#include"tDevice.h"
 #include"tDescriptorPool.h"
 #include"../PipelineState.h"
 namespace tEngine {
 	struct GraphicsPipelineCreateInfo {
 		void addShader(VkShaderModule mod, vk::ShaderStageFlagBits flags) {
-			Stages.emplace_back(vk::PipelineShaderStageCreateInfo({}, flags,mod));
+	
+			Stages.emplace_back(vk::PipelineShaderStageCreateInfo( vk::PipelineShaderStageCreateFlags(), flags, mod, "main"));
 		}
 		std::vector<vk::VertexInputBindingDescription> vertexInput;
 		std::vector<vk::VertexInputAttributeDescription> vertexAttribute;
 		struct TopologyState {
-			vk::PrimitiveTopology topolygy;
-			bool primitiveRestartEnable = {};
+			vk::PrimitiveTopology topolygy=vk::PrimitiveTopology::eTriangleList;
+			bool primitiveRestartEnable = false;
 			bool operator==(const TopologyState& state)const { return state.topolygy == this->topolygy && state.primitiveRestartEnable == primitiveRestartEnable; }
 			vk::PipelineInputAssemblyStateCreateInfo getCreateInfo()const {
 				return vk::PipelineInputAssemblyStateCreateInfo({},topolygy,primitiveRestartEnable);
@@ -28,13 +29,13 @@ namespace tEngine {
 		}viewport;
 		struct RasterizationState {
 			
-			bool depthClampEnable=true;
+			bool depthClampEnable=false;
 			bool resterizerDiscardEnable=false;
 			bool depthBiasEnable = false;
 			float depthBiasConstantFactor = {};
 			float depthBiasClamp = {};
 			float depthBiasSlopeFactor = {};
-			float lineWidth = {};
+			float lineWidth = 1;
 			vk::PolygonMode polygonMode = vk::PolygonMode::eFill;
 			vk::CullModeFlags cullMode = vk::CullModeFlagBits::eBack;
 			vk::FrontFace frontFace = vk::FrontFace::eCounterClockwise;
@@ -59,8 +60,8 @@ namespace tEngine {
 			
 			vk::SampleCountFlagBits rasterizationSamples = vk::SampleCountFlagBits::e1;
 			bool sampleShadingEnable = false;
-			float minSampleShading = {};
-			vk::SampleMask SampleMask = {};
+			float minSampleShading = 0;
+			vk::SampleMask SampleMask = 0xffffffff;
 			vk::Bool32 alphaToCoverageEnable = false;
 			vk::Bool32 alphaToOneEnable = false;
 			bool operator==(const MultisampleState& state)const {
@@ -77,15 +78,15 @@ namespace tEngine {
 			}
 		}multisampleState;
 		struct DepthStencilState {
-			bool depthTestEnable = {};
-			bool depthWriteEnable = {};
+			bool depthTestEnable = true;
+			bool depthWriteEnable = true;
 			vk::CompareOp depthCompareOp = vk::CompareOp::eLessOrEqual;
-			vk::Bool32 depthBoundsTestEnable = {};
-			vk::Bool32 stencilTestEnable = {};
+			vk::Bool32 depthBoundsTestEnable = false;
+			vk::Bool32 stencilTestEnable = false;
 			vk::StencilOpState front = {};
 			vk::StencilOpState back = {};
-			float minDepthBounds = {};
-			float maxDepthBounds = {};
+			float minDepthBounds = 0.f;
+			float maxDepthBounds = 1.f;
 			bool operator==(const DepthStencilState& state)const {
 				return depthTestEnable == state.depthTestEnable
 					&& depthWriteEnable == state.depthWriteEnable
@@ -102,8 +103,8 @@ namespace tEngine {
 			}
 		}depthStencilState;
 		struct ColorBlendState {
-			vk::Bool32 logicOpEnable = {};
-			vk::LogicOp logicOp = VULKAN_HPP_NAMESPACE::LogicOp::eClear;
+			vk::Bool32 logicOpEnable = false;
+			vk::LogicOp logicOp = VULKAN_HPP_NAMESPACE::LogicOp::eSet;
 			std::vector<vk::PipelineColorBlendAttachmentState> Attachments = {};
 			vk::ArrayWrapper1D<float, 4> blendConstants = {};
 			bool operator==(const ColorBlendState& state)const {
@@ -124,6 +125,7 @@ namespace tEngine {
 			vk::PipelineDynamicStateCreateInfo getCreateInfo()const {
 				vk::PipelineDynamicStateCreateInfo info;
 				info.setDynamicStates(dynamicStates);
+				return info;
 			}
 
 		}dynamicState;
@@ -147,42 +149,17 @@ namespace tEngine {
 		bool operator!=(const GraphicsPipelineCreateInfo& info)const {
 			return !(info == *this);
 		}
-		vk::Pipeline createPipeline(const Device* device)const {
-			vk::GraphicsPipelineCreateInfo info;
-			info.setLayout(layout);
-			info.setPColorBlendState(&coloBlendState.getCreateInfo());
-			info.setPDepthStencilState(&depthStencilState.getCreateInfo());
-			info.setPDynamicState(&dynamicState.getCreateInfo());
-			vk::PipelineVertexInputStateCreateInfo VertexInputState;
-			VertexInputState.setVertexAttributeDescriptions(vertexAttribute);
-			VertexInputState.setVertexBindingDescriptions(vertexInput);
-			info.setPVertexInputState(&VertexInputState);
-			info.setPInputAssemblyState(&topology.getCreateInfo());
-			info.setPMultisampleState(&multisampleState.getCreateInfo());
-			info.setPRasterizationState(&rasterizationState.getCreateInfo());
-			info.setStages(Stages);
-			vk::PipelineTessellationStateCreateInfo tessellationState;
-			tessellationState.setPatchControlPoints(tessellation.patchControlPoints);
-			info.setPTessellationState(&tessellationState);
-			vk::PipelineViewportStateCreateInfo view;
-			view.setScissors(viewport.scissors);
-			view.setViewports(viewport.viewPorts);
-			info.setPViewportState(&view);
-			info.setRenderPass(renderPass);
-			info.setSubpass(subpass);
-
-			return device->createGraphicsPipeline(device->getPipelineCache(),info);
-		}
+		vk::Pipeline createPipeline(const Device* device)const;
 		vk::PipelineLayout layout = {};
 		vk::RenderPass renderPass = {};
 		uint32_t subpass = {};
-		
-	private:
 		std::vector<vk::PipelineShaderStageCreateInfo> Stages = {};
+	private:
+		
 	};
 	struct ComputePipelineCreateInfo {
 		void setShader(VkShaderModule mod, vk::ShaderStageFlagBits flags) {
-			Stage=(vk::PipelineShaderStageCreateInfo({}, flags, mod));
+			Stage=(vk::PipelineShaderStageCreateInfo(vk::PipelineShaderStageCreateFlags(), flags, mod,"main"));
 		}
 		void setLayout(vk::PipelineLayout layout) {
 			this->layout = layout;
@@ -194,6 +171,15 @@ namespace tEngine {
 		bool operator!=(const ComputePipelineCreateInfo& info)const {
 			return !(info==*this);
 		}
+		vk::Pipeline createPipeline(const Device* device)const {
+			vk::ComputePipelineCreateInfo info;
+			info.setLayout(layout);
+			info.setStage(Stage);
+			auto result = device->createComputePipeline(device->getPipelineCache(), info);
+			assert(result.result == vk::Result::eSuccess);
+			return result.value;
+			
+		}
 	private:
 		vk::PipelineLayout layout = {};
 		vk::PipelineShaderStageCreateInfo Stage;
@@ -201,10 +187,10 @@ namespace tEngine {
 	class tPipeline {
 	public:
 		friend class tPipelineLayout;
-		tPipeline(vk::PipelineBindPoint bindPoint,vk::Pipeline pipeline,tPipelineLayout& layout) :bindPoint(bindPoint), pipelineLayout(layout),vkpipeline(pipeline){}
+		tPipeline(weakDevice device,vk::PipelineBindPoint bindPoint,vk::Pipeline pipeline,tPipelineLayout* layout) :device(device),bindPoint(bindPoint), pipelineLayout(layout),vkpipeline(pipeline){}
 		~tPipeline() {
 			if (vkpipeline) {
-
+			//	assert(false);
 				device->destroyPipeline(vkpipeline);
 
 			}
@@ -215,11 +201,11 @@ namespace tEngine {
 		const vk::PipelineBindPoint& getBindPoint() const{
 			return bindPoint;
 		}
-		const tPipelineLayout& getPipelineLayout()const {
+		const tPipelineLayout* getPipelineLayout()const {
 			return pipelineLayout;
 		}
 	protected:
-		tPipelineLayout& pipelineLayout;
+		tPipelineLayout* pipelineLayout;
 		vk::PipelineBindPoint bindPoint;
 		vk::Pipeline vkpipeline;
 	private:
@@ -234,21 +220,28 @@ namespace tEngine {
 			
 		
 		}
-		tPipeline* requestGraphicsPipeline(const GraphicsPipelineCreateInfo& createInfo) {
+		PipelineHandle requestGraphicsPipeline(const GraphicsPipelineCreateInfo& createInfo) {
 			auto pipeline=graphic_pipelinePool.request(createInfo);
 			if (pipeline == nullptr) {
 				auto vkPipeline = createInfo.createPipeline(device);
-				pipeline=graphic_pipelinePool.allocate(createInfo, vk::PipelineBindPoint::eGraphics,vkPipeline,*this);
+				pipeline=graphic_pipelinePool.allocate(createInfo,device, vk::PipelineBindPoint::eGraphics,vkPipeline,this);
 
 			}
 			return pipeline;
 		}
-		tPipeline* requestComputePipeline(const ComputePipelineCreateInfo& createInfo) {
+		PipelineHandle requestComputePipeline(const ComputePipelineCreateInfo& createInfo) {
+			auto pipeline = compute_pipelinePool.request(createInfo);
+			if (pipeline == nullptr) {
+				auto vkPipeline = createInfo.createPipeline(device);
+				pipeline = compute_pipelinePool.allocate(createInfo,device, vk::PipelineBindPoint::eCompute, vkPipeline, this);
 
+			}
+			return pipeline;
 		}
 		~tPipelineLayout() {
 			if (vkLayout) {
 				device->destroyPipelineLayout(vkLayout);
+		//		assert(false);
 				vkLayout = vk::PipelineLayout();
 			}
 		}
@@ -261,7 +254,8 @@ namespace tEngine {
 		vk::PipelineLayout vkLayout;
 		weakDevice device;
 	};
-	
+	//without shader
+	GraphicsPipelineCreateInfo getDefaultPipelineCreateInfo(tShaderInterface* shader, const tRenderPass* renderPass, uint32_t subpass, const tFrameBuffer* frameBuffer);
 
 	
 }

@@ -20,7 +20,8 @@ namespace tEngine {
 		std::vector<uint32_t> shaderSource;
 		std::string shaderReflection;
 	};
-	struct ImageAsset :public Asset {
+	class ImageAsset :public Asset {
+	public:
 		stbi_uc* pixels;
 		bool enableRandomWrite = false;
 		bool autoGenerateMips = false;

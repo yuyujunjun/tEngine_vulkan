@@ -9,7 +9,7 @@
 #include<string>
 #include<fstream>
 #include<iostream>
-#include"Core.h"
+#include"tDevice.h"
 #include"tDescriptorPool.h"
 //#include "tPSystem.h"
 //#include "Glow.h"

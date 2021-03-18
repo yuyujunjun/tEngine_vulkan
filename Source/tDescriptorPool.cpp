@@ -3,7 +3,6 @@
 #include <iomanip>
 #include <numeric>
 #include"tShader.h"
-#include"tMaterial.h"
 namespace tEngine {
 	//Each element belongs to a set
 	void MergeSet(std::vector<tDescSetsDataWithSetNumber>& setLayoutBinding) {
@@ -65,52 +64,54 @@ namespace tEngine {
 			maxSets += bi.descriptorCount * RingSize;
 		}
 		assert(0 < maxSets);
-		vk::DescriptorPoolCreateInfo info;
+		vk::DescriptorPoolCreateInfo info = {};
+		info.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
 		info.setPoolSizes(poolSize);
 		
 		info.setMaxSets(maxSets);
-		pool= device->createDescriptorPool(info);
-		std::vector<vk::DescriptorSetLayout > descLayouts(minRingSize);
-		size_t idx = 0;
-		for (auto& lay : descLayouts) {
-			lay = layout->getVkHandle();
-		}
-		vk::DescriptorSetAllocateInfo descSetInfo;
-		descSetInfo.setDescriptorPool(pool);
-		descSetInfo.setSetLayouts(descLayouts);
-		auto sets=device->allocateDescriptorSets(descSetInfo);
-		allocatedDescSets = sets;
-		resSetBinding.resize(sets.size());
+		auto vkpool = device->createDescriptorPool(info);
+		pool = std::make_shared<tDescriptorPool>(device,vkpool);
 	}
 
-	vk::DescriptorSet tDescriptorSetAllocator::requestDescriptorSet(const ResSetBinding& rb) {
-		if (rb.getBuffers().size() == 0 && rb.getImages().size() == 0)return vk::DescriptorSet();
+	std::shared_ptr<tDescriptorSet> tDescriptorSetAllocator::requestDescriptorSet(const ResSetBinding& rb) {
+		if (rb.getBuffers().size() == 0 && rb.getImages().size() == 0)return nullptr;
 		auto re=descriptorSetPool.request(rb);
 		if (re != nullptr) {
-			return *re;
+			return re;
 		}
-		vk::DescriptorSetAllocateInfo descSetInfo;
-		descSetInfo.setDescriptorPool(pool);
-		descSetInfo.setSetLayouts(layout->getVkHandle());
-		auto set = device->allocateDescriptorSets(descSetInfo);
-		re = descriptorSetPool.allocate(rb,set.begin());
+		//Only need rebind
+		if (descriptorSetPool.isFull()) {
+			re = descriptorSetPool.moveLastToFront(rb);
+		}
+		else {//Create a new descriptorSet
+			vk::DescriptorSetAllocateInfo descSetInfo;
+			descSetInfo.setDescriptorPool(pool->getVkHandle());
+			descSetInfo.setSetLayouts(layout->getVkHandle());
+			auto set = device->allocateDescriptorSets(descSetInfo);
+			re = descriptorSetPool.allocate(rb, device, pool, set[0],rb);
+		}
+		
+		
+		
 		std::vector<vk::WriteDescriptorSet> write;
-		auto& vkDescSet = *re;
+		//auto& vkDescSet = *re;
 		std::vector< vk::DescriptorBufferInfo> bufferInfo;
 		std::vector<vk::DescriptorImageInfo> imageInfo;
 	//	auto m_binding = descriptorSetPool.getFirstAttribute();
 		for (auto& b : rb.getBuffers()) {
+			if (!b.hasUsed)continue;
 			auto& binding = b.binding;
 			{
 			//	m_binding.getBuffers()[binding] = b;
 				auto& buffer = b.buffer;
 				bufferInfo.emplace_back(buffer->getVkHandle(), 0, buffer->getSize());
-				write.emplace_back(vk::WriteDescriptorSet(vkDescSet, binding, 0, layout->getCreateInfo().bindingAt(binding).descriptorType, nullptr, bufferInfo.back(), {}));
+				write.emplace_back(vk::WriteDescriptorSet(re->getVkHandle(), binding, 0, layout->getCreateInfo().bindingAt(binding).descriptorType, nullptr, bufferInfo.back(), {}));
 			}
 		}
 
 		
 		for (auto& b : rb.getImages()) {
+			if (!b.hasUsed)continue;
 			auto& binding = b.binding;
 			 {
 			//	m_binding.getImages()[binding] = b;
@@ -129,12 +130,49 @@ namespace tEngine {
 				default:
 					throw("Wrong image descriptor Type");
 				}
-				write.emplace_back(vk::WriteDescriptorSet(vkDescSet, binding, 0, type, imageInfo.back(), {}, {}));
+				write.emplace_back(vk::WriteDescriptorSet(re->getVkHandle(), binding, 0, type, imageInfo.back(), {}, {}));
 			}
 		}
 		if (write.size() != 0) {
 			device->updateDescriptorSets(write, {});
 		}
-		return *re;
+		return re;
 	}
+	DescSetAllocHandle tDescriptorSetAllocatorManager::requestSetAllocator(Device* device, const DescriptorLayoutCreateInfo& bindings) {
+		//find first
+		for (size_t i = 0; i < bindingInfoList.size(); ++i) {
+			if (bindings.bindings == bindingInfoList[i].bindings) {
+				if (!allocList[i].expired()) {
+					return allocList[i].lock();
+				}
+			}
+		}
+		std::lock_guard<std::mutex> lock(mtx);
+
+		for (size_t i = 0; i < bindingInfoList.size(); ++i) {
+			if (bindings.bindings == bindingInfoList[i].bindings) {
+				if (!allocList[i].expired()) {
+					return allocList[i].lock();
+				}
+				else {
+					vk::DescriptorSetLayoutCreateInfo info;
+					info.setBindings(bindings.bindings);
+					auto vkLayout = device->createDescriptorSetLayout(info);
+					auto descSetLayout = std::make_shared<tDescriptorSetLayout>(device, vkLayout, bindings);
+					auto alloc = std::make_shared<tDescriptorSetAllocator>(device, descSetLayout);
+					allocList[i] = alloc;
+					return alloc;
+				}
+			}
+		}
+		vk::DescriptorSetLayoutCreateInfo info;
+		info.setBindings(bindings.bindings);
+		auto vkLayout = device->createDescriptorSetLayout(info);
+		auto descSetLayout = std::make_shared<tDescriptorSetLayout>(device, vkLayout, bindings);
+		auto alloc = std::make_shared<tDescriptorSetAllocator>(device, descSetLayout);
+		allocList.push_back(alloc);
+		bindingInfoList.push_back(bindings);
+		return alloc;
+	}
+
 }

@@ -1139,7 +1139,7 @@ bool ImGui::RadioButton(const char* label, bool active)
     return pressed;
 }
 
-// FIXME: This would work nicely if it was a public template, e.g. 'template<T> RadioButton(const char* label, T* v, T v_button)', but I'm not sure how we would expose it..
+// FIXME: This would work nicely if it was a public template, e.g. 'template<Attribute> RadioButton(const char* label, Attribute* v, Attribute v_button)', but I'm not sure how we would expose it..
 bool ImGui::RadioButton(const char* label, int* v, int v_button)
 {
     const bool pressed = RadioButton(label, *v == v_button);
@@ -1899,8 +1899,8 @@ bool ImGui::DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
     return memcmp(&data_backup, p_data, type_info->Size) != 0;
 }
 
-template<typename T>
-static bool ClampBehaviorT(T* v, T v_min, T v_max)
+template<typename Attribute>
+static bool ClampBehaviorT(Attribute* v, Attribute v_min, Attribute v_max)
 {
     if (*v < v_min) { *v = v_min; return true; }
     if (*v > v_max) { *v = v_max; return true; }

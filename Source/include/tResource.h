@@ -1,11 +1,9 @@
 #pragma once
 #include"vulkan/vulkan.h"
 #include"vulkan/vulkan.hpp"
-#include"Core.h"
+#include"tDevice.h"
 #include"tAsset.h"
-#include"tEngineFunctional.h"
-#include"tFormatInterfacce.h"
-
+#include"tTextureFormatLayout.h"
 //Only support SharingMode: Exclusive, which means have to transfer resource when using the different queues
 namespace tEngine {
 	enum class BufferDomain
@@ -23,8 +21,9 @@ namespace tEngine {
 		BUFFER_MISC_ZERO_INITIALIZE_BIT = 1 << 0
 	};
 	using BufferMiscFlags = uint32_t;
-	struct  BufferCreateInfo
+	class  BufferCreateInfo
 	{
+	public:
 		BufferDomain domain = BufferDomain::Device;
 		VkDeviceSize size = 0;
 		VkBufferUsageFlags usage=0;
@@ -34,11 +33,13 @@ namespace tEngine {
 	class tBuffer {
 	public:
 		
-		tBuffer(Device* device,vk::Buffer buffer,const VmaAllocation& alloc, BufferCreateInfo& bufferInfo):device(device), bufferInfo(bufferInfo),alloc(alloc), vkHandle(buffer){
+		tBuffer(const Device* device,vk::Buffer buffer,const VmaAllocation& alloc,const BufferCreateInfo& bufferInfo):device(device), bufferInfo(bufferInfo),alloc(alloc), vkHandle(buffer){
+		
 		}
 		~tBuffer() {
 			
 			if (vkHandle) {
+				
 				device->freeAllocation(alloc);
 	
 				device->destroyBuffer(vkHandle);
@@ -53,25 +54,25 @@ namespace tEngine {
 			return alloc;
 		}
 		const BufferCreateInfo& getCreateInfo()const {
-			bufferInfo.size = alloc->GetSize();
+		//	bufferInfo.size = alloc->GetSize();
 			return bufferInfo;
 			
 		}
-		const vk::DeviceSize getSize()const {
-			return alloc->GetSize();
-		}
-		void Flush() {
-			vmaFlushAllocation(device->getAllocator(), alloc, 0, bufferInfo.size);
-		}
+		void setRange(const void* data, size_t size, size_t offset);
+		const vk::DeviceSize getSize()const;
+		void Flush();
 	private:
 		vk::Buffer vkHandle;
 		weakDevice device;
 		VmaAllocation alloc;
-		BufferCreateInfo& bufferInfo;
+		BufferCreateInfo bufferInfo;
+		vk::MemoryPropertyFlags memoryProperty;
+	
 	};
 
-	struct InitialImageBuffer
+	class InitialImageBuffer
 	{
+	public:
 		BufferHandle buffer;
 		std::vector<vk::BufferImageCopy> blits;
 	};
@@ -82,8 +83,9 @@ namespace tEngine {
 	inline  bool operator != (const BufferHandle& a, const BufferHandle& b) {
 		return !(a->getVkHandle() == b->getVkHandle());
 	}
-	struct SamplerCreateInfo
+	class SamplerCreateInfo
 	{
+	public:
 		VkFilter mag_filter;
 		VkFilter min_filter;
 		VkSamplerMipmapMode mipmap_mode;
@@ -105,7 +107,7 @@ namespace tEngine {
 	public:
 		DECLARE_SHARED(tSampler);
 
-		tSampler(Device* device,vk::Sampler sampler,const SamplerCreateInfo& info):device(device),vksampler(sampler),info(info) {
+		tSampler(const Device* device,vk::Sampler sampler,const SamplerCreateInfo& info):device(device),vksampler(sampler),info(info) {
 		}
 		~tSampler() {
 			if (vksampler) {
@@ -122,7 +124,7 @@ namespace tEngine {
 	private:
 		SamplerCreateInfo info;
 		vk::Sampler vksampler;
-		Device* device;
+		weakDevice device;
 		
 	};
 	
@@ -159,7 +161,7 @@ namespace tEngine {
 	public:
 		
 		
-		tImageView(Device* device,vk::ImageView default_view, ImageViewCreateInfo& info) :device(device),view(default_view), info(info) {
+		tImageView(const Device* device,vk::ImageView default_view, ImageViewCreateInfo& info) :device(device),view(default_view), info(info) {
 		}
 		~tImageView() {
 			if (view) {
@@ -282,14 +284,16 @@ namespace tEngine {
 		VkImageView unorm_view = VK_NULL_HANDLE;
 		VkImageView srgb_view = VK_NULL_HANDLE;
 		ImageViewCreateInfo info;
-		Device* device;
+		weakDevice device;
 	};
 	using ImageviewHandle = std::shared_ptr<tImageView>;
-	bool operator==(const ImageviewHandle& a, const ImageviewHandle& b) {
+	inline bool operator==(const ImageviewHandle& a, const ImageviewHandle& b) {
 		assert(false);
+		return true;
 	}
-	bool operator != (const ImageviewHandle& a, const ImageviewHandle& b) {
+	inline bool operator != (const ImageviewHandle& a, const ImageviewHandle& b) {
 		assert(false);
+		return !(b==a);
 	}
 	//ImageviewHandle CreateImageViewWithImage(uniqueDevice& device, vk::ImageCreateInfo imageInfo, vk::ImageViewCreateInfo viewInfo, vk::MemoryPropertyFlags& memoryProperties);
 	//ImageviewHandle CreateImageViewWithImage(uniqueDevice& device, std::shared_ptr<ImageAsset>& asset, const std::shared_ptr<CommandBuffer>& cb);
@@ -321,8 +325,9 @@ namespace tEngine {
 		IMAGE_MISC_FORCE_NO_DEDICATED_BIT = 1 << 9
 	};
 	using ImageMiscFlags = uint32_t;
-	struct ImageCreateInfo
+	class ImageCreateInfo
 	{
+	public:
 		ImageDomain domain = ImageDomain::Physical;
 		unsigned width = 0;
 		unsigned height = 0;
@@ -342,133 +347,21 @@ namespace tEngine {
 		const VmaAllocation** memory_aliases = nullptr;
 		unsigned num_memory_aliases = 0;
 
-		static ImageCreateInfo immutable_image(const TextureFormatLayout& layout)
-		{
-		
-			ImageCreateInfo info;
-			info.width = layout.get_width();
-			info.height = layout.get_height();
-			info.type = layout.get_image_type();
-			info.depth = layout.get_depth();
-			info.format = layout.get_format();
-			info.layers = layout.get_layers();
-			info.levels = layout.get_levels();
-			info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-			info.initial_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			info.samples = VK_SAMPLE_COUNT_1_BIT;
-			info.domain = ImageDomain::Physical;
-			return info;
-		}
-
-		static ImageCreateInfo immutable_2d_image(unsigned width, unsigned height, VkFormat format, bool mipmapped = false)
-		{
-			ImageCreateInfo info;
-			info.width = width;
-			info.height = height;
-			info.depth = 1;
-			info.levels = mipmapped ? 0u : 1u;
-			info.format = format;
-			info.type = VK_IMAGE_TYPE_2D;
-			info.layers = 1;
-			info.usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-			info.samples = VK_SAMPLE_COUNT_1_BIT;
-			info.flags = 0;
-			info.misc = mipmapped ? unsigned(IMAGE_MISC_GENERATE_MIPS_BIT) : 0u;
-			info.initial_layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			return info;
-		}
-
-		static ImageCreateInfo
-			immutable_3d_image(unsigned width, unsigned height, unsigned depth, VkFormat format, bool mipmapped = false)
-		{
-			ImageCreateInfo info = immutable_2d_image(width, height, format, mipmapped);
-			info.depth = depth;
-			info.type = VK_IMAGE_TYPE_3D;
-			return info;
-		}
-
-		static ImageCreateInfo render_target(unsigned width, unsigned height, VkFormat format)
-		{
-			ImageCreateInfo info;
-			info.width = width;
-			info.height = height;
-			info.depth = 1;
-			info.levels = 1;
-			info.format = format;
-			info.type = VK_IMAGE_TYPE_2D;
-			info.layers = 1;
-			info.usage = (format_has_depth_or_stencil_aspect(format) ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT :
-				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) |
-				VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-
-			info.samples = VK_SAMPLE_COUNT_1_BIT;
-			info.flags = 0;
-			info.misc = 0;
-			info.initial_layout = format_has_depth_or_stencil_aspect(format) ?
-				VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL :
-				VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			return info;
-		}
-
-		static ImageCreateInfo transient_render_target(unsigned width, unsigned height, VkFormat format)
-		{
-			ImageCreateInfo info;
-			info.domain = ImageDomain::Transient;
-			info.width = width;
-			info.height = height;
-			info.depth = 1;
-			info.levels = 1;
-			info.format = format;
-			info.type = VK_IMAGE_TYPE_2D;
-			info.layers = 1;
-			info.usage = (format_has_depth_or_stencil_aspect(format) ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT :
-				VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) |
-				VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
-			info.samples = VK_SAMPLE_COUNT_1_BIT;
-			info.flags = 0;
-			info.misc = 0;
-			info.initial_layout = VK_IMAGE_LAYOUT_UNDEFINED;
-			return info;
-		}
-
-		static uint32_t compute_view_formats(const ImageCreateInfo& info, VkFormat* formats)
-		{
-			if ((info.misc & IMAGE_MISC_MUTABLE_SRGB_BIT) == 0)
-				return 0;
-
-			switch (info.format)
-			{
-			case VK_FORMAT_R8G8B8A8_UNORM:
-			case VK_FORMAT_R8G8B8A8_SRGB:
-				formats[0] = VK_FORMAT_R8G8B8A8_UNORM;
-				formats[1] = VK_FORMAT_R8G8B8A8_SRGB;
-				return 2;
-
-			case VK_FORMAT_B8G8R8A8_UNORM:
-			case VK_FORMAT_B8G8R8A8_SRGB:
-				formats[0] = VK_FORMAT_B8G8R8A8_UNORM;
-				formats[1] = VK_FORMAT_B8G8R8A8_SRGB;
-				return 2;
-
-			case VK_FORMAT_A8B8G8R8_UNORM_PACK32:
-			case VK_FORMAT_A8B8G8R8_SRGB_PACK32:
-				formats[0] = VK_FORMAT_A8B8G8R8_UNORM_PACK32;
-				formats[1] = VK_FORMAT_A8B8G8R8_SRGB_PACK32;
-				return 2;
-
-			default:
-				return 0;
-			}
-		}
+		static ImageCreateInfo immutable_image(const TextureFormatLayout& layout);
+		static ImageCreateInfo immutable_2d_image(unsigned width, unsigned height, VkFormat format, bool mipmapped = false);
+		static ImageCreateInfo immutable_3d_image(unsigned width, unsigned height, unsigned depth, VkFormat format, bool mipmapped = false);
+		static ImageCreateInfo render_target(unsigned width, unsigned height, VkFormat format);
+		static ImageCreateInfo transient_render_target(unsigned width, unsigned height, VkFormat format);
+		static uint32_t compute_view_formats(const ImageCreateInfo& info, VkFormat* formats);
 	};
 
-	struct tImage {
+	class tImage{
 	public:
 		DECLARE_NO_COPY_SEMANTICS(tImage)
 		friend class tImageView;
 		
 		
-		tImage(Device* device, vk::Image image, vk::ImageView default_view, const VmaAllocation& alloc,
+		tImage(const Device* device, vk::Image image, vk::ImageView default_view, const VmaAllocation& alloc,
 			const ImageCreateInfo& cinfo,VkImageViewType view_type) :vkImage(image), device(device), create_info(cinfo), alloc(alloc),view(view){
 			ImageViewCreateInfo info;
 			info.image = this;
@@ -564,17 +457,22 @@ namespace tEngine {
 		{
 			return alloc;
 		}
-
+		void ownsImage(bool own) {
+			owns_image = own;
+		}
 		~tImage() {
-			
+
 			if (vkImage) {
+				if (owns_image) {
 					device->destroyImage(vkImage);
-					if (alloc != nullptr) {
-						device->getAllocator()->FreeMemory(1, &alloc);
-					}
-				
-					vkImage = vk::Image();
-				
+				}
+				if (alloc != nullptr) {
+					device->freeAllocation(alloc);
+
+				}
+
+				vkImage = vk::Image();
+
 			}
 
 		}
@@ -598,7 +496,7 @@ namespace tEngine {
 		VkImageLayout swapchain_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		bool owns_image = true;
 		bool owns_memory_allocation = true;
-		Device* device;
+		weakDevice device;
 	
 		std::shared_ptr<ImageAsset> asset;
 		
@@ -621,12 +519,19 @@ namespace tEngine {
 			return imageList.size();
 		}
 		vk::Format getFormat() {
-			imageList[0]->get_format();
+			return vk::Format(imageList[0]->get_format());
 		}
 		~tSwapChain() {
 			if (swapChain) {
+				
 				device->destroySwapchainKHR(swapChain);
 			}
+		}
+		const vk::SwapchainKHR& getVkHandle()const {
+			return swapChain;
+		}
+		const ImageHandle& getImage(uint32_t imageIdx)const {
+			return imageList[imageIdx];
 		}
 	private:
 		weakDevice device;
@@ -634,4 +539,11 @@ namespace tEngine {
 		std::vector<ImageHandle> imageList;
 	};
 
+
+	SwapChainHandle createSwapChain(Device* device, vk::SurfaceKHR const& surface, vk::Extent2D const& extent, vk::ImageUsageFlags usage, vk::SwapchainKHR const& oldSwapChain, uint32_t graphicsQueueFamilyIndex, uint32_t presentQueueFamilyIndex);
+	void updateBufferUsingStageBuffer(const Device* device, BufferHandle& buffer, CommandBufferHandle& cb, const void* data, size_t size, size_t offset = 0);
+	void fillBufferUsingStageBuffer(const Device* device, BufferHandle& handle, CommandBufferHandle& cb, uint32_t zero, size_t size, size_t offset = 0);
+	void find_memory_type(ImageDomain domain, VmaAllocationCreateInfo& info);
+	void find_memory_type(BufferDomain domain, VmaAllocationCreateInfo& info);
+	VkSamplerCreateInfo fill_vk_sampler_info(const SamplerCreateInfo& sampler_info);
 }
