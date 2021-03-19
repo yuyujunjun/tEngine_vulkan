@@ -2,6 +2,7 @@
 #include"Buffer.h"
 #include"Image.h"
 #include"Device.h"
+#include"Log.h"
 namespace tEngine {
 
 	void tSubpass::addColorOutput(std::string name, vk::ImageLayout layout) {
@@ -25,6 +26,7 @@ namespace tEngine {
 
 		auto result = frameBuffersPool.request(views);
 		if (result == nullptr) {
+			LOGD(LogLevel::Performance, "create frameBuffer");
 			result = frameBuffersPool.allocate(views, device);
 			result->pass = this;
 			result->setupFrameBuffer();

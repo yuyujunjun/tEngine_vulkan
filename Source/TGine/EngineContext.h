@@ -19,70 +19,118 @@
 #include"Shader.h"
 #include"MeshBuffer.h"
 #include"AssetLoadManager.h"
+#include"utils.hpp"
+#include"Queue.h"
+#include<functional>
+#include"Camera.h"
 namespace tEngine {
 
-	inline std::vector<std::string> GetInstanceLayers(bool forceLayers = true)
-	{
-		std::vector<std::string> vulkanLayers;
-	//	std::vector<pvrvk::VulkanLayer> vulkanLayers;
-		if (forceLayers)
-		{
-			// Enable both VK_LAYER_KHRONOS_validation and the deprecated VK_LAYER_LUNARG_standard_validation as the Loader will handle removing duplicate layers
-			vulkanLayers.push_back("VK_LAYER_KHRONOS_validation");
-		//	vulkanLayers.push_back("VK_LAYER_LUNARG_standard_validation");
-		//	vulkanLayers.push_back("VK_LAYER_LUNARG_assistant_layer");
-			vulkanLayers.push_back("VK_LAYER_LUNARG_monitor");
-			
-		}
-	//	layers.setLayers(vulkanLayers);
-		return vulkanLayers;
-	}
-	inline 	std::vector<std::string> GetInstanceExtensions() {
+	
+	void ContextInit();
 
-		if (!glfwInit()) //Initialize GLFW
-		{
-			std::cout << "GLFW not initialized.\n";
-			abort();
-		}
-		if (!glfwVulkanSupported()) //Any Vulkan-related function requires GLFW initialized
-		{
-			std::cout << "Vulkan not supported.\n";
-			abort();
-		}
-		std::vector<std::string> extensions;
+	 std::vector<std::string> GetInstanceLayers(bool forceLayers = true);
+	 	std::vector<std::string> GetInstanceExtensions();
+	 GLFWwindow* createWindow(vk::Extent2D extent, std::string name = "View");
+	 vk::SurfaceKHR createSurface(vk::Instance instance, GLFWwindow* gWindow);
+	 SwapChainHandle createSwapChain(Device* device, vk::SurfaceKHR surface, vk::Extent2D extent, vk::SwapchainKHR oldSwapchain = {});
+	 void updateSwapChain(GLFWwindow* gWindow, VkSurfaceKHR surface, SwapChainHandle& swapChain, Device* device);
+	 vk::Instance createInstance();
 
+	 vk::Device createDevice(vk::Instance instance); 
+	 struct ThreadContext {
+		 ThreadContext(tEngineContext* context);
+		 tEngine::CommandPoolHandle cmdPool;
+		 std::vector<tEngine::CommandBufferHandle> cmdBuffers;
+		 ~ThreadContext() {
+			 for (auto& cb : cmdBuffers) {
 
-#ifdef GLFW_INCLUDE_VULKAN
-		uint32_t glfwExtensionCount = 0;
-		const char** glfwExtensions;
-		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-		for (uint32_t i = 0; i < glfwExtensionCount; i++) {
-			extensions.push_back(glfwExtensions[i]);
-		}
-
-#endif
-		extensions.push_back("VK_EXT_debug_utils");
-
-		return extensions;
-	}
-
+			 }
+		 }
+	 };
 	class tEngineContext {
 	public:
-		//static tEngineContext context;
-		tEngineContext(vk::Extent2D extent);
+		static tEngineContext context;
+		tEngineContext() = default;
+		void Set(vk::Instance instance,GLFWwindow* gWindow,vk::SurfaceKHR surface, vk::Extent2D extent);
 		std::unique_ptr<Device> device;
+		GLFWwindow* gWindow;
+		vk::SurfaceKHR surface;
+		SwapChainHandle swapChain;
+		vk::DebugUtilsMessengerEXT debugUtilsMessenger;
+		CameraManipulator cameraManipulator;
+	
+		std::function<void(uint32_t)> prepareStage;
+		std::function<void(uint32_t, CommandBufferHandle& cb)> loopStage;
+	
+		void Update(const std::function<void(uint32_t)>& f) {
+			prepareStage = f;
+		}
 		
+		void Record(const std::function<void(uint32_t,CommandBufferHandle& cb)>& f) {
+			loopStage = f;
+		}
+		void Loop(ThreadContext* threadContext){
+			SemaphoreHandle acquireSemaphore;
+			SemaphoreHandle presentSemaphore;
+			FenceHandle fence;
+			fence = device->getFenceManager()->requestSingaledFence();
+			acquireSemaphore = device->getSemaphoreManager()->requestSemaphore();
+			presentSemaphore = device->getSemaphoreManager()->requestSemaphore();
+			while (!glfwWindowShouldClose(gWindow)) {
+				uint32_t imageIdx;
+				auto currentBuffer = (VkResult)device->acquireNextImageKHR(swapChain->getVkHandle(), -1, acquireSemaphore->getVkHandle(), {}, &imageIdx);
+				if (currentBuffer == VK_ERROR_OUT_OF_DATE_KHR || currentBuffer == VK_SUBOPTIMAL_KHR) {
+					updateSwapChain(gWindow, surface, swapChain, device.get());
+				}
+				else if (currentBuffer != VK_SUCCESS) {
+					throw std::runtime_error("failed to present swap chain image!");
+				}
+
+				prepareStage(imageIdx);
+				auto& cb = threadContext->cmdBuffers[imageIdx];
+				auto result = device->waitForFences(fence->getVkHandle(), true, -1);
+				device->resetFences(fence->getVkHandle());
+				cb->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
+				cb->begin(vk::CommandBufferUsageFlags());
+				loopStage(imageIdx,cb);
+				cb->end();
+				tSubmitInfo info;
+				info.setCommandBuffers(cb);
+				info.waitSemaphore(acquireSemaphore, vk::PipelineStageFlagBits::eFragmentShader);
+
+				info.signalSemaphore(presentSemaphore);
+
+				device->requestQueue(cb->getQueueFamilyIdx()).submit(info.getSubmitInfo(), fence->getVkHandle());
+
+				auto presentInfo = vk::PresentInfoKHR(presentSemaphore->getVkHandle(), swapChain->getVkHandle(), imageIdx);
+				auto presentResult = (VkResult)device->requestQueue(vk::QueueFlagBits::eGraphics).presentKHR(&presentInfo);
+				if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR) {
+					updateSwapChain(gWindow, surface, swapChain, device.get());
+				}
+				else if (presentResult != VK_SUCCESS) {
+					throw std::runtime_error("failed to present swap chain image!");
+				}
+
+				glfwPollEvents();
+
+			}
+			device->waitForFences(fence->getVkHandle(), true, -1);
+			for (auto& cb : threadContext->cmdBuffers) {
+				cb->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
+			}
+			acquireSemaphore = nullptr;
+			presentSemaphore = nullptr;
+			fence = nullptr;
+		}
+		~tEngineContext() {
+	
+			swapChain.reset();
+			device->clearDeviceObject();
+			device = nullptr;
+		}
+
 	};
 	
-	struct ThreadContext {
-		ThreadContext(Device* device);
-		tEngine::CommandPoolHandle cmdPool;
-		std::vector<tEngine::CommandBufferHandle> cmdBuffers;
-		~ThreadContext() {
-			for (auto& cb : cmdBuffers) {
-				
-			}
-		}
-	};
+	
 	
 }

@@ -15,12 +15,14 @@ namespace tEngine {
 			sampler.reset();
 		}
 		//transientCb.reset();
-		swapChain.reset();
+	//	swapChain.reset();
 		transientPool.reset();
 		destroyPipelineCache(pipelineCache);
 		vmaDestroyAllocator(allocator);
 	}
-	
+	Device::~Device() {
+		this->destroy();
+	}
 
 	
 	
@@ -29,7 +31,7 @@ namespace tEngine {
 		auto queueFamilyProperties = physicalDevice.getPhysicalDevice().getQueueFamilyProperties();
 		return findQueueFamilyIndex(queueFamilyProperties, queueType);
 	}
-	Device::Device(VkDevice device, vk::Instance instance, vk::Extent2D extent):vk::Device(device),instance(instance) {
+	Device::Device(VkDevice device, vk::Instance instance, vk::SurfaceKHR surface):vk::Device(device),instance(instance) {
 
 		//physical Device
 		auto phyDevice = instance.enumeratePhysicalDevices().front();
@@ -42,23 +44,10 @@ namespace tEngine {
 		allocatorInfo.device = device;
 		allocatorInfo.instance = instance;
 		vmaCreateAllocator(&allocatorInfo, &allocator);
-		//window
-		glfwInit();
-		glfwSetErrorCallback([](int error, const char* msg) {
-			std::cerr << "glfw: "
-				<< "(" << error << ") " << msg << std::endl;
-			});
-
-
-		glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-		gWindow = glfwCreateWindow(extent.width, extent.height, "Tgine", nullptr, nullptr);
+	
 
 		//surface
-		VkSurfaceKHR _surface;
-		VkResult err = glfwCreateWindowSurface(static_cast<VkInstance>(instance), gWindow, nullptr, &_surface);
-		if (err != VK_SUCCESS)
-			throw std::runtime_error("Failed to create window!");
-		surface = vk::SurfaceKHR(_surface);
+	
 		
 		
 		
@@ -69,19 +58,18 @@ namespace tEngine {
 		pipelineCache=createPipelineCache(info);
 
 		this->initStockSamplers();
-		auto pair = vk::su::findGraphicsAndPresentQueueFamilyIndex(physicalDevice.getPhysicalDevice(), surface);
-		this->getPhysicalDevice().graphicsQueuefamilyId = pair.first;
-		this->getPhysicalDevice().presentQueuefamilyId = pair.second;
+		auto graph_pres_idx=vk::su::findGraphicsAndPresentQueueFamilyIndex(physicalDevice.getPhysicalDevice(), surface);
+		
 		auto queueFamilyProperties = physicalDevice.getPhysicalDevice().getQueueFamilyProperties();
+		this->getPhysicalDevice().graphicsQueuefamilyId = graph_pres_idx.first;
+		this->getPhysicalDevice().presentQueuefamilyId = graph_pres_idx.second;
 		this->getPhysicalDevice().computeQueuefamilyId = findQueueFamilyIndex(queueFamilyProperties, vk::QueueFlagBits::eCompute);
 		this->getPhysicalDevice().transferQueuefamilyId = findQueueFamilyIndex(queueFamilyProperties, vk::QueueFlagBits::eTransfer);
 
 		this->queues[this->getPhysicalDevice().graphicsQueuefamilyId] = this->getQueue(this->getPhysicalDevice().graphicsQueuefamilyId, 0);
 		this->queues[this->getPhysicalDevice().computeQueuefamilyId] = this->getQueue(this->getPhysicalDevice().computeQueuefamilyId, 0);
 		this->queues[this->getPhysicalDevice().presentQueuefamilyId] = this->getQueue(this->getPhysicalDevice().presentQueuefamilyId, 0);
-		this->swapChain = createSwapChain(this, surface,extent, vk::ImageUsageFlagBits::eColorAttachment |
-			vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst, vk::SwapchainKHR(), this->getPhysicalDevice().graphicsQueuefamilyId, this->getPhysicalDevice().presentQueuefamilyId);
-
+		
 
 
 

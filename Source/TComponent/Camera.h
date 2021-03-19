@@ -50,13 +50,13 @@ namespace tEngine {
         void update();
 
     private:
-        glm::vec3 m_cameraPosition = glm::vec3(10, 10, 10);
+        glm::vec3 m_cameraPosition = glm::vec3(5, 5, 5);
         glm::vec3 m_centerPosition = glm::vec3(0, 0, 0);
         glm::vec3 m_upVector = glm::vec3(0, 1, 0);
         float     m_roll = 0;                      // Rotation around the Z axis in RAD
         glm::mat4 m_matrix = glm::mat4(1);
 
-        glm::u32vec2 m_windowSize = glm::u32vec2(1, 1);
+        glm::u32vec2 m_windowSize = glm::u32vec2(1080, 960);
 
         float       m_speed = 30.0f;
         glm::ivec2  m_mousePosition = glm::ivec2(0, 0);
@@ -72,6 +72,6 @@ namespace tEngine {
         return glm::perspective(fieldOfview, _viewportAspectRatio, nearPlane, farPlane);
     }
   class tShaderInterface;
-    void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material);
+   void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material);
 }
 

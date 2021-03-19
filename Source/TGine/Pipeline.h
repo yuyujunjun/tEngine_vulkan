@@ -28,7 +28,9 @@ namespace tEngine {
 		struct ViewPortState {
 			std::vector<vk::Viewport> viewPorts;
 			std::vector<vk::Rect2D> scissors;
-			bool operator==(const ViewPortState& state)const { return state.viewPorts == viewPorts && state.scissors == scissors; }
+			bool operator==(const ViewPortState& state)const { 
+				return true;
+				return state.viewPorts == viewPorts && state.scissors == scissors; }
 		}viewport;
 		struct RasterizationState {
 			
@@ -134,6 +136,7 @@ namespace tEngine {
 		}dynamicState;
 
 		bool operator==(const GraphicsPipelineCreateInfo& info) const {
+		
 			return info.layout == layout
 				&& info.renderPass == renderPass
 				&& info.subpass == subpass

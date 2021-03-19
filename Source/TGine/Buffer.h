@@ -82,13 +82,14 @@ namespace tEngine {
 		size_t getOffset()const {
 			return offset;
 		}
+		void removeBuffer() { handle = nullptr; }
 	private:
 
 		size_t rangeSize = 0;
 		//std::mutex mtx;
 		size_t initialOff = 0;
 		size_t offset = 0;
-		const BufferHandle handle;
+		BufferHandle handle;
 	};
 
 	

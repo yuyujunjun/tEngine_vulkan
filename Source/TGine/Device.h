@@ -61,7 +61,7 @@ namespace tEngine {
 	class Device :public vk::Device{
 	public:
 		friend class tEngineContext;
-		Device(VkDevice device,  vk::Instance instance,vk::Extent2D extent);
+		Device(VkDevice device,  vk::Instance instance,vk::SurfaceKHR surface);
 
 		void Device::initStockSamplers();
 		void freeAllocation(VmaAllocation allocation)const;
@@ -80,21 +80,19 @@ namespace tEngine {
 		vk::Queue requestQueue(vk::QueueFlagBits flag)const {
 			return queues.at(getQueueId(flag));
 		}
-		GLFWwindow* getWindow() {
-			return gWindow;
-		}
-		SwapChainHandle swapChain;
+	
+		
 		std::unordered_map<uint32_t, vk::Queue> queues;
 		uint32_t getQueueId(vk::QueueFlagBits queueType)const;
 		const std::unique_ptr<FenceManager>& getFenceManager()const { return fenceManager; }
 		const std::unique_ptr<SemaphoreManager>& getSemaphoreManager()const { return semaphoreManager; }
+		~Device();
 		//vk::Device* operator->()const { return const_cast<vk::Device*>( &vkDevice); }
 		//operator vk::Device() { return vkDevice; }
 	private:
 		vk::DebugUtilsMessengerEXT debugUtilsMessenger;
 		vk::Instance instance;
-		GLFWwindow* gWindow;
-		vk::SurfaceKHR surface;
+		
 		std::unique_ptr<FenceManager> fenceManager;
 		std::unique_ptr<SemaphoreManager> semaphoreManager;
 

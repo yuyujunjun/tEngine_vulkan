@@ -38,10 +38,13 @@ namespace tEngine {
 			device->destroySwapchainKHR(swapChain);
 		}
 	}
-	SwapChainHandle createSwapChain(Device* device, vk::SurfaceKHR const& surface, vk::Extent2D const& extent, vk::ImageUsageFlags usage, vk::SwapchainKHR const& oldSwapChain, uint32_t graphicsQueueFamilyIndex, uint32_t presentQueueFamilyIndex) {
+	
+	vk::SwapchainKHR createSwapChain(const vk::Device* device,const vk::PhysicalDevice physicalDevice, 
+		vk::SurfaceKHR const& surface, vk::Extent2D const& extent, vk::ImageUsageFlags usage, vk::SwapchainKHR const& oldSwapChain, 
+		uint32_t graphicsQueueFamilyIndex, uint32_t presentQueueFamilyIndex) {
 		using vk::su::clamp;
-		vk::SurfaceFormatKHR surfaceFormat = vk::su::pickSurfaceFormat(device->getPhysicalDevice().physicalDevice.getSurfaceFormatsKHR(surface));
-		vk::SurfaceCapabilitiesKHR surfaceCapabilities = device->getPhysicalDevice().physicalDevice.getSurfaceCapabilitiesKHR(surface);
+		vk::SurfaceFormatKHR surfaceFormat = vk::su::pickSurfaceFormat(physicalDevice.getSurfaceFormatsKHR(surface));
+		vk::SurfaceCapabilitiesKHR surfaceCapabilities = physicalDevice.getSurfaceCapabilitiesKHR(surface);
 		VkExtent2D                 swapchainExtent;
 		if (surfaceCapabilities.currentExtent.width == std::numeric_limits<uint32_t>::max())
 		{
@@ -68,7 +71,7 @@ namespace tEngine {
 			: (surfaceCapabilities.supportedCompositeAlpha & vk::CompositeAlphaFlagBitsKHR::eInherit)
 			? vk::CompositeAlphaFlagBitsKHR::eInherit
 			: vk::CompositeAlphaFlagBitsKHR::eOpaque;
-		vk::PresentModeKHR presentMode = vk::su::pickPresentMode(device->getPhysicalDevice().physicalDevice.getSurfacePresentModesKHR(surface));
+		vk::PresentModeKHR presentMode = vk::su::pickPresentMode(physicalDevice.getSurfacePresentModesKHR(surface));
 		vk::SwapchainCreateInfoKHR swapChainCreateInfo({},
 			surface,
 			surfaceCapabilities.minImageCount,
@@ -95,12 +98,17 @@ namespace tEngine {
 			swapChainCreateInfo.queueFamilyIndexCount = 2;
 			swapChainCreateInfo.pQueueFamilyIndices = queueFamilyIndices;
 		}
-		auto swapChain = device->createSwapchainKHR(swapChainCreateInfo);
+	
+		return device->createSwapchainKHR(swapChainCreateInfo);
+	
+	}
+
+	SwapChainHandle createSwapChain(Device* device, vk::SurfaceKHR const& surface, vk::Extent2D const& swapchainExtent, vk::ImageUsageFlags usage, vk::SwapchainKHR const& oldSwapChain, uint32_t graphicsQueueFamilyIndex, uint32_t presentQueueFamilyIndex) {
+		auto swapChain= createSwapChain(static_cast<vk::Device*>(device), device->getPhysicalDevice().physicalDevice, surface, swapchainExtent, usage, oldSwapChain, graphicsQueueFamilyIndex, presentQueueFamilyIndex);
 		auto swapchain_images = device->getSwapchainImagesKHR(swapChain);
+		vk::SurfaceFormatKHR surfaceFormat = vk::su::pickSurfaceFormat(device->getPhysicalDevice().physicalDevice.getSurfaceFormatsKHR(surface));
 		ImageCreateInfo info = ImageCreateInfo::render_target(swapchainExtent.width, swapchainExtent.height, (VkFormat)surfaceFormat.format);
 		info.usage = (VkImageUsageFlags)usage;
-
-
 		std::vector<ImageHandle> images;
 		for (auto& image : swapchain_images)
 		{
@@ -130,7 +138,10 @@ namespace tEngine {
 		SwapChainHandle handle = std::make_shared<tSwapChain>(device, swapChain, swapchainExtent);
 
 		handle->setImages(images);
-		return handle;
+			return handle;
 	}
+	void tSwapChain::createDepth(vk::Format format) {
+		depth = (createImage(device, ImageCreateInfo::render_target(getExtent().width, getExtent().height, (VkFormat)format)));
 
+	}
 }

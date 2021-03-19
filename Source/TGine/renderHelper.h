@@ -8,7 +8,9 @@ namespace tEngine {
 	class tShaderInterface;
 	class CommandBuffer;
 	using CommandBufferHandle = std::shared_ptr <CommandBuffer>;
+	class tSwapChain;
+	using SwapChainHandle = std::shared_ptr<tSwapChain>;
 
-	RenderPassHandle getSingleRenderpass(Device* device);
+	RenderPassHandle getSingleRenderpass(Device* device,SwapChainHandle& swapChain);
 
 }
