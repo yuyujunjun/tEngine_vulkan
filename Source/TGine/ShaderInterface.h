@@ -1,5 +1,5 @@
 #pragma once
-#include"tSampler.h"
+#include"Sampler.h"
 namespace tEngine {
 	class tShader;
 	class tDescriptorSetAllocator;

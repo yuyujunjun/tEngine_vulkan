@@ -21,8 +21,8 @@
 #include "Camera.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
-#include"tShader.h"
-#include"tShaderInterface.h"
+#include"Shader.h"
+#include"ShaderInterface.h"
 using namespace tEngine;
 
 static const float MaxVerticalAngle = 85.0f; //must be less than 90 to avoid gimbal lock

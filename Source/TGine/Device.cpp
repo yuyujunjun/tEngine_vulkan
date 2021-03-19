@@ -1,13 +1,13 @@
 
-#include"tDevice.h"
+#include"Device.h"
 #include"CommandBufferBase.h"
-#include"tFenceSemaphore.h"
-#include"tSwapChain.h"
-#include"tBuffer.h"
-#include"tQueue.h"
+#include"FenceSemaphore.h"
+#include"SwapChain.h"
+#include"Buffer.h"
+#include"Queue.h"
 #include"vma/src/vk_mem_alloc.h"
 #include"utils.hpp"
-//#include"tTextureFormatLayout.h"
+//#include"TextureFormatLayout.h"
 namespace tEngine {
 	using namespace std;
 	void Device::clearDeviceObject(){

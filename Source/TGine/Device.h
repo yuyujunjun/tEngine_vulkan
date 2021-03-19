@@ -3,7 +3,7 @@
 #include<unordered_map>
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
-#include"tSampler.h"
+#include"Sampler.h"
 #include"vmaAllocation.h"
 namespace tEngine {
 	class CommandBuffer;

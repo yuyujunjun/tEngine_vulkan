@@ -1,5 +1,5 @@
-#include "tFenceSemaphore.h"
-#include"tDevice.h"
+#include "FenceSemaphore.h"
+#include"Device.h"
 namespace tEngine {
 
 	tFence::~tFence() {

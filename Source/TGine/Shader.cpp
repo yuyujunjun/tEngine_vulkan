@@ -1,14 +1,14 @@
-#include"tShader.h"
+#include"Shader.h"
 #include"Reflector.h"
 #include"CommandBufferBase.h"
-#include"tBuffer.h"
-#include"tImage.h"
-#include"tShaderInterface.h"
-#include"tDescriptorPool.h"
-#include"tPipeline.h"
-#include"tFrameBuffer.h"
-#include"tDevice.h"
-#include"tAssetLoadManager.h"
+#include"Buffer.h"
+#include"Image.h"
+#include"ShaderInterface.h"
+#include"DescriptorPool.h"
+#include"Pipeline.h"
+#include"FrameBuffer.h"
+#include"Device.h"
+#include"AssetLoadManager.h"
 namespace tEngine {
 	uint32_t tShader::setCount()const {
 		uint32_t maxSet = 0;

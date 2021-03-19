@@ -1,4 +1,4 @@
-#include"tQueue.h"
+#include"Queue.h"
 namespace tEngine {
 	uint32_t findQueueFamilyIndex(std::vector<vk::QueueFamilyProperties>const& queueFamilyProperties, vk::QueueFlagBits bits) {
 		std::vector<vk::QueueFamilyProperties>::const_iterator graphicsQueueFamilyProperty = std::find_if(

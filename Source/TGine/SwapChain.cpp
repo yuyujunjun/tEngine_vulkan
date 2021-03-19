@@ -1,9 +1,9 @@
-#include"tSwapChain.h"
-#include"tImage.h"
-#include"tDevice.h"
+#include"SwapChain.h"
+#include"Image.h"
+#include"Device.h"
 #include"utils.hpp"
-#include"tTextureFormatLayout.h"
-#include"tDevice.h"
+#include"TextureFormatLayout.h"
+#include"Device.h"
 namespace tEngine {
 	vk::Format tSwapChain::getFormat() {
 		return vk::Format(imageList[0]->get_format());

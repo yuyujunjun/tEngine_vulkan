@@ -11,8 +11,8 @@
 #include<iostream>
 
 #include<map>
-#include"tGpuBlock.h"
-#include"tDescriptorShared.h"
+#include"GpuBlock.h"
+#include"DescriptorShared.h"
 //#include "tPSystem.h"
 //#include "Glow.h"
 

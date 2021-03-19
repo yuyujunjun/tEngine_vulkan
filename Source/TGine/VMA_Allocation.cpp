@@ -1,6 +1,6 @@
 
 #define VMA_IMPLEMENTATION
-#include"tDevice.h"
+#include"Device.h"
 #include"vmaAllocation.h"
 namespace tEngine {
 	void FreeMemory(VmaAllocator allocator, VmaAllocation allocation) {

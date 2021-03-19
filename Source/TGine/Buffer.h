@@ -2,7 +2,7 @@
 #include"vulkan/vulkan.hpp"
 #include"vmaAllocation.h"
 #include<memory>
-#include"tGpuBlock.h"
+#include"GpuBlock.h"
 //Only support SharingMode: Exclusive, which means have to transfer resource when using the different queues
 namespace tEngine {
 	class Device;

@@ -1,6 +1,6 @@
 #pragma once
 #include"SimpleGeometry.h"
-#include"tBuffer.h"
+#include"Buffer.h"
 namespace tEngine {
 	class CommandBuffer;
 	using CommandBufferHandle = std::shared_ptr <CommandBuffer>;

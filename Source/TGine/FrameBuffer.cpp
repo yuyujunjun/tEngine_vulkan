@@ -1,7 +1,7 @@
-#include"tFrameBuffer.h"
-#include"tBuffer.h"
-#include"tImage.h"
-#include"tDevice.h"
+#include"FrameBuffer.h"
+#include"Buffer.h"
+#include"Image.h"
+#include"Device.h"
 namespace tEngine {
 
 	void tSubpass::addColorOutput(std::string name, vk::ImageLayout layout) {

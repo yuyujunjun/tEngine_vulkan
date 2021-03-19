@@ -1,11 +1,11 @@
-#include"tPipeline.h"
-#include"tFrameBuffer.h"
-#include"tShader.h"
-#include"tShaderInterface.h"
+#include"Pipeline.h"
+#include"FrameBuffer.h"
+#include"Shader.h"
+#include"ShaderInterface.h"
 #include"SimpleGeometry.h"
-#include"tDevice.h"
-#include"tLog.h"
-#include"tDescriptorPool.h"
+#include"Device.h"
+#include"Log.h"
+#include"DescriptorPool.h"
 namespace tEngine {
 	GraphicsPipelineCreateInfo getDefaultPipelineCreateInfo(tShaderInterface* shader, const tRenderPass* renderPass, uint32_t subpass, const tFrameBuffer* frameBuffer) {
 		// Shader

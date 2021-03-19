@@ -2,8 +2,8 @@
 #include"vulkan/vulkan.h"
 #include<vulkan/vulkan.hpp>
 #include<unordered_map>
-#include"tSampler.h"
-#include"tGpuBlock.h"
+#include"Sampler.h"
+#include"GpuBlock.h"
 namespace tEngine {
 	class tBuffer;
 	using BufferHandle = std::shared_ptr<tBuffer>;

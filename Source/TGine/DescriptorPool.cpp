@@ -1,14 +1,14 @@
-#include"tDescriptorPool.h"
+#include"DescriptorPool.h"
 #include<unordered_map>
 #include <iomanip>
 #include <numeric>
-#include"tGpuBlock.h"
-#include"tLog.h"
-#include"tBuffer.h"
-#include"tSampler.h"
-#include"tImage.h"
-#include"tDevice.h"
-#include"tGpuBlock.h"
+#include"GpuBlock.h"
+#include"Log.h"
+#include"Buffer.h"
+#include"Sampler.h"
+#include"Image.h"
+#include"Device.h"
+#include"GpuBlock.h"
 namespace tEngine {
 	tDescriptorSetAllocatorManager tDescriptorSetAllocatorManager::manager;
 	//Each element belongs to a set

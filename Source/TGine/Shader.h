@@ -2,8 +2,8 @@
 #include"vulkan/vulkan.h"
 #include<vulkan/vulkan.hpp>
 #include<unordered_map>
-#include"tDescriptorShared.h"
-#include"tGpuBlock.h"
+#include"DescriptorShared.h"
+#include"GpuBlock.h"
 
 namespace tEngine {
 	class Device;

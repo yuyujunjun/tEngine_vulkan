@@ -1,4 +1,4 @@
-#include"tTextureFormatLayout.h"
+#include"TextureFormatLayout.h"
 #include<vector>
 #include<algorithm>
 #include<assert.h>

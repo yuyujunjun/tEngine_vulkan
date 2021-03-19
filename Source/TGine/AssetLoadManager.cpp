@@ -1,4 +1,4 @@
-#include"tAssetLoadManager.h"
+#include"AssetLoadManager.h"
 #ifndef STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_IMPLEMENTATION
 
@@ -8,7 +8,7 @@
 #endif
 #include"stb_image/stb_image.h"
 #include"tiny_obj_loader.h"
-#include"tLog.h"
+#include"Log.h"
 namespace tEngine {
 	ResourceLoadManager ResourceLoadManager::manager;
 	std::vector<uint32_t> read_binary_file(const std::string& filename, const uint32_t count)

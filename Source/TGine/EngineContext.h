@@ -7,18 +7,18 @@
 
 #include<unordered_map>
 #include"EgTypes.h"
-#include"tDevice.h"
-#include"tSwapChain.h"
-#include"tBuffer.h"
-#include"tImage.h"
-#include"tSampler.h"
+#include"Device.h"
+#include"SwapChain.h"
+#include"Buffer.h"
+#include"Image.h"
+#include"Sampler.h"
 #include"renderHelper.h"
-#include"tFenceSemaphore.h"
-#include"tFrameBuffer.h"
-#include"tShaderInterface.h"
-#include"tShader.h"
+#include"FenceSemaphore.h"
+#include"FrameBuffer.h"
+#include"ShaderInterface.h"
+#include"Shader.h"
 #include"MeshBuffer.h"
-#include"tAssetLoadManager.h"
+#include"AssetLoadManager.h"
 namespace tEngine {
 
 	inline std::vector<std::string> GetInstanceLayers(bool forceLayers = true)
