@@ -9,10 +9,10 @@
 #include<string>
 #include<fstream>
 #include<iostream>
-#include"tGine.h"
 
-#include"tDescriptorShared.h"
 #include<map>
+#include"tGpuBlock.h"
+#include"tDescriptorShared.h"
 //#include "tPSystem.h"
 //#include "Glow.h"
 

@@ -6,18 +6,21 @@
 #include<GLFW/glfw3.h>
 
 #include<unordered_map>
-#include"tAssetLoadManager.h"
-#include"CommandBufferBase.h"
+#include"EgTypes.h"
+#include"tDevice.h"
+#include"tSwapChain.h"
+#include"tBuffer.h"
+#include"tImage.h"
+#include"tSampler.h"
+#include"renderHelper.h"
+#include"tFenceSemaphore.h"
+#include"tFrameBuffer.h"
+#include"tShaderInterface.h"
 #include"tShader.h"
 #include"MeshBuffer.h"
-#include"CTPL/ctpl_stl.h"
-#include"GLFW/glfw3.h"
-#include"tDevice.h"
-#include"renderHelper.h"
-#include"tFrameBuffer.h"
-#include"tFenceSemaphore.h"
-#include"tSwapChain.h"
+#include"tAssetLoadManager.h"
 namespace tEngine {
+
 	inline std::vector<std::string> GetInstanceLayers(bool forceLayers = true)
 	{
 		std::vector<std::string> vulkanLayers;
@@ -67,7 +70,7 @@ namespace tEngine {
 	public:
 		//static tEngineContext context;
 		tEngineContext(vk::Extent2D extent);
-		uniqueDevice device;
+		std::unique_ptr<Device> device;
 		
 	};
 	

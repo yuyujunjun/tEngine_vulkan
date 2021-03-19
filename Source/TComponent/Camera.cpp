@@ -21,6 +21,8 @@
 #include "Camera.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
+#include"tShader.h"
+#include"tShaderInterface.h"
 using namespace tEngine;
 
 static const float MaxVerticalAngle = 85.0f; //must be less than 90 to avoid gimbal lock
@@ -422,5 +424,13 @@ void CameraManipulator::update()
     {
         glm::mat4 rot = glm::rotate(m_roll, glm::vec3(0, 0, 1));
         m_matrix = m_matrix * rot;
+    }
+}
+namespace tEngine {
+      void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material) {
+        material->SetValue(ShaderString(SV::_MATRIX_V), view);
+        material->SetValue(ShaderString(SV::_MATRIX_P), projection);
+        material->SetValue(ShaderString(SV::_MATRIX_VP), projection * view);
+        material->SetValue(ShaderString(SV::_INV_MATRIX_VP), glm::inverse(projection * view));
     }
 }

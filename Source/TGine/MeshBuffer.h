@@ -1,8 +1,9 @@
 #pragma once
-#include"Tgine.h"
 #include"SimpleGeometry.h"
-#include"tResource.h"
+#include"tBuffer.h"
 namespace tEngine {
+	class CommandBuffer;
+	using CommandBufferHandle = std::shared_ptr <CommandBuffer>;
 	class MeshBuffer
 	{
 	public:
@@ -18,24 +19,8 @@ namespace tEngine {
 			createVertexBuffer(device,cb,domain);
 			createIdxBuffer(device,cb,domain);
 		}
-		void createVertexBuffer(Device* device, CommandBufferHandle& cb, BufferDomain domain = BufferDomain::Device) {
-			assert(mesh.vertices.size() > 0);
-			if (VBO && VBO->getSize() > mesh.vertices.size() * sizeof(Vertex)) { return; }
-			BufferCreateInfo info;
-			info.domain = domain;
-			info.size = mesh.vertices.size() * sizeof(Vertex);
-			info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-			VBO = createBuffer(device,info, mesh.vertices.data(), cb);
-		}
-		void createIdxBuffer(Device* device, CommandBufferHandle& cb, BufferDomain domain = BufferDomain::Device) {
-			if (mesh.indices.size() == 0)return;
-			if (IBO && IBO->getSize() >= mesh.indices.size() * sizeof(uint32_t)) { return; }
-			BufferCreateInfo info;
-			info.domain = domain;
-			info.size = mesh.indices.size() * sizeof(uint32_t);
-			info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
-			IBO = createBuffer(device,info, mesh.indices.data(), cb);
-		}
+		void createVertexBuffer(Device* device, CommandBufferHandle& cb, BufferDomain domain = BufferDomain::Device);
+		void createIdxBuffer(Device* device, CommandBufferHandle& cb, BufferDomain domain = BufferDomain::Device);
 		void uploadVertexBuffer(Device* device, CommandBufferHandle& cb) {
 			updateBufferUsingStageBuffer(device, VBO, cb, mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
 			

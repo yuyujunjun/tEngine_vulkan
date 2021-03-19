@@ -1,12 +1,19 @@
 #pragma once
-#include"Tgine.h"
-#include"PriorityAllocator.h"
-#include<unordered_map>
-#include"utils.hpp"
-#define VULKAN_DEBUG DEBUG
-namespace tEngine {
-	
 
+#include<unordered_map>
+#define GLFW_INCLUDE_NONE
+#include <GLFW/glfw3.h>
+#include"tSampler.h"
+#include"vmaAllocation.h"
+namespace tEngine {
+	class CommandBuffer;
+	using CommandBufferHandle = std::shared_ptr <CommandBuffer>;
+	class tCommandPool;
+	using CommandPoolHandle = std::shared_ptr<tCommandPool>;
+	class tSwapChain;
+	using SwapChainHandle = std::shared_ptr<tSwapChain>;
+	class SemaphoreManager;
+	class FenceManager;
 	class tPhysicalDevice {
 	public:
 		tPhysicalDevice() {};
@@ -97,7 +104,7 @@ namespace tEngine {
 		CommandPoolHandle transientPool;
 		std::array<SamplerHandle, static_cast<unsigned>(StockSampler::Count)> samplers;
 	};
-	using weakDevice = const Device*;
+	//using const Device* = const Device*;
 	using uniqueDevice = std::unique_ptr<Device>;
 	
 

@@ -1,6 +1,11 @@
 #include"tPipeline.h"
 #include"tFrameBuffer.h"
 #include"tShader.h"
+#include"tShaderInterface.h"
+#include"SimpleGeometry.h"
+#include"tDevice.h"
+#include"tLog.h"
+#include"tDescriptorPool.h"
 namespace tEngine {
 	GraphicsPipelineCreateInfo getDefaultPipelineCreateInfo(tShaderInterface* shader, const tRenderPass* renderPass, uint32_t subpass, const tFrameBuffer* frameBuffer) {
 		// Shader
@@ -60,6 +65,103 @@ namespace tEngine {
 
 		return createInfo;
 
+	}
+	vk::Pipeline GraphicsPipelineCreateInfo::createPipeline(const Device* device)const {
+		vk::GraphicsPipelineCreateInfo info = {};
+
+		info.setLayout(layout);
+		auto cbs = coloBlendState.getCreateInfo();
+		info.setPColorBlendState(&cbs);
+		auto dss = depthStencilState.getCreateInfo();
+		info.setPDepthStencilState(&dss);
+		auto ds = dynamicState.getCreateInfo();
+		info.setPDynamicState(&ds);
+		vk::PipelineVertexInputStateCreateInfo VertexInputState;
+		VertexInputState.setVertexAttributeDescriptions(vertexAttribute);
+		VertexInputState.setVertexBindingDescriptions(vertexInput);
+		info.setPVertexInputState(&VertexInputState);
+		auto t = topology.getCreateInfo();
+		info.setPInputAssemblyState(&t);
+		auto multisample = multisampleState.getCreateInfo();
+		info.setPMultisampleState(&multisample);
+		auto rasterization = rasterizationState.getCreateInfo();
+		info.setPRasterizationState(&rasterization);
+		info.setStages(Stages);
+		vk::PipelineTessellationStateCreateInfo tessellationState;
+		tessellationState.setPatchControlPoints(tessellation.patchControlPoints);
+		info.setPTessellationState(&tessellationState);
+		vk::PipelineViewportStateCreateInfo view;
+		view.setScissors(viewport.scissors);
+		view.setViewports(viewport.viewPorts);
+		info.setPViewportState(&view);
+		info.setRenderPass(renderPass);
+		info.setSubpass(subpass);
+		info.setBasePipelineIndex(-1);
+		auto result = device->createGraphicsPipeline(device->getPipelineCache(), info);
+		assert(result.result == vk::Result::eSuccess);
+		return result.value;
+	}
+	vk::Pipeline ComputePipelineCreateInfo::createPipeline(const Device* device)const {
+		vk::ComputePipelineCreateInfo info = {};
+		info.setLayout(layout);
+		info.setStage(Stage);
+		auto result = device->createComputePipeline(device->getPipelineCache(), info);
+		assert(result.result == vk::Result::eSuccess);
+		return result.value;
+
+	}
+	tPipeline::~tPipeline() {
+		if (vkpipeline) {
+			//	assert(false);
+			device->destroyPipeline(vkpipeline);
+
+		}
+	}
+	tPipelineLayout::~tPipelineLayout() {
+		if (vkLayout) {
+			device->destroyPipelineLayout(vkLayout);
+			//		assert(false);
+			vkLayout = vk::PipelineLayout();
+		}
+	}
+	PipelineHandle tPipelineLayout::requestGraphicsPipeline(const GraphicsPipelineCreateInfo& createInfo) {
+		auto pipeline = graphic_pipelinePool.request(createInfo);
+		if (pipeline == nullptr) {
+			LOGD(LogLevel::Performance, "createPipeline");
+			auto vkPipeline = createInfo.createPipeline(device);
+			pipeline = graphic_pipelinePool.allocate(createInfo, device, vk::PipelineBindPoint::eGraphics, vkPipeline, this);
+
+		}
+		return pipeline;
+	}
+	PipelineHandle tPipelineLayout::requestComputePipeline(const ComputePipelineCreateInfo& createInfo) {
+		auto pipeline = compute_pipelinePool.request(createInfo);
+		if (pipeline == nullptr) {
+			auto vkPipeline = createInfo.createPipeline(device);
+			pipeline = compute_pipelinePool.allocate(createInfo, device, vk::PipelineBindPoint::eCompute, vkPipeline, this);
+
+		}
+		return pipeline;
+	}
+	PipelineLayoutHandle createPipelineLayout(const Device* device, std::vector<DescriptorSetLayoutHandle>& descLayouts, GpuBlockBuffer& pushConstant, vk::ShaderStageFlags shaderStage) {
+		vk::PipelineLayoutCreateInfo  info = {};
+
+		std::vector<vk::PushConstantRange> ranges(pushConstant.size());
+
+		for (int idx = 0; idx < ranges.size(); ++idx) {
+			auto& pus = pushConstant[idx];
+			ranges[idx].setOffset(pus.offset);
+			ranges[idx].setSize(pus.size);
+			ranges[idx].setStageFlags(shaderStage);
+		}
+		info.setPushConstantRanges(ranges);
+		std::vector<vk::DescriptorSetLayout> layouts(descLayouts.size());
+		for (int i = 0; i < layouts.size(); ++i) {
+			layouts[i] = descLayouts[i]->getVkHandle();
+		}
+		info.setSetLayouts(layouts);
+		auto vklayout = device->createPipelineLayout(info);
+		return std::make_shared<tPipelineLayout>(device, vklayout);
 	}
 
 }

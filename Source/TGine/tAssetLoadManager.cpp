@@ -8,7 +8,6 @@
 #endif
 #include"stb_image/stb_image.h"
 #include"tiny_obj_loader.h"
-#include"tGine.h"
 #include"tLog.h"
 namespace tEngine {
 	ResourceLoadManager ResourceLoadManager::manager;

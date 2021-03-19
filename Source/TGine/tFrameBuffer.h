@@ -1,43 +1,22 @@
 #pragma once
-#include"Tgine.h"
-#include"PriorityAllocator.h"
+#include"RingPool.h"
+#include<assert.h>
 #include<unordered_set>
 #include<unordered_map>
+#include<vulkan/vulkan.hpp>
 namespace tEngine {
-
-
-
-	enum SizeClass
-	{
-		Absolute,
-		SwapchainRelative,
-		InputRelative
-	};
+	class Device;
+	
+	class CommandBuffer;
+	using CommandBufferHandle = std::shared_ptr <CommandBuffer>;
+	class tImage;
+	using ImageHandle = std::shared_ptr<tImage>;// ::SharedPtr;
 
 	struct AttachmentInfo
 	{
 		uint32_t idx=0;
 		vk::AttachmentDescription description;
 		vk::ClearValue value;
-	};
-
-	struct BufferInfo
-	{
-		VkDeviceSize size = 0;
-		VkBufferUsageFlags usage = 0;
-		bool persistent = true;
-
-		bool operator==(const BufferInfo& other) const
-		{
-			return size == other.size &&
-				usage == other.usage &&
-				persistent == other.persistent;
-		}
-
-		bool operator!=(const BufferInfo& other) const
-		{
-			return !(*this == other);
-		}
 	};
 
 
@@ -84,6 +63,7 @@ namespace tEngine {
 	};
 
 	class tFrameBuffer;
+	using FrameBufferHandle = std::shared_ptr<tFrameBuffer>;
 	std::vector<vk::SubpassDependency> SingleDependencies();
 	std::vector<vk::SubpassDependency> WriteBeforeShaderReadDependencies();
 	class tRenderPass {
@@ -186,7 +166,7 @@ namespace tEngine {
 	private:
 
 		vk::RenderPass vkRenderPass;
-		weakDevice device;
+		const Device* device;
 		std::vector<vk::SubpassDependency> dependencies;
 		std::vector<std::unique_ptr<tSubpass>> passes;
 		std::vector<AttachmentInfo> resource;
@@ -203,12 +183,13 @@ namespace tEngine {
 		std::vector<std::function<void(CommandBufferHandle&, tRenderPass*, uint32_t subpass)>> renderFunction;
 		//bool imageViewDirty = false;
 	};
+	using RenderPassHandle = std::shared_ptr<tRenderPass>;
 	class tFrameBuffer {
 
 	public:
 		friend class tRenderPass;
 		using SharedPtr = std::shared_ptr<tFrameBuffer>;
-		tFrameBuffer(weakDevice device) :device(device) {
+		tFrameBuffer(const Device* device) :device(device) {
 
 		}
 		~tFrameBuffer();
@@ -228,7 +209,7 @@ namespace tEngine {
 		uint32_t width = (uint32_t)-1;
 		uint32_t height = (uint32_t)-1;
 		tRenderPass* pass=nullptr;
-		weakDevice device;
+		const Device* device;
 	};
 	
 }

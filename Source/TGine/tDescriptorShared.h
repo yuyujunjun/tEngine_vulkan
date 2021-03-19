@@ -1,7 +1,19 @@
 #pragma once
-#include"Tgine.h"
+#include"vulkan/vulkan.h"
+#include<vulkan/vulkan.hpp>
 #include<unordered_map>
+#include"tSampler.h"
+#include"tGpuBlock.h"
 namespace tEngine {
+	class tBuffer;
+	using BufferHandle = std::shared_ptr<tBuffer>;
+	class tImage;
+	using ImageHandle = std::shared_ptr<tImage>;// ::SharedPtr;
+	class tSampler;
+	using SamplerHandle = std::shared_ptr<tSampler>;
+	class tImageView;
+	using ImageviewHandle = std::shared_ptr<tImageView>;
+
 	class DescriptorLayoutCreateInfo {
 	public:
 

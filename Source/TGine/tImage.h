@@ -1,8 +1,13 @@
 #pragma once
-#include"tAsset.h"
-#include"Tgine.h"
-//Only support SharingMode: Exclusive, which means have to transfer resource when using the different queues
+#include"vulkan/vulkan.hpp"
+#include<memory>
+#include"vmaAllocation.h"
 namespace tEngine {
+	class ImageAsset;
+	class tImage;
+	class tBuffer;
+	using BufferHandle = std::shared_ptr<tBuffer>;
+	class Device;
 
 	enum ImageViewMiscFlagBits
 	{
@@ -23,155 +28,15 @@ namespace tEngine {
 				VK_COMPONENT_SWIZZLE_R, VK_COMPONENT_SWIZZLE_G, VK_COMPONENT_SWIZZLE_B, VK_COMPONENT_SWIZZLE_A,
 		};
 	};
-	class SamplerCreateInfo
-	{
-	public:
-		VkFilter mag_filter;
-		VkFilter min_filter;
-		VkSamplerMipmapMode mipmap_mode;
-		VkSamplerAddressMode address_mode_u;
-		VkSamplerAddressMode address_mode_v;
-		VkSamplerAddressMode address_mode_w;
-		float mip_lod_bias;
-		VkBool32 anisotropy_enable;
-		float max_anisotropy;
-		VkBool32 compare_enable;
-		VkCompareOp compare_op;
-		float min_lod;
-		float max_lod;
-		VkBorderColor border_color;
-		VkBool32 unnormalized_coordinates;
-	};
-	enum class BufferDomain
-	{
-		Device, // Device local. Probably not visible from CPU.
-		LinkedDeviceHost, // On desktop, directly mapped VRAM over PCI.
-		LinkedDeviceHostPreferDevice, // Prefer device local of host visible.
-		Host, // Host-only, needs to be synced to GPU. Might be device local as well on iGPUs.
-		CachedHost,
-		CachedCoherentHostPreferCoherent, // Aim for both cached and coherent, but prefer COHERENT
-		CachedCoherentHostPreferCached, // Aim for both cached and coherent, but prefer CACHED
-	};
-	enum BufferMiscFlagBits
-	{
-		BUFFER_MISC_ZERO_INITIALIZE_BIT = 1 << 0
-	};
-	using BufferMiscFlags = uint32_t;
-	class  BufferCreateInfo
-	{
-	public:
-		BufferDomain domain = BufferDomain::Device;
-		VkDeviceSize size = 0;
-		VkBufferUsageFlags usage = 0;
-		BufferMiscFlags misc = 0;
-	};
-	class tBuffer {
-	public:
-		
-		tBuffer(const Device* device,vk::Buffer buffer,const VmaAllocation& alloc,const BufferCreateInfo& bufferInfo):device(device), bufferInfo(bufferInfo),alloc(alloc), vkHandle(buffer){
-		
-		}
-		~tBuffer();
-		const vk::Buffer& getVkHandle()const {
-			return vkHandle;
-		}
-		const VmaAllocation& getAllocation()const {
-			return alloc;
-		}
-		const BufferCreateInfo& getCreateInfo()const {
-		//	bufferInfo.size = alloc->GetSize();
-			return bufferInfo;
-			
-		}
-		void setRange(const void* data, size_t offset, size_t size);
-		const vk::DeviceSize getSize()const;
-		void Flush();
-	private:
-		vk::Buffer vkHandle;
-		weakDevice device;
-		VmaAllocation alloc;
-		BufferCreateInfo bufferInfo;
-		vk::MemoryPropertyFlags memoryProperty;
-	
-	};
-	//offset update must align the minAlignmentOffset(each update must be a buffer update)
-	class BufferRangeManager {
-	public:
-		BufferRangeManager(const BufferHandle buffer, size_t rangeSize = -1, size_t initialOffset = 0) :handle(buffer), rangeSize(rangeSize), initialOff(initialOffset) {
-			if (rangeSize == -1)rangeSize = buffer->getSize();
-		}
-		size_t SetRangeIncremental(void* data);
-		//return current offset
-		void SetRangeNoLock(void* data);
-		const  BufferHandle& buffer() const {
-			return handle;
-		}
-		void NextRangenoLock() {
-			offset = offset + rangeSize * 2 <= handle->getSize() ? offset + rangeSize : initialOff;
-		}
-		size_t getOffset()const {
-			return offset;
-		}
-	private:
-
-		size_t rangeSize = 0;
-		//std::mutex mtx;
-		size_t initialOff = 0;
-		size_t offset = 0;
-		const BufferHandle handle;
-	};
-	class InitialImageBuffer
-	{
-	public:
-		BufferHandle buffer;
-		std::vector<vk::BufferImageCopy> blits;
-	};
-	
-	inline  bool operator==(const BufferHandle& a,const BufferHandle& b) {
-		return a->getVkHandle() == b->getVkHandle();
-	}
-	inline  bool operator != (const BufferHandle& a, const BufferHandle& b) {
-		return !(a->getVkHandle() == b->getVkHandle());
-	}
-
-	
-	class tSampler {
-	public:
-		DECLARE_SHARED(tSampler);
-
-		tSampler(const Device* device,vk::Sampler sampler,const SamplerCreateInfo& info):device(device),vksampler(sampler),info(info) {
-		}
-		~tSampler();
-		const vk::Sampler& getVkHandle()const {
-			return vksampler;
-		}
-		const SamplerCreateInfo& getCreateInfo()const {
-			return info;
-		}
-	private:
-		SamplerCreateInfo info;
-		vk::Sampler vksampler;
-		weakDevice device;
-		
-	};
-	
-	inline  bool operator==(const SamplerHandle& a, const SamplerHandle& b) {
-		return a->getVkHandle() == b->getVkHandle();
-	}
-	inline  bool operator != (const SamplerHandle& a, const SamplerHandle& b) {
-		return !(a->getVkHandle() == b->getVkHandle());
-	}
 	
 
-	class tImage;
-	
 	//Must depend on the specifical image, so createde from the image
 	//One image can have different views, tImageView include all views the image have
 	class tImageView {
 	public:
-		
-		
-		tImageView(const Device* device,vk::ImageView default_view, ImageViewCreateInfo& info) :device(device),view(default_view), info(info) {
+
+
+		tImageView(const Device* device, vk::ImageView default_view, ImageViewCreateInfo& info) :device(device), view(default_view), info(info) {
 		}
 		~tImageView();
 		VkFormat getFormat() const {
@@ -179,25 +44,25 @@ namespace tEngine {
 		}
 		void set_alt_views(VkImageView depth, VkImageView stencil)
 		{
-			VK_ASSERT(depth_view == VK_NULL_HANDLE);
-			VK_ASSERT(stencil_view == VK_NULL_HANDLE);
+			assert(depth_view == VK_NULL_HANDLE);
+			assert(stencil_view == VK_NULL_HANDLE);
 			depth_view = depth;
 			stencil_view = stencil;
 		}
 		void set_render_target_views(std::vector<VkImageView> views)
 		{
-			VK_ASSERT(render_target_views.empty());
+			assert(render_target_views.empty());
 			render_target_views = std::move(views);
 		}
 		void set_unorm_view(VkImageView view_)
 		{
-			VK_ASSERT(unorm_view == VK_NULL_HANDLE);
+			assert(unorm_view == VK_NULL_HANDLE);
 			unorm_view = view_;
 		}
 
 		void set_srgb_view(VkImageView view_)
 		{
-			VK_ASSERT(srgb_view == VK_NULL_HANDLE);
+			assert(srgb_view == VK_NULL_HANDLE);
 			srgb_view = view_;
 		}
 
@@ -272,7 +137,7 @@ namespace tEngine {
 		VkImageView unorm_view = VK_NULL_HANDLE;
 		VkImageView srgb_view = VK_NULL_HANDLE;
 		ImageViewCreateInfo info;
-		weakDevice device;
+		const Device* device;
 	};
 	using ImageviewHandle = std::shared_ptr<tImageView>;
 	inline bool operator==(const ImageviewHandle& a, const ImageviewHandle& b) {
@@ -281,7 +146,7 @@ namespace tEngine {
 	}
 	inline bool operator != (const ImageviewHandle& a, const ImageviewHandle& b) {
 		assert(false);
-		return !(b==a);
+		return !(b == a);
 	}
 	//ImageviewHandle CreateImageViewWithImage(uniqueDevice& device, vk::ImageCreateInfo imageInfo, vk::ImageViewCreateInfo viewInfo, vk::MemoryPropertyFlags& memoryProperties);
 	//ImageviewHandle CreateImageViewWithImage(uniqueDevice& device, std::shared_ptr<ImageAsset>& asset, const std::shared_ptr<CommandBuffer>& cb);
@@ -313,6 +178,7 @@ namespace tEngine {
 		IMAGE_MISC_FORCE_NO_DEDICATED_BIT = 1 << 9
 	};
 	using ImageMiscFlags = uint32_t;
+	class TextureFormatLayout;
 	class ImageCreateInfo
 	{
 	public:
@@ -343,14 +209,14 @@ namespace tEngine {
 		static uint32_t compute_view_formats(const ImageCreateInfo& info, VkFormat* formats);
 	};
 
-	class tImage{
+	class tImage {
 	public:
-		DECLARE_NO_COPY_SEMANTICS(tImage)
+		
 		friend class tImageView;
-		
-		
+
+
 		tImage(const Device* device, vk::Image image, vk::ImageView default_view, const VmaAllocation& alloc,
-			const ImageCreateInfo& cinfo,VkImageViewType view_type) :vkImage(image), device(device), create_info(cinfo), alloc(alloc),view(view){
+			const ImageCreateInfo& cinfo, VkImageViewType view_type) :vkImage(image), device(device), create_info(cinfo), alloc(alloc), view(view) {
 			ImageViewCreateInfo info;
 			info.image = this;
 			info.view_type = view_type;
@@ -359,19 +225,19 @@ namespace tEngine {
 			info.levels = create_info.levels;
 			info.base_layer = 0;
 			info.layers = create_info.layers;
-			view = std::make_shared<tImageView>(device, default_view,info);
-			
+			view = std::make_shared<tImageView>(device, default_view, info);
+
 		}
-		
+
 		const tImageView* get_view() const
 		{
-			VK_ASSERT(view);
+			assert(view);
 			return view.get();
 		}
 
 		ImageviewHandle get_view()
 		{
-			VK_ASSERT(view);
+			assert(view);
 			return view;
 		}
 
@@ -405,7 +271,7 @@ namespace tEngine {
 			return create_info;
 		}
 
-	
+
 		bool is_swapchain_image() const
 		{
 			return swapchain_layout != VK_IMAGE_LAYOUT_UNDEFINED;
@@ -449,13 +315,13 @@ namespace tEngine {
 			owns_image = own;
 		}
 		~tImage();
-		
 
-		
+
+
 		void _bakeImageAsset(std::shared_ptr<ImageAsset>& asset) {
 			this->asset = asset;
 		}
-		
+
 		const vk::Image& getVkHandle()const {
 			return vkImage;
 		}
@@ -469,25 +335,32 @@ namespace tEngine {
 		VkImageLayout swapchain_layout = VK_IMAGE_LAYOUT_UNDEFINED;
 		bool owns_image = true;
 		bool owns_memory_allocation = true;
-		weakDevice device;
-	
+		const Device* device;
+
 		std::shared_ptr<ImageAsset> asset;
-		
+
 	};
-	
+	using ImageHandle = std::shared_ptr<tImage>;
 	inline  bool operator==(const ImageHandle& a, const ImageHandle& b) {
 		return a->getVkHandle() == b->getVkHandle();
 	}
 	inline  bool operator != (const ImageHandle& a, const ImageHandle& b) {
 		return !(a->getVkHandle() == b->getVkHandle());
 	}
-	
-
-
-	SwapChainHandle createSwapChain(Device* device, vk::SurfaceKHR const& surface, vk::Extent2D const& extent, vk::ImageUsageFlags usage, vk::SwapchainKHR const& oldSwapChain, uint32_t graphicsQueueFamilyIndex, uint32_t presentQueueFamilyIndex);
-	void updateBufferUsingStageBuffer(const Device* device, BufferHandle& buffer, CommandBufferHandle& cb, const void* data, size_t size, size_t offset = 0);
-	void fillBufferUsingStageBuffer(const Device* device, BufferHandle& handle, CommandBufferHandle& cb, uint32_t zero, size_t size, size_t offset = 0);
+	class InitialImageBuffer
+	{
+	public:
+		BufferHandle buffer;
+		std::vector<vk::BufferImageCopy> blits;
+	};
+	class CommandBuffer;
+	using CommandBufferHandle = std::shared_ptr <CommandBuffer>;
 	void find_memory_type(ImageDomain domain, VmaAllocationCreateInfo& info);
-	void find_memory_type(BufferDomain domain, VmaAllocationCreateInfo& info);
-	VkSamplerCreateInfo fill_vk_sampler_info(const SamplerCreateInfo& sampler_info);
+	bool imageFormat_is_supported(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatFeatureFlags required, VkImageTiling tiling);
+	VkImageViewType get_image_view_type(const ImageCreateInfo& create_info, const ImageViewCreateInfo* view);
+	vk::AccessFlags getAccesFlagsFromLayout(vk::ImageLayout layout);
+	ImageHandle createImage(const Device* device, const ImageCreateInfo& info, std::shared_ptr<ImageAsset> initial = nullptr, CommandBufferHandle cb = nullptr);
+	ImageHandle create_image_from_staging_buffer(const Device* device, const ImageCreateInfo& info, const InitialImageBuffer* buffer = nullptr, CommandBufferHandle cb = nullptr);
+	InitialImageBuffer create_image_staging_buffer(const Device* device, const ImageCreateInfo& info, const ImageAsset* initial);
+	InitialImageBuffer create_image_staging_buffer(const Device* device, const TextureFormatLayout& layout);
 }

@@ -3,7 +3,10 @@
 #include"CommandBufferBase.h"
 #include"tFenceSemaphore.h"
 #include"tSwapChain.h"
-#include"tResource.h"
+#include"tBuffer.h"
+#include"tQueue.h"
+#include"vma/src/vk_mem_alloc.h"
+#include"utils.hpp"
 //#include"tTextureFormatLayout.h"
 namespace tEngine {
 	using namespace std;

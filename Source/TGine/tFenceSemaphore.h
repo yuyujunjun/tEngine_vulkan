@@ -1,14 +1,13 @@
 #pragma once
-#include"TGine.h"
 #include"CommandBufferBase.h"
 namespace tEngine {
 	class tFence {
 	public:
-		tFence(weakDevice device,vk::Fence f):device(device),fece(f){}
+		tFence(const Device* device,vk::Fence f):device(device),fece(f){}
 		vk::Fence getVkHandle() { return fece; }
 		~tFence();
 	private:
-		weakDevice device;
+		const Device* device;
 		vk::Fence fece;
 	};
 	using FenceHandle = std::shared_ptr<tFence>;
@@ -16,7 +15,7 @@ namespace tEngine {
 
 	class FenceManager {
 	public:
-		FenceManager(weakDevice device) :device(device) {
+		FenceManager(const Device* device) :device(device) {
 
 		}
 		FenceHandle requestSingaledFence();
@@ -30,21 +29,21 @@ namespace tEngine {
 		}
 	private:
 		std::vector<FenceHandle> signalfences;
-		weakDevice device;
+		const Device* device;
 	};
 	class tSemaphore {
 	public:
-		tSemaphore(weakDevice device, vk::Semaphore s) :device(device), semaphore(s) {}
+		tSemaphore(const Device* device, vk::Semaphore s) :device(device), semaphore(s) {}
 		const vk::Semaphore& getVkHandle()const { return semaphore; }
 		~tSemaphore();
 	private:
-		weakDevice device;
+		const Device* device;
 		vk::Semaphore semaphore;
 	};
 	using SemaphoreHandle = std::shared_ptr<tSemaphore>;
 	class SemaphoreManager {
 	public:
-		SemaphoreManager(weakDevice device) :device(device) {
+		SemaphoreManager(const Device* device) :device(device) {
 
 		}
 		SemaphoreHandle requestSemaphore();
@@ -58,7 +57,7 @@ namespace tEngine {
 		}
 	private:
 		std::vector<SemaphoreHandle> semaphore;
-		weakDevice device;
+		const Device* device;
 	};
 	class tSubmitInfo {
 	public:

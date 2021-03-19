@@ -7,10 +7,13 @@
 #include"utils.hpp"
 #include<mutex>
 
+#include"tQueue.h"
 #include"tDevice.h"
+#include"tSwapChain.h"
+#include"CommandBufferBase.h"
 namespace tEngine {
 
-	tDescriptorSetAllocatorManager tDescriptorSetAllocatorManager::manager;
+	
 
 
 	tEngineContext::tEngineContext(vk::Extent2D extent) {

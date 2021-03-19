@@ -1,13 +1,25 @@
 #pragma once
-#include"tGine.h"
-#include"tDescriptorPool.h"
+#include"vulkan/vulkan.h"
+#include<vulkan/vulkan.hpp>
 #include<unordered_map>
+#include"tDescriptorShared.h"
 #include"tGpuBlock.h"
-#include"tResource.h"
-namespace tEngine {
 
+namespace tEngine {
+	class Device;
+	class BindingResourceInfo;
+	using ResSetBinding = std::vector<BindingResourceInfo>;
 	struct ShaderAsset;
 	class tShaderInterface;
+	class BufferRangeManager;
+	class tPipelineLayout;
+	using PipelineLayoutHandle = std::shared_ptr<tPipelineLayout>;
+	class tDescriptorSetAllocator;
+	using DescSetAllocHandle = std::shared_ptr<tDescriptorSetAllocator>;
+	class tBuffer;
+	using BufferHandle = std::shared_ptr<tBuffer>;
+	class tImage;
+	using ImageHandle = std::shared_ptr<tImage>;// ::SharedPtr;
 	class tShader {
 	public:
 		/// <summary>
@@ -23,7 +35,7 @@ namespace tEngine {
 		static SharedPtr Create(Device* device) {
 			return std::make_shared<tShader>(device);
 		}
-		tShader(Device* device) :device(device) {}
+		tShader( Device* device) :device(device) {}
 		void SetShaderModule(const vk::ArrayProxy<const std::string>& fileName, const vk::ArrayProxy<const vk::ShaderStageFlagBits>& stageFlag);
 		const vk::ShaderModule& getShaderModule(int i) const {
 			return shaderModule[i];
@@ -50,33 +62,16 @@ namespace tEngine {
 			return blockToSetBinding.at(name);
 		}
 		//including empty set
-		uint32_t setCount()const {
-			uint32_t maxSet = 0;
-			for (auto& set : setInfos) {
-				maxSet = maxSet < set.set_number ? set.set_number : maxSet;
-			}
-			maxSet++;
-			return maxSet;
-		}
+		uint32_t setCount()const;
 		const PipelineLayoutHandle& getPipelineLayout()const {
 			return pipelinelayout;
 		}
 		const vk::ShaderStageFlags  getAllStagesFlag()const {
 			return allstageFlags;
 		}
-		const GpuBlockBuffer& getBlock(std::string name) {
-			auto s_b = blockToSetBinding.at(name);
-			return setInfos[s_b.first].blockBuffers.at(s_b.second);
-		}
-		BufferRangeManager requestBufferRange(std::string name, uint32_t rangeCount)const {
-			auto s_b = blockToSetBinding.at(name);
-			auto block = setInfos[s_b.first].blockBuffers.at(s_b.second);
-			return createBufferFromBlock(device, block, rangeCount);
-
-		}
-		const BufferHandle& requestBuffer(std::string name, uint32_t rangeCount = 1)const {
-			return requestBufferRange(name, 1).buffer();
-		}
+		const GpuBlockBuffer& getBlock(std::string name);
+		BufferRangeManager requestBufferRange(std::string name, uint32_t rangeCount)const;
+		const BufferHandle& requestBuffer(std::string name, uint32_t rangeCount = 1)const;
 		std::vector<tDescSetsDataWithSetNumber> setInfos;
 	private:
 
@@ -112,113 +107,6 @@ namespace tEngine {
 		buffer->setRange(&value, info.offset + rangeOffset, sizeof(value));
 
 	}
-	class tShaderInterface {
-	public:
-
-		friend class CommandBuffer;
-		tShaderInterface(const tShader* shader);
-
-
-
-		//只是缓存，仅有拷贝操作
-		void SetBuffer(std::string name, BufferHandle buffer, uint32_t offset = 0) {
-			auto s_b = base_shader->getBlockSetBinding(name);
-
-			auto set_number = s_b.first;
-			auto binding = s_b.second;
-			bindResources[s_b.first][s_b.second].buffer = buffer;
-			bindResources[s_b.first][s_b.second].offset = offset;
-
-		}
-		//fake viewInfo
-		void SetImage(std::string name, ImageHandle image, vk::ImageView vkView = {}, StockSampler sampler = StockSampler::LinearClamp) {
-			//	assert(bindResource_to_idx.count(name) != 0);
-			auto s_b = base_shader->getBlockSetBinding(name);
-
-			auto set_number = s_b.first;
-			auto binding = s_b.second;
-			bindResources[s_b.first][s_b.second].image = image;
-			vkView = vkView ? vkView : image->get_view()->getDefaultView();
-			bindResources[s_b.first][s_b.second].view = vkView;
-			bindResources[s_b.first][s_b.second].sampler = sampler;
-		}
-		template <typename Attribute>
-		//using  Attribute=float;
-		void SetValue(std::string valueName, const Attribute& value, BufferHandle buffer = nullptr) {
-			auto info = base_shader->getVarSetBinding(valueName);
-			if (buffer == nullptr) {
-				assert(bindResources[info.set_number][info.bind_number].buffer != nullptr);
-				buffer = bindResources[info.set_number][info.bind_number].buffer;
-			}
-			auto rangeOffset = bindResources[info.set_number][info.bind_number].offset;
-			buffer->setRange(&value, info.offset + rangeOffset, sizeof(value));
-
-		}
-
-
-		template<typename Attribute>
-		void SetPushConstant(std::string name, Attribute value) {
-
-			bool HasSet = false;
-			auto& pushConstant = base_shader->pushConstant;
-			for (int i = 0; i < base_shader->pushConstant.size(); i++) {
-				if (base_shader->pushConstant[i].name == name) {
-					int size = sizeof(Attribute);
-					int a = sizeof(char);
-					assert(size == pushConstant[i].size);
-					memcpy(pushConstantBlock.data() + pushConstant[i].offset, &value, pushConstant[i].size);
-					HasSet = true;
-					break;
-				}
-
-			}
-			assert(HasSet && "Push Constant Name may be wrong or Push Constant size may be zero");
-		}
-
-		const tShader* getShader() const {
-			return base_shader;
-		}
-
-
-		size_t setCount()const {
-			return bindResources.size();
-		}
-		const tShader* getShader() {
-			return base_shader;
-		}
-		const DescSetAllocHandle& getDescSetAllocator(uint32_t set_number)const {
-			return base_shader->setAllocator[set_number];
-		}
-
-		const std::vector<uint8_t>& getPushConstantBlock()const {
-			return pushConstantBlock;
-		}
-		const std::vector<ResSetBinding>& getResSetBinding()const {
-			return bindResources;
-		}
-		bool isSetEmpty(int i) {
-
-			for (auto& b : bindResources[i]) {
-				if (!b.emptyResource()) {
-					return false;
-				}
-			}
-			return true;
-		}
-
-	protected:
-
-		std::vector<ResSetBinding> bindResources;
-		//std::vector<PipelineBinding> bindResources;
-		std::vector<uint8_t> pushConstantBlock;
-	private:
-
-		const tShader* base_shader;
-
-
-	};
-
-
-
+	
 
 }

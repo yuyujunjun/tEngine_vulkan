@@ -1,11 +1,11 @@
 
 
 #pragma once
-
+#include"vulkan/vulkan.h"
+#include<vulkan/vulkan.hpp>
 #include <glm/glm.hpp>
-#include<glm/matrix.hpp>
+#include<glm/gtc/matrix_transform.hpp>
 #include"ShaderVariable.h"
-#include"tShader.h"
 namespace tEngine {
 
   
@@ -71,11 +71,7 @@ namespace tEngine {
         float _viewportAspectRatio = float(extent.width) / extent.height;
         return glm::perspective(fieldOfview, _viewportAspectRatio, nearPlane, farPlane);
     }
-  inline  void uploadCameraMatrix(const glm::mat4& view,const glm::mat4& projection,tShaderInterface* material) {
-        material->SetValue(ShaderString(SV::_MATRIX_V),view);
-        material->SetValue(ShaderString(SV::_MATRIX_P), projection);
-        material->SetValue(ShaderString(SV::_MATRIX_VP), projection*view);
-        material->SetValue(ShaderString(SV::_INV_MATRIX_VP), glm::inverse(projection*view));
-    }
+  class tShaderInterface;
+    void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material);
 }
 

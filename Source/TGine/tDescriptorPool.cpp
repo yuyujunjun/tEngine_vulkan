@@ -2,12 +2,15 @@
 #include<unordered_map>
 #include <iomanip>
 #include <numeric>
-#include"PriorityAllocator.h"
 #include"tGpuBlock.h"
 #include"tLog.h"
-#include"tResource.h"
+#include"tBuffer.h"
+#include"tSampler.h"
+#include"tImage.h"
+#include"tDevice.h"
+#include"tGpuBlock.h"
 namespace tEngine {
-
+	tDescriptorSetAllocatorManager tDescriptorSetAllocatorManager::manager;
 	//Each element belongs to a set
 	void MergeSet(std::vector<tDescSetsDataWithSetNumber>& setLayoutBinding) {
 		using BindMap = std::pair<std::vector<vk::DescriptorSetLayoutBinding>,std::unordered_map<uint32_t,GpuBlockBuffer>>;
@@ -85,8 +88,144 @@ namespace tEngine {
 			return nullptr;
 		}
 	}
-	
-	bool BufferBindInfo::operator==(const BufferBindInfo& a)const {
+	tDescriptorSet::~tDescriptorSet() {
+		device->freeDescriptorSets(pool->getVkHandle(), set);
+	}
+	void tDescriptorSetAllocator::createPool() {
+		uint32_t maxSets = 0;
+		std::vector<vk::DescriptorPoolSize> poolSize;
+		for (auto& bi : layout->getCreateInfo().bindings) {
+			poolSize.emplace_back(bi.descriptorType, bi.descriptorCount * RingSize);
+			maxSets += bi.descriptorCount * RingSize;
+		}
+		assert(0 < maxSets);
+		vk::DescriptorPoolCreateInfo info = {};
+		info.setFlags(vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet);
+		info.setPoolSizes(poolSize);
+
+		info.setMaxSets(maxSets);
+		auto vkpool = device->createDescriptorPool(info);
+		pool = std::make_shared<tDescriptorPool>(device, vkpool);
+	}
+	DescSetAllocHandle tDescriptorSetAllocatorManager::requestSetAllocator(Device* device, const DescriptorLayoutCreateInfo& bindings) {
+		//find first
+		for (size_t i = 0; i < bindingInfoList.size(); ++i) {
+			if (bindings.bindings == bindingInfoList[i].bindings) {
+				if (!allocList[i].expired()) {
+					return allocList[i].lock();
+				}
+			}
+		}
+		std::lock_guard<std::mutex> lock(mtx);
+
+		for (size_t i = 0; i < bindingInfoList.size(); ++i) {
+			if (bindings.bindings == bindingInfoList[i].bindings) {
+				if (!allocList[i].expired()) {
+					return allocList[i].lock();
+				}
+				else {
+					vk::DescriptorSetLayoutCreateInfo info;
+					info.setBindings(bindings.bindings);
+					auto vkLayout = device->createDescriptorSetLayout(info);
+					auto descSetLayout = std::make_shared<tDescriptorSetLayout>(device, vkLayout, bindings);
+					auto alloc = std::make_shared<tDescriptorSetAllocator>(device, descSetLayout);
+					allocList[i] = alloc;
+					return alloc;
+				}
+			}
+		}
+		vk::DescriptorSetLayoutCreateInfo info;
+		info.setBindings(bindings.bindings);
+		auto vkLayout = device->createDescriptorSetLayout(info);
+		auto descSetLayout = std::make_shared<tDescriptorSetLayout>(device, vkLayout, bindings);
+		auto alloc = std::make_shared<tDescriptorSetAllocator>(device, descSetLayout);
+		allocList.push_back(alloc);
+		bindingInfoList.push_back(bindings);
+		return alloc;
+	}
+	tDescriptorSetLayout::~tDescriptorSetLayout() {
+		if (vkLayout) {
+			device->destroyDescriptorSetLayout(vkLayout);
+			vkLayout = vk::DescriptorSetLayout();
+		}
+	}
+	bool BindingResourceInfo::operator==(const BindingResourceInfo& info)const {
+		bool equal = dstBinding == info.dstBinding && dstArrayElement == info.dstArrayElement && type == info.type && view == info.view && sampler == info.sampler
+			&& range == info.range;
+		if (!equal)return false;
+
+		if (buffer && info.buffer) {
+			return  buffer->getVkHandle() == info.buffer->getVkHandle();
+		}
+		else if (image && info.image) {
+			return image->getVkHandle() == info.image->getVkHandle();
+		}
+		else return true;
+
+
+	}
+	tDescriptorPool::~tDescriptorPool() {
+		if (pool) {
+			device->destroyDescriptorPool(pool);
+		}
+	}
+	std::shared_ptr<tDescriptorSet> tDescriptorSetAllocator::requestDescriptorSet(const ResSetBinding& rb) {
+		if (rb.size() == 0)return nullptr;
+
+		auto re = descriptorSetPool.request(rb);
+		if (re != nullptr) {
+			return re;
+		}
+		//Only need rebind
+		if (descriptorSetPool.isFull()) {
+			re = descriptorSetPool.moveLastToFront(rb);
+		}
+		else {//Create a new descriptorSet
+			LOGD(LogLevel::Performance, "Allocate descriptorSet");
+			vk::DescriptorSetAllocateInfo descSetInfo;
+			descSetInfo.setDescriptorPool(pool->getVkHandle());
+			descSetInfo.setSetLayouts(layout->getVkHandle());
+			auto set = device->allocateDescriptorSets(descSetInfo);
+			re = descriptorSetPool.allocate(rb, device, pool, set[0], rb);
+		}
+
+
+
+		std::vector<vk::WriteDescriptorSet> write;
+		//allocate enough memory for vector, we need use address of them
+		std::vector< vk::DescriptorBufferInfo> bufferInfo;
+		bufferInfo.reserve(rb.size());
+		//bufferInfo.reserve(rb.getBuffers().size());
+		std::vector<vk::DescriptorImageInfo> imageInfo;
+		imageInfo.reserve(rb.size());
+		//imageInfo.reserve(rb.getImages().size());
+		for (auto& bindingInfo : rb) {
+			if (bindingInfo.emptyResource())continue;
+			auto& resource = bindingInfo;
+			switch (resource.type) {
+			case vk::DescriptorType::eUniformBufferDynamic:
+			case vk::DescriptorType::eStorageBufferDynamic:
+				//assert(resource.offset == 0);
+				bufferInfo.emplace_back(vk::DescriptorBufferInfo(resource.buffer->getVkHandle(), 0, resource.range));
+				;
+				write.emplace_back(vk::WriteDescriptorSet(re->getVkHandle(), resource.dstBinding, resource.dstArrayElement, 1, resource.type, nullptr, &bufferInfo.back(), nullptr));
+				break;
+			case vk::DescriptorType::eCombinedImageSampler:
+			case vk::DescriptorType::eStorageImage:
+				imageInfo.emplace_back(device->getSampler(resource.sampler)->getVkHandle(), resource.view, vk::ImageLayout::eShaderReadOnlyOptimal);
+				write.emplace_back(vk::WriteDescriptorSet(re->getVkHandle(), resource.dstBinding, resource.dstArrayElement, 1, resource.type, &imageInfo.back(), nullptr, nullptr));
+				break;
+			default:assert(false && "can't support other type for now");
+			}
+		}
+
+		if (write.size() != 0) {
+			LOGD(LogLevel::Performance, "Rebind descriptorSet");
+			device->updateDescriptorSets(write, {});
+		}
+		return re;
+	}
+	/*bool BufferBindInfo::operator==(const BufferBindInfo& a)const {
 		if (!a.hasUsed || !hasUsed)return true;
 		return a.binding == binding && a.buffer->getVkHandle() == buffer->getVkHandle() && a.range == range;
 	}
@@ -104,6 +243,6 @@ namespace tEngine {
 	}
 	ImageviewHandle ImageBindInfo::getImageViewHandle()const {
 		return image->get_view();
-	}
+	}*/
 
 }

@@ -2,10 +2,12 @@
 #include<list>
 #include<vector>
 #include<functional>
+#include<memory>
+#include<assert.h>
 namespace tEngine {
 
 
-	template <typename C,typename Attribute=C,unsigned RingSize=8>
+	template <typename C,typename Attribute,unsigned RingSize=8>
 	class RingPool {
 	public:
 		RingPool() {

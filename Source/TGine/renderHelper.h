@@ -1,12 +1,14 @@
 #pragma once
-#include"Tgine.h"
+#include<vulkan/vulkan.h>
+#include<memory>
 namespace tEngine {
+	class Device;
+	class tRenderPass;
+	using RenderPassHandle = std::shared_ptr<tRenderPass>;
+	class tShaderInterface;
+	class CommandBuffer;
+	using CommandBufferHandle = std::shared_ptr <CommandBuffer>;
+
 	RenderPassHandle getSingleRenderpass(Device* device);
-	void flushDescriptorSet(const CommandBufferHandle& cb, tShaderInterface& state);
-	void flushGraphicsPipeline(const CommandBufferHandle& cb, tShaderInterface& state, tRenderPass* renderPass, uint32_t subpass);
-	void flushComptuePipeline(const CommandBufferHandle& cb, tShaderInterface& state);
-	void flushGraphicsShaderState(tShaderInterface& state, CommandBufferHandle& cb, tRenderPass* renderPass, uint32_t subpass);
-	void flushComputeShaderState(tShaderInterface& state, CommandBufferHandle& cb);
-	void collectDescriptorSets(std::vector<DescriptorSetHandle>& bindedSets, std::vector<uint32_t>& offsets,
-		const ResSetBinding& setBindings, const DescSetAllocHandle& setAllocator);
+
 }

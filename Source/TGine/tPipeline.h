@@ -1,8 +1,10 @@
 #pragma once
 
-#include"tDescriptorPool.h"
-#include"tLog.h"
+#include"vulkan/vulkan.hpp"
+#include"RingPool.h"
 namespace tEngine {
+	class Device;
+	struct GpuBlockBuffer;
 	class GraphicsPipelineCreateInfo {
 	public:
 		void addShader(VkShaderModule mod, vk::ShaderStageFlagBits flags) {
@@ -181,7 +183,7 @@ namespace tEngine {
 	class tPipeline {
 	public:
 		friend class tPipelineLayout;
-		tPipeline(weakDevice device,vk::PipelineBindPoint bindPoint,vk::Pipeline pipeline,tPipelineLayout* layout) :device(device),bindPoint(bindPoint), pipelineLayout(layout),vkpipeline(pipeline){}
+		tPipeline(const Device* device,vk::PipelineBindPoint bindPoint,vk::Pipeline pipeline,tPipelineLayout* layout) :device(device),bindPoint(bindPoint), pipelineLayout(layout),vkpipeline(pipeline){}
 		~tPipeline();
 		const vk::Pipeline& getVkHandle()const {
 			return vkpipeline;
@@ -197,36 +199,20 @@ namespace tEngine {
 		vk::PipelineBindPoint bindPoint;
 		vk::Pipeline vkpipeline;
 	private:
-		weakDevice device;
+		const Device* device;
 
 	};
+	using PipelineHandle = std::shared_ptr<tPipeline>;
 	class tPipelineLayout {
 	public:
-		DECLARE_SHARED(tPipelineLayout)
+		
 		
 		tPipelineLayout(const Device* device,vk::PipelineLayout layout):device(device), vkLayout(layout){
 			
 		
 		}
-		PipelineHandle requestGraphicsPipeline(const GraphicsPipelineCreateInfo& createInfo) {
-			auto pipeline=graphic_pipelinePool.request(createInfo);
-			if (pipeline == nullptr) {
-				LOGD(LogLevel::Performance,"createPipeline");
-				auto vkPipeline = createInfo.createPipeline(device);
-				pipeline=graphic_pipelinePool.allocate(createInfo,device, vk::PipelineBindPoint::eGraphics,vkPipeline,this);
-
-			}
-			return pipeline;
-		}
-		PipelineHandle requestComputePipeline(const ComputePipelineCreateInfo& createInfo) {
-			auto pipeline = compute_pipelinePool.request(createInfo);
-			if (pipeline == nullptr) {
-				auto vkPipeline = createInfo.createPipeline(device);
-				pipeline = compute_pipelinePool.allocate(createInfo,device, vk::PipelineBindPoint::eCompute, vkPipeline, this);
-
-			}
-			return pipeline;
-		}
+		PipelineHandle requestGraphicsPipeline(const GraphicsPipelineCreateInfo& createInfo);
+		PipelineHandle requestComputePipeline(const ComputePipelineCreateInfo& createInfo);
 		~tPipelineLayout();
 		vk::PipelineLayout getVkHandle() {
 			return vkLayout;
@@ -235,8 +221,15 @@ namespace tEngine {
 		RingPool<tPipeline, GraphicsPipelineCreateInfo, 64> graphic_pipelinePool;
 		RingPool<tPipeline, ComputePipelineCreateInfo, 32> compute_pipelinePool;
 		vk::PipelineLayout vkLayout;
-		weakDevice device;
+		const Device* device;
 	};
+	using PipelineLayoutHandle = std::shared_ptr<tPipelineLayout>;
+	class tShaderInterface;
+	class tDescriptorSetLayout;
+	using DescriptorSetLayoutHandle = std::shared_ptr<tDescriptorSetLayout>;
+	class tRenderPass;
+	class tFrameBuffer;
+	PipelineLayoutHandle createPipelineLayout(const Device* device, std::vector<DescriptorSetLayoutHandle>& descLayouts, GpuBlockBuffer& pushConstant, vk::ShaderStageFlags shaderStage);
 	//without shader
 	GraphicsPipelineCreateInfo getDefaultPipelineCreateInfo(tShaderInterface* shader, const tRenderPass* renderPass, uint32_t subpass, const tFrameBuffer* frameBuffer);
 

@@ -1,5 +1,5 @@
 #pragma once
-#include"tGine.h"
+#include"vulkan/vulkan.hpp"
 namespace tEngine {
 	class MemoryBarrierSet
 	{

@@ -1,11 +1,7 @@
 #include"renderHelper.h"
-#include"tDescriptorPool.h"
-#include"tFrameBuffer.h"
 #include"tDevice.h"
 #include"tSwapChain.h"
-#include"tShader.h"
-#include"CommandBufferBase.h"
-#include"tPipeline.h"
+#include"tFrameBuffer.h"
 namespace tEngine {
 	inline vk::AttachmentDescription createDepthStencilDescription(vk::Format format, vk::ImageLayout initialLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal,
 		vk::ImageLayout finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::AttachmentLoadOp loadOp = vk::AttachmentLoadOp::eClear,
@@ -37,7 +33,6 @@ namespace tEngine {
 		if (loadOp == vk::AttachmentLoadOp::eClear || loadOp == vk::AttachmentLoadOp::eDontCare) {
 			description.setInitialLayout(vk::ImageLayout::eUndefined);
 		}
-
 	}
 	static vk::AttachmentDescription StartColorDescription(vk::Format format) {
 
@@ -130,79 +125,5 @@ namespace tEngine {
 		handle->setupRenderPass();
 		return handle;
 	}
-	void collectDescriptorSets(std::vector<DescriptorSetHandle>& bindedSets, std::vector<uint32_t>& offsets,
-		const ResSetBinding& setBindings, const DescSetAllocHandle& setAllocator)
-	{
-		if (setBindings.size() == 0) {
-			return;
-		}
-		bindedSets.emplace_back(setAllocator->requestDescriptorSet(setBindings));
-		//Dynamic Offsets
-		for (const auto& bindBufer : setBindings) {
-			if (bindBufer.type == vk::DescriptorType::eUniformBufferDynamic || bindBufer.type == vk::DescriptorType::eStorageBufferDynamic) {
-				if (bindBufer.buffer) {
-					offsets.emplace_back(bindBufer.offset);
-				}
-				else {
-					offsets.emplace_back(0);
-				}
-
-			}
-
-		}
-	}
-	void flushDescriptorSet(const CommandBufferHandle& cb, tShaderInterface& state) {
-		//state.uploadUniformBuffer();
-		std::vector<DescriptorSetHandle> bindedSets;
-		std::vector<uint32_t> offsets;
-
-		/// <summary>
-		/// BindDescriptorSet
-		/// </summary>
-		/// <param name="cb"></param>
-		/// <param name="state"></param>
-		auto bindNow = [&bindedSets, &cb, &offsets, &state](uint32_t firstSet) {
-			if (bindedSets.size() != 0) {
-				cb->bindDescriptorSet(static_cast<vk::PipelineBindPoint>(state.getShader()->getPipelineBindPoint()),
-					state.getShader()->getPipelineLayout(), firstSet, bindedSets, offsets);
-				bindedSets.clear();
-				offsets.clear();
-			}
-		};
-		for (uint32_t i = 0; i < state.setCount(); ++i) {
-			if (state.isSetEmpty(i)) {
-
-				bindNow(i - bindedSets.size());
-
-			}
-			collectDescriptorSets(bindedSets, offsets, state.getResSetBinding()[i], state.getDescSetAllocator(i));
-		}
-		bindNow(state.setCount() - bindedSets.size());
-	}
-	void flushGraphicsPipeline(const CommandBufferHandle& cb, tShaderInterface& state, tRenderPass* renderPass, uint32_t subpass) {
-		auto createInfo = getDefaultPipelineCreateInfo(&state, renderPass, subpass, renderPass->requestFrameBuffer().get());
-
-
-		cb->bindPipeline(state.getShader()->getPipelineLayout()->requestGraphicsPipeline(createInfo));
-		if (state.getPushConstantBlock().size()) {
-			cb->pushConstants(state.getShader()->getPipelineLayout()->getVkHandle(), (VkShaderStageFlags)state.getShader()->getAllStagesFlag(), state.getPushConstantBlock());
-		}
-	}
-	void flushComptuePipeline(const CommandBufferHandle& cb, tShaderInterface& state) {
-		ComputePipelineCreateInfo info;
-		info.setShader(state.getShader()->getShaderModule(0), state.getShader()->getShaderStage(0));
-		info.setLayout(state.getShader()->getPipelineLayout()->getVkHandle());
-		cb->bindPipeline(state.getShader()->getPipelineLayout()->requestComputePipeline(info));
-		if (state.getPushConstantBlock().size()) {
-			cb->pushConstants(state.getShader()->getPipelineLayout()->getVkHandle(), (VkShaderStageFlags)state.getShader()->getAllStagesFlag(), state.getPushConstantBlock());
-		}
-	}
-	void flushGraphicsShaderState(tShaderInterface& state, CommandBufferHandle& cb, tRenderPass* renderPass, uint32_t subpass) {
-		flushGraphicsPipeline(cb, state, renderPass, subpass);
-		flushDescriptorSet(cb, state);
-	}
-	void flushComputeShaderState(tShaderInterface& state, CommandBufferHandle& cb) {
-		flushComptuePipeline(cb, state);
-		flushDescriptorSet(cb, state);
-	}
+	
 }

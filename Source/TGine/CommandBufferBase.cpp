@@ -1,13 +1,34 @@
 #include"CommandBufferBase.h"
 #include"tPipeline.h"
-#include"tResource.h"
+#include"tBuffer.h"
+#include"tImage.h"
 #include"tMemoryBarrier.h"
 #include"tDescriptorPool.h"
 #include"tFrameBuffer.h"
 #include"tShader.h"
 #include"tTextureFormatLayout.h"
+#include"tDevice.h"
 namespace tEngine {
-	
+	tCommandPool::~tCommandPool() {
+		if (vkCommandPool) {
+
+
+			device->destroyCommandPool(vkCommandPool);
+			vkCommandPool = vk::CommandPool();
+
+		}
+	}
+	CommandBuffer::~CommandBuffer() {
+		device->freeCommandBuffers(_pool->vkCommandPool, cb);
+	}
+	CommandBufferHandle allocateCommandBuffer(const Device* device, CommandPoolHandle cmdPool) {
+		vk::CommandBufferAllocateInfo info = {};
+		info.setCommandBufferCount(1);
+		info.setCommandPool(cmdPool->vkCommandPool);
+		info.setLevel(vk::CommandBufferLevel::ePrimary);
+		auto vkcb = device->allocateCommandBuffers(info);
+		return std::make_shared<CommandBuffer>(device, vkcb.front(), cmdPool);
+	}
 
 #ifdef DEBUG
 	void CommandBuffer::updatePerSubpassImageLayouts()

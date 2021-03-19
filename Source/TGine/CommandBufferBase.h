@@ -1,9 +1,49 @@
 #pragma once
 #include"vulkan/vulkan.hpp"
-#include"Tgine.h"
 #include<memory>
 namespace tEngine {
+	class Device;
 
+	class tBuffer;
+	using BufferHandle = std::shared_ptr<tBuffer>;
+	class tImage;
+	using ImageHandle = std::shared_ptr<tImage>;// ::SharedPtr;
+	class tSampler;
+	using SamplerHandle = std::shared_ptr<tSampler>;
+	class tImageView;
+	using ImageviewHandle = std::shared_ptr<tImageView>;
+	class CommandBuffer;
+	using CommandBufferHandle = std::shared_ptr <CommandBuffer>;
+	class tDescriptorSetLayout;
+	using DescriptorSetLayoutHandle = std::shared_ptr<tDescriptorSetLayout>;
+	class tDescriptorSetAllocator;
+	using DescSetAllocHandle = std::shared_ptr<tDescriptorSetAllocator>;
+	class tDescriptorPool;
+	using DescriptorPoolHandle = std::shared_ptr<tDescriptorPool>;
+	class tDescriptorSet;
+	using DescriptorSetHandle = std::shared_ptr<tDescriptorSet>;
+	class tSwapChain;
+	using SwapChainHandle = std::shared_ptr<tSwapChain>;
+	class tFrameBuffer;
+	using FrameBufferHandle = std::shared_ptr<tFrameBuffer>;
+	class tPipelineLayout;
+	using PipelineLayoutHandle = std::shared_ptr<tPipelineLayout>;
+	class tShaderInterface;
+	class tPipeline;
+	using PipelineHandle = std::shared_ptr<tPipeline>;
+	class tCommandPool;
+	using CommandPoolHandle = std::shared_ptr<tCommandPool>;
+	class tFence;
+	using FenceHandle = std::shared_ptr<tFence>;
+	class tPhysicalDevice;
+	
+	struct ImageViewCreateInfo;
+	class MemoryBarrierSet;
+	class BindingResourceInfo;
+	using ResSetBinding = std::vector<BindingResourceInfo>;
+	class tRenderPass;
+	using RenderPassHandle = std::shared_ptr<tRenderPass>;
+	CommandBufferHandle allocateCommandBuffer(const Device* device, CommandPoolHandle cmdPool);
 	class tCommandPool {
 	public:
 		tCommandPool(const Device* device, const vk::CommandPool& vkPool, uint32_t queueFamilyIdx) :device(device),vkCommandPool(vkPool), queueFamilyIdx(queueFamilyIdx){}
@@ -11,7 +51,7 @@ namespace tEngine {
 		vk::CommandPool vkCommandPool;
 		const uint32_t queueFamilyIdx;
 	private:
-		weakDevice device;
+		const Device* device;
 	};
 	class CommandBuffer {
 	protected:
@@ -48,7 +88,7 @@ namespace tEngine {
 		vk::CommandBuffer cb;
 
 		bool _isRecording;
-		weakDevice device;
+		const Device* device;
 		const Device* getDevice() {
 			return device;
 		}
@@ -62,7 +102,7 @@ namespace tEngine {
 			return cb;
 		}
 		//!\cond NO_DOXYGEN
-		DECLARE_NO_COPY_SEMANTICS(CommandBuffer)
+	//	DECLARE_NO_COPY_SEMANTICS(CommandBuffer)
 	
 		CommandBuffer(const Device* device,const vk::CommandBuffer& cb, CommandPoolHandle cmdPool)
 			: device(device), _isRecording(false),cb(cb), _pool(cmdPool)

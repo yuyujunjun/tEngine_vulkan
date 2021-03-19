@@ -1,19 +1,21 @@
 #pragma once
-//#include<mutex>
-#include"vulkan/vulkan.hpp"
-#include"tGine.h"
+
 #include"tDescriptorShared.h"
 #include<unordered_map>
-#include"PriorityAllocator.h"
+#include"RingPool.h"
 #include<mutex>
 namespace tEngine {
 	//Not ordered by binding
-	
-	
+	class tDescriptorPool;
+	using DescriptorPoolHandle = std::shared_ptr<tDescriptorPool>;
+	class tDescriptorSetLayout;
+	using DescriptorSetLayoutHandle = std::shared_ptr<tDescriptorSetLayout>;
+	class tDescriptorSetAllocator;
+	using DescSetAllocHandle = std::shared_ptr<tDescriptorSetAllocator>;
 
 	class tDescriptorSetLayout {
 	public:
-		DECLARE_SHARED(tDescriptorSetLayout);
+		//DECLARE_SHARED(tDescriptorSetLayout);
 	
 		
 		tDescriptorSetLayout(Device* device,vk::DescriptorSetLayout layout, const DescriptorLayoutCreateInfo& bindings) :device(device), info(bindings),vkLayout(layout) {
@@ -31,59 +33,59 @@ namespace tEngine {
 	private:
 		DescriptorLayoutCreateInfo info;
 		vk::DescriptorSetLayout vkLayout;
-		weakDevice device;
+		const Device* device;
 	};
 	
 	
-	struct BufferBindInfo {
-		bool hasUsed = false;
-		BufferBindInfo():hasUsed(false), binding(-1),range(-1) {}
-		BufferBindInfo(uint32_t binding, BufferHandle& buffer,uint32_t range) :range(range),binding(binding), buffer(buffer),hasUsed(true) {}
-		uint32_t binding;
-		uint32_t range;
-		BufferHandle buffer;
-		bool operator==(const BufferBindInfo& a)const;
-		bool operator!=(const BufferBindInfo& a)const {
-			return !(*this == a);
-		}
-	};
-	//If don't set view explicit, we choose imageviewHandle->getDefaultView()
-	struct ImageBindInfo {
-		bool hasUsed = false;
-		ImageBindInfo():hasUsed(false),binding(-1){}
-		ImageBindInfo(uint32_t binding, ImageHandle image, VkImageView defaultView, StockSampler  sampler) :binding(binding), image(image),
-			defaultView(defaultView), sampler(sampler),hasUsed(true) {}
-		uint32_t binding;
-	public:
-		VkImageView getImageView()const;
-		StockSampler getSampler()const;
-		bool operator==(const ImageBindInfo& a) const;
-		bool operator!=(const ImageBindInfo& a)const {
-			return !(*this == a);
-		}
-		void SetImage(ImageHandle& handle) {
-			image = handle;
-		}
-	
-		void SetView(VkImageView view) {
-			defaultView = view;
-		}
-		void SetSampler(StockSampler sam) {
-			sampler = sam;
-		}
-		ImageHandle getImageResource()const {
-			return image;
-		}
-		ImageviewHandle getImageViewHandle()const;
-	private:
-		StockSampler  sampler=StockSampler::LinearClamp;
-		ImageHandle image;
-		VkImageView defaultView = VK_NULL_HANDLE;
-	};
+	//struct BufferBindInfo {
+	//	bool hasUsed = false;
+	//	BufferBindInfo():hasUsed(false), binding(-1),range(-1) {}
+	//	BufferBindInfo(uint32_t binding, BufferHandle& buffer,uint32_t range) :range(range),binding(binding), buffer(buffer),hasUsed(true) {}
+	//	uint32_t binding;
+	//	uint32_t range;
+	//	BufferHandle buffer;
+	//	bool operator==(const BufferBindInfo& a)const;
+	//	bool operator!=(const BufferBindInfo& a)const {
+	//		return !(*this == a);
+	//	}
+	//};
+	////If don't set view explicit, we choose imageviewHandle->getDefaultView()
+	//struct ImageBindInfo {
+	//	bool hasUsed = false;
+	//	ImageBindInfo():hasUsed(false),binding(-1){}
+	//	ImageBindInfo(uint32_t binding, ImageHandle image, VkImageView defaultView, StockSampler  sampler) :binding(binding), image(image),
+	//		defaultView(defaultView), sampler(sampler),hasUsed(true) {}
+	//	uint32_t binding;
+	//public:
+	//	VkImageView getImageView()const;
+	//	StockSampler getSampler()const;
+	//	bool operator==(const ImageBindInfo& a) const;
+	//	bool operator!=(const ImageBindInfo& a)const {
+	//		return !(*this == a);
+	//	}
+	//	void SetImage(ImageHandle& handle) {
+	//		image = handle;
+	//	}
+	//
+	//	void SetView(VkImageView view) {
+	//		defaultView = view;
+	//	}
+	//	void SetSampler(StockSampler sam) {
+	//		sampler = sam;
+	//	}
+	//	ImageHandle getImageResource()const {
+	//		return image;
+	//	}
+	//	ImageviewHandle getImageViewHandle()const;
+	//private:
+	//	StockSampler  sampler=StockSampler::LinearClamp;
+	//	ImageHandle image;
+	//	VkImageView defaultView = VK_NULL_HANDLE;
+	//};
 
 	class tDescriptorPool {
 	public:
-		tDescriptorPool(weakDevice device, vk::DescriptorPool pool) :device(device), pool(pool) {}
+		tDescriptorPool(const Device* device, vk::DescriptorPool pool) :device(device), pool(pool) {}
 		
 		vk::DescriptorPool getVkHandle() {
 			return pool;
@@ -91,12 +93,12 @@ namespace tEngine {
 		~tDescriptorPool();
 	private:
 
-		weakDevice device;
+		const Device* device;
 		vk::DescriptorPool pool;
 	};
 	class tDescriptorSet {
 	public:
-		tDescriptorSet(weakDevice device,DescriptorPoolHandle pool,vk::DescriptorSet set,const ResSetBinding& binding):device(device),set(set),pool(pool), setInfo(binding){}
+		tDescriptorSet(const Device* device,DescriptorPoolHandle pool,vk::DescriptorSet set,const ResSetBinding& binding):device(device),set(set),pool(pool), setInfo(binding){}
 		vk::DescriptorSet getVkHandle() {
 			return set;
 		}
@@ -106,7 +108,7 @@ namespace tEngine {
 		const ResSetBinding& getResource()const { return setInfo; }
 		~tDescriptorSet();
 	private:
-		weakDevice device;
+		const Device* device;
 		vk::DescriptorSet set;
 		//just store, in case delete pool before this set
 		DescriptorPoolHandle pool;
@@ -148,4 +150,5 @@ namespace tEngine {
 		std::vector<DescriptorLayoutCreateInfo> bindingInfoList;
 		std::vector< std::weak_ptr<tDescriptorSetAllocator>> allocList;
 	};
+
 }

@@ -1,6 +1,17 @@
 #pragma once
-#include"Tgine.h"
+#include<vector>
 namespace tEngine {
+	template<typename t1, typename t2>
+	inline t1 align(t1 numberToAlign, t2 alignment)
+	{
+		if (alignment)
+		{
+			t1 align1 = numberToAlign % (t1)alignment;
+			if (!align1) { align1 += (t1)alignment; }
+			numberToAlign += t1(alignment) - align1;
+		}
+		return numberToAlign;
+	}
 	struct GpuBlockMember {
 
 		std::string name = "";
@@ -15,6 +26,10 @@ namespace tEngine {
 	};
 	struct GpuBlockBuffer {
 		GpuBlockMember& operator[](int id)noexcept {
+			assert(id < data.size() && "id exceed blocks");
+			return data[id];
+		}
+		const GpuBlockMember& operator[](int id)const {
 			assert(id < data.size() && "id exceed blocks");
 			return data[id];
 		}
