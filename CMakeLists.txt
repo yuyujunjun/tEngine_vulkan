@@ -14,19 +14,20 @@ INCLUDE_DIRECTORIES(
     3rdParty/termcolor/
     3rdParty/vma/src
     ${VULKAN_INCLUDE_DIRS}
-  
-    Source/include
-    Source/)
+    
+    Source/TComponent
+    Source/TGine)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Tgine)
 #Engine source
-file(GLOB USER_SRC_PATH ./Source/*.cpp)
+file(GLOB USER_SRC_PATH ./Source/TGine/*)
 set(SRC_FILES ${USER_SRC_PATH} )
-# Engine Include
-file(GLOB USER_HEADER_PATH ./Source/include/*.h)
-set(SRC_FILES ${SRC_FILES} ${USER_HEADER_PATH})
+#Engine source
+file(GLOB USER_SRC_PATH ./Source/TComponent/*)
+set(SRC_FILES ${USER_SRC_PATH} ${SRC_FILES})
+
 
 
 # Imgui
