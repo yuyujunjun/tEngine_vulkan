@@ -15,7 +15,7 @@ int main() {
 	auto shader = tShader::Create(device.get());
 	shader->SetShaderModule({ "draw.vsh","blingPhong.fsh" }, { vk::ShaderStageFlagBits::eVertex, vk::ShaderStageFlagBits::eFragment });
 	auto material = shader->getInterface();
-	auto renderPass = getSingleRenderpass(device.get(),context->swapChain->getFormat(),(vk::Format)context->swapChain->getDepth()->get_format());
+	auto renderPass = getSingleRenderpass(device.get(),context->swapChain->getFormat(),(vk::Format)context->swapChain->getDepth()->getFormat());
 
 	//Load Mesh
 	auto mesh = std::make_shared<MeshBuffer>();
@@ -34,6 +34,11 @@ int main() {
 	material->SetBuffer("CameraMatrix", CameraBuffer.buffer());
 	material->SetBuffer("ModelMatrix", modelMatrix.buffer());
 
+	glm::vec3 lightPos(0.2, 0.2, 0.2);
+	float lightIntensity = 3;
+	glm::vec3 uKd = glm::vec3(0.2, 0.2, 0.2);
+	glm::vec3 uKs = glm::vec3(0.2, 0.2, 0.2);
+
 	context->Update([&](double timeDelta) {
 		renderPass->SetImageView("back", context->swapChain->getImage(context->imageIdx));
 		renderPass->SetImageView("depth", context->swapChain->getDepth());
@@ -45,13 +50,23 @@ int main() {
 		material->SetBuffer("CameraMatrix", CameraBuffer.buffer(), CameraBuffer.getOffset());
 		material->SetBuffer("ModelMatrix", modelMatrix.buffer(), modelMatrix.getOffset());
 		material->SetBuffer("MaterialInfo", materialInfo.buffer(), materialInfo.getOffset());
-		material->SetValue("lightPos", glm::vec3(2,2,2));
-		material->SetValue<float>("lightIntensity",3);
-		material->SetValue("uKd", glm::vec3(0.2,0.2,0.2));
-		material->SetValue("uKs", glm::vec3(0.2,0.2,0.2));
+		material->SetValue("lightPos", lightPos);
+		material->SetValue<float>("lightIntensity", lightIntensity);
+		material->SetValue("uKd", uKd);
+		material->SetValue("uKs", uKs);
 		material->SetValue("cameraPos", tEngineContext::context.cameraManipulator.getCameraPosition());
 		uploadCameraMatrix(tEngineContext::context.cameraManipulator.getMatrix(), Perspective(context->swapChain->getExtent()), material.get());
 		material->SetValue(ShaderString(SV::_MATRIX_M), glm::mat4(1));
+		ImGui::ShowDemoWindow();
+		ImGui::Begin("test");
+	
+		ImGui::Text("story begin");
+		ImGui::DragFloat3("lightPos",&lightPos[0],.01,-10,10);
+		ImGui::DragFloat3("uKd",&uKd[0],.01,0,3);
+		ImGui::DragFloat3("uKs",&uKs[0],.01,0,5);
+		ImGui::DragFloat("lightIntensity",&lightIntensity,.01,0,10);
+		ImGui::End();
+
 		});
 	context->Record([&](double timeDelta, CommandBufferHandle& cb) {
 
@@ -64,6 +79,7 @@ int main() {
 		DrawMesh(mesh.get(), cb);
 
 		cb->endRenderPass();
+	
 		
 		});
 

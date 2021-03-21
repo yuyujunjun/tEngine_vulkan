@@ -6,7 +6,7 @@
 #include"Device.h"
 namespace tEngine {
 	vk::Format tSwapChain::getFormat() {
-		return vk::Format(imageList[0]->get_format());
+		return vk::Format(imageList[0]->getFormat());
 	}
 	
 	tSwapChain::tSwapChain(Device* device, vk::SwapchainKHR const& swapChain, vk::Extent2D extent) :device(device), swapChain(swapChain), extent(extent) {

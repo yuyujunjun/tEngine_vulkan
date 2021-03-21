@@ -246,9 +246,9 @@ namespace tEngine {
 			return vkImage;
 		}
 
-		VkFormat get_format() const
+		vk::Format getFormat() const
 		{
-			return create_info.format;
+			return (vk::Format)create_info.format;
 		}
 
 		uint32_t get_width(uint32_t lod = 0) const

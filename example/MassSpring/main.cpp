@@ -12,7 +12,7 @@ int main() {
 	//clothMaterial->SetImage("_MainTex", tImage::requestDummyImage(device.get()));
 //	sphereMaterial->SetImage("_MainTex", tImage::requestDummyImage(device.get()));
 
-	auto renderPass = getSingleRenderpass(device.get(), context.swapChain->getFormat(),(vk::Format)context.swapChain->getDepth()->get_format());
+	auto renderPass = getSingleRenderpass(device.get(), context.swapChain->getFormat(),(vk::Format)context.swapChain->getDepth()->getFormat());
 
 	auto cameraBuffer = shader->requestBufferRange("CameraMatrix", 2);
 	auto transformBuffer = shader->requestBufferRange("ModelMatrix", 4);

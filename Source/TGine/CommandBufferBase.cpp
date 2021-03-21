@@ -259,9 +259,9 @@ namespace tEngine {
 
 		;
 		const vk::ImageBlit blit = {
-			{ (vk::ImageAspectFlags)format_to_aspect_mask(src->get_format()), src_level, src_base_layer, num_layers },
+			{ (vk::ImageAspectFlags)format_to_aspect_mask((VkFormat)src->getFormat()), src_level, src_base_layer, num_layers },
 			{ src_offset, add_offset(src_offset, src_extent) },
-			{ (vk::ImageAspectFlags)format_to_aspect_mask(dst->get_format()), dst_level, dst_base_layer, num_layers },
+			{ (vk::ImageAspectFlags)format_to_aspect_mask((VkFormat)dst->getFormat()), dst_level, dst_base_layer, num_layers },
 			{ dst_offset, add_offset(dst_offset, dst_extent) },
 		};
 		blitImage(src, dst, { blit }, filter);
@@ -591,7 +591,7 @@ namespace tEngine {
 			//	default: assert(false); break;
 		}
 
-		vk::ImageAspectFlags aspectMask = (vk::ImageAspectFlags)format_to_aspect_mask((VkFormat)image->get_format());
+		vk::ImageAspectFlags aspectMask = (vk::ImageAspectFlags)format_to_aspect_mask((VkFormat)image->getFormat());
 
 		vk::ImageSubresourceRange imageSubresourceRange(aspectMask, 0, image->get_create_info().levels, 0, image->get_create_info().layers);
 
@@ -623,7 +623,7 @@ namespace tEngine {
 		{
 
 			barriers[i].image = image->getVkHandle();
-			barriers[i].subresourceRange.aspectMask = (vk::ImageAspectFlagBits)format_to_aspect_mask(image->get_format());
+			barriers[i].subresourceRange.aspectMask = (vk::ImageAspectFlagBits)format_to_aspect_mask((VkFormat)image->getFormat());
 			barriers[i].subresourceRange.layerCount = create_info.layers;
 			barriers[i].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 			barriers[i].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -669,7 +669,7 @@ namespace tEngine {
 		b.setImage(image->getVkHandle());
 		b.subresourceRange.levelCount = 1;
 		b.subresourceRange.layerCount = image->get_create_info().layers;
-		b.subresourceRange.aspectMask = (vk::ImageAspectFlagBits)format_to_aspect_mask(image->get_format());// get_format()); image->getCreateInfo().format
+		b.subresourceRange.aspectMask = (vk::ImageAspectFlagBits)format_to_aspect_mask((VkFormat)image->getFormat());// getFormat()); image->getCreateInfo().format
 		b.oldLayout = (vk::ImageLayout)VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
 		b.newLayout = (vk::ImageLayout)VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		b.srcAccessMask = (vk::AccessFlags)VK_ACCESS_TRANSFER_WRITE_BIT;

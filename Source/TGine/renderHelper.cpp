@@ -45,7 +45,7 @@ namespace tEngine {
 	}
 	static vk::AttachmentDescription EndColorDescription(vk::Format format) {
 		auto info = createColorDescription(format);
-		info.setInitialLayout(vk::ImageLayout::eColorAttachmentOptimal);
+		info.setInitialLayout(vk::ImageLayout::ePresentSrcKHR);
 		info.setFinalLayout(vk::ImageLayout::ePresentSrcKHR);
 		info.setLoadOp(vk::AttachmentLoadOp::eLoad);
 		info.setStoreOp(vk::AttachmentStoreOp::eStore);
@@ -59,7 +59,7 @@ namespace tEngine {
 		info.setStoreOp(vk::AttachmentStoreOp::eStore);
 		return info;
 	}
-	static vk::AttachmentDescription  EndDepthDescription(std::string name, vk::Format format) {
+	static vk::AttachmentDescription  EndDepthDescription( vk::Format format) {
 		auto info = createDepthStencilDescription(format);
 		info.setLoadOp(vk::AttachmentLoadOp::eLoad);
 		info.setStoreOp(vk::AttachmentStoreOp::eDontCare);
@@ -123,6 +123,21 @@ namespace tEngine {
 		handle->SetDependencies(SingleDependencies());
 		handle->setClearValue("back", {0,0,0,0});
 		handle->setDepthStencilValue("depth",1,0);
+		handle->setupRenderPass();
+		return handle;
+	}
+	RenderPassHandle getUIRenderpass(Device* device, vk::Format format, vk::Format depthFormat) {
+		auto& handle = std::make_shared<tRenderPass>(device);
+		auto& pass = handle->getPass("Single");
+		pass.addColorOutput("back", (vk::ImageLayout)VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		pass.setDepth("depth", vk::ImageLayout::eDepthStencilAttachmentOptimal);
+		//	pass.addColorOutput("debug", (vk::ImageLayout)VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
+		handle->SetAttachmentDescription("back", EndColorDescription(format));
+		//	handle->SetAttachmentDescription("debug", StartColorDescription(vk::Format::eR8G8B8A8Srgb));
+		handle->SetAttachmentDescription("depth", EndDepthDescription(depthFormat));
+		handle->SetDependencies(SingleDependencies());
+		handle->setClearValue("back", { 0,0,0,0 });
+		handle->setDepthStencilValue("depth", 1, 0);
 		handle->setupRenderPass();
 		return handle;
 	}
