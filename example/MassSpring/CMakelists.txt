@@ -1,0 +1,5 @@
+project(MassSpring)
+file(GLOB_RECURSE c_files  *.cpp *.c)
+find_package(Eigen3 CONFIG REQUIRED)
+add_executable(MassSpring ${c_files})
+target_link_libraries(MassSpring Engine)

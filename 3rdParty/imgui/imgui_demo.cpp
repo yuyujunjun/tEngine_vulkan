@@ -23,10 +23,10 @@
 // Message to beginner C/C++ programmers about the meaning of the 'static' keyword:
 // In this demo code, we frequently we use 'static' variables inside functions. A static variable persist across calls,
 // so it is essentially like a global variable but declared inside the scope of the function. We do this as a way to
-// gather code and mappedMemory in the same place, to make the demo source code faster to read, faster to write, and smaller
+// gather code and data in the same place, to make the demo source code faster to read, faster to write, and smaller
 // in size. It also happens to be a convenient way of storing simple UI related information as long as your function
 // doesn't need to be reentrant or used in multiple threads. This might be a pattern you will want to use in your code,
-// but most of the real mappedMemory you would be editing is likely going to be stored outside your functions.
+// but most of the real data you would be editing is likely going to be stored outside your functions.
 
 // The Demo code in this file is designed to be easy to copy-and-paste in into your application!
 // Because of this:
@@ -292,7 +292,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     if (no_bring_to_front)  window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
     if (no_close)           p_open = NULL; // Don't pass our bool* to Begin
 
-    // We specify a default position/size in case there's no mappedMemory in the .ini file.
+    // We specify a default position/size in case there's no data in the .ini file.
     // We only do it to make the demo applications a little more welcoming, but typically this isn't required.
     ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
@@ -901,7 +901,7 @@ static void ShowDemoWindowWidgets()
         // More:
         // - If you decided that ImTextureID = MyEngineTexture*, then you can pass your MyEngineTexture* pointers
         //   to ImGui::Image(), and gather width/height through your own functions, etc.
-        // - You can use ShowMetricsWindow() to inspect the draw mappedMemory that are being passed to your renderer,
+        // - You can use ShowMetricsWindow() to inspect the draw data that are being passed to your renderer,
         //   it will help you debug issues if you are confused about it.
         // - Consider using the lower-level ImDrawList::AddImage() API, via ImGui::GetWindowDrawList()->AddImage().
         // - Read https://github.com/ocornut/imgui/blob/master/docs/FAQ.md
@@ -942,7 +942,7 @@ static void ShowDemoWindowWidgets()
         {
             ImGui::PushID(i);
             int frame_padding = -1 + i;                             // -1 == uses default padding (style.FramePadding)
-            ImVec2 size = ImVec2(32.0f, 32.0f);                     // Size of the vkImage we want to make visible
+            ImVec2 size = ImVec2(32.0f, 32.0f);                     // Size of the image we want to make visible
             ImVec2 uv0 = ImVec2(0.0f, 0.0f);                        // UV coordinates for lower-left
             ImVec2 uv1 = ImVec2(32.0f / my_tex_w, 32 / my_tex_h);   // UV coordinates for (32,32) in our texture
             ImVec4 bg_col = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);         // Black background
@@ -969,10 +969,10 @@ static void ShowDemoWindowWidgets()
             flags &= ~ImGuiComboFlags_NoArrowButton; // Clear the other flag, as we cannot combine both
 
         // Using the generic BeginCombo() API, you have full control over how to display the combo contents.
-        // (your selection mappedMemory could be an index, a pointer to the object, an id for the object, a flag intrusively
+        // (your selection data could be an index, a pointer to the object, an id for the object, a flag intrusively
         // stored in the object itself, etc.)
         const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ", "KKKK", "LLLLLLL", "MMMM", "OOOOOOO" };
-        static int item_current_idx = 0;                    // Here our selection mappedMemory is an index.
+        static int item_current_idx = 0;                    // Here our selection data is an index.
         const char* combo_label = items[item_current_idx];  // Label to preview before opening the combo (technically could be anything)(
         if (ImGui::BeginCombo("combo 1", combo_label, flags))
         {
@@ -1133,7 +1133,7 @@ static void ShowDemoWindowWidgets()
     {
         if (ImGui::TreeNode("Multi-line Text Input"))
         {
-            // Note: we are using a fixed-sized vkbuffer for simplicity here. See ImGuiInputTextFlags_CallbackResize
+            // Note: we are using a fixed-sized buffer for simplicity here. See ImGuiInputTextFlags_CallbackResize
             // and the code in misc/cpp/imgui_stdlib.h for how to setup InputText() for dynamically resizing strings.
             static char text[1024 * 16] =
                 "/*\n"
@@ -1201,7 +1201,7 @@ static void ShowDemoWindowWidgets()
                     {
                         ImVector<char>* my_str = (ImVector<char>*)data->UserData;
                         IM_ASSERT(my_str->begin() == data->Buf);
-                        my_str->resize(data->BufSize); // NB: On resizing calls, generally mappedMemory->BufSize == mappedMemory->BufTextLen + 1
+                        my_str->resize(data->BufSize); // NB: On resizing calls, generally data->BufSize == data->BufTextLen + 1
                         data->Buf = my_str->begin();
                     }
                     return 0;
@@ -1249,7 +1249,7 @@ static void ShowDemoWindowWidgets()
         static double refresh_time = 0.0;
         if (!animate || refresh_time == 0.0)
             refresh_time = ImGui::GetTime();
-        while (refresh_time < ImGui::GetTime()) // Create dummy mappedMemory at fixed 60 Hz rate for the demo
+        while (refresh_time < ImGui::GetTime()) // Create dummy data at fixed 60 Hz rate for the demo
         {
             static float phase = 0.0f;
             values[values_offset] = cosf(phase);
@@ -1497,7 +1497,7 @@ static void ShowDemoWindowWidgets()
 
     if (ImGui::TreeNode("Data Types"))
     {
-        // DragScalar/InputScalar/SliderScalar functions allow various mappedMemory types
+        // DragScalar/InputScalar/SliderScalar functions allow various data types
         // - signed/unsigned
         // - 8/16/32/64-bits
         // - integer/float/double
@@ -1744,8 +1744,8 @@ static void ShowDemoWindowWidgets()
                     // Set payload to carry the index of our item (could be anything)
                     ImGui::SetDragDropPayload("DND_DEMO_CELL", &n, sizeof(int));
 
-                    // Display preview (could be anything, e.g. when dragging an vkImage we could decide to display
-                    // the filename and a small preview of the vkImage, etc.)
+                    // Display preview (could be anything, e.g. when dragging an image we could decide to display
+                    // the filename and a small preview of the image, etc.)
                     if (mode == Mode_Copy) { ImGui::Text("Copy %s", names[n]); }
                     if (mode == Mode_Move) { ImGui::Text("Move %s", names[n]); }
                     if (mode == Mode_Swap) { ImGui::Text("Swap %s", names[n]); }
@@ -2379,7 +2379,7 @@ static void ShowDemoWindowLayout()
             ImGui::SameLine(0.0f, spacing);
             if (ImGui::TreeNode("Node##1"))
             {
-                // Dummy tree mappedMemory
+                // Dummy tree data
                 for (int i = 0; i < 6; i++)
                     ImGui::BulletText("Item %d..", i);
                 ImGui::TreePop();
@@ -2395,7 +2395,7 @@ static void ShowDemoWindowLayout()
             ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##2");
             if (node_open)
             {
-                // Dummy tree mappedMemory
+                // Dummy tree data
                 for (int i = 0; i < 6; i++)
                     ImGui::BulletText("Item %d..", i);
                 ImGui::TreePop();
@@ -2715,14 +2715,14 @@ static void ShowDemoWindowPopups()
     if (!ImGui::CollapsingHeader("Popups & Modal windows"))
         return;
 
-    // The deviceProperties of popups windows are:
+    // The properties of popups windows are:
     // - They block normal mouse hovering detection outside them. (*)
     // - Unless modal, they can be closed by clicking anywhere outside them, or by pressing ESCAPE.
     // - Their visibility state (~bool) is held internally by Dear ImGui instead of being held by the programmer as
     //   we are used to with regular Begin() calls. User can manipulate the visibility state by calling OpenPopup().
     // (*) One can use IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) to bypass it and detect hovering even
     //     when normally blocked by a popup.
-    // Those three deviceProperties are connected. The library needs to hold their visibility state BECAUSE it can close
+    // Those three properties are connected. The library needs to hold their visibility state BECAUSE it can close
     // popups at any time.
 
     // Typical use for regular windows:
@@ -3960,7 +3960,7 @@ static void ShowExampleMenuFile()
 //-----------------------------------------------------------------------------
 
 // Demonstrate creating a simple console window, with scrolling, filtering, completion and history.
-// For the console example, we are using a more C++ like approach of declaring a class to hold both mappedMemory and functions.
+// For the console example, we are using a more C++ like approach of declaring a class to hold both data and functions.
 struct ExampleAppConsole
 {
     char                  InputBuf[256];
@@ -4203,7 +4203,7 @@ struct ExampleAppConsole
 
     int     TextEditCallback(ImGuiInputTextCallbackData* data)
     {
-        //AddLog("cursor: %d, selection: %d-%d", mappedMemory->CursorPos, mappedMemory->SelectionStart, mappedMemory->SelectionEnd);
+        //AddLog("cursor: %d, selection: %d-%d", data->CursorPos, data->SelectionStart, data->SelectionEnd);
         switch (data->EventFlag)
         {
         case ImGuiInputTextFlags_CallbackCompletion:
@@ -4290,7 +4290,7 @@ struct ExampleAppConsole
                             HistoryPos = -1;
                 }
 
-                // A better implementation would preserve the mappedMemory on the current input line along with cursor position.
+                // A better implementation would preserve the data on the current input line along with cursor position.
                 if (prev_history_pos != HistoryPos)
                 {
                     const char* history_str = (HistoryPos >= 0) ? History[HistoryPos] : "";
@@ -4401,17 +4401,17 @@ struct ExampleAppLog
         }
         else
         {
-            // The simplest and easy way to display the entire vkbuffer:
+            // The simplest and easy way to display the entire buffer:
             //   ImGui::TextUnformatted(buf_begin, buf_end);
             // And it'll just work. TextUnformatted() has specialization for large blob of text and will fast-forward
             // to skip non-visible lines. Here we instead demonstrate using the clipper to only process lines that are
             // within the visible area.
             // If you have tens of thousands of items and their processing cost is non-negligible, coarse clipping them
             // on your side is recommended. Using ImGuiListClipper requires
-            // - A) random access into your mappedMemory
+            // - A) random access into your data
             // - B) items all being the  same height,
             // both of which we can handle since we an array pointing to the beginning of each line of text.
-            // When using the filter (in the block of code above) we don't have random access into the mappedMemory to display
+            // When using the filter (in the block of code above) we don't have random access into the data to display
             // anymore, which is why we don't use the clipper. Storing or skimming through the search result would make
             // it possible (and would be recommended if you want to search through tens of thousands of entries).
             ImGuiListClipper clipper;
@@ -4597,7 +4597,7 @@ static void ShowExampleAppPropertyEditor(bool* p_open)
     ImGui::Columns(2);
     ImGui::Separator();
 
-    // Iterate dummy objects with dummy members (all the same mappedMemory)
+    // Iterate dummy objects with dummy members (all the same data)
     for (int obj_i = 0; obj_i < 3; obj_i++)
         ShowDummyObject("Object", obj_i);
 
@@ -4642,7 +4642,7 @@ static void ShowExampleAppLongText(bool* p_open)
     switch (test_type)
     {
     case 0:
-        // Single call to TextUnformatted() with a big vkbuffer
+        // Single call to TextUnformatted() with a big buffer
         ImGui::TextUnformatted(log.begin(), log.end());
         break;
     case 1:

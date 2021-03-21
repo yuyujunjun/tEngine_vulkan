@@ -1,0 +1,6 @@
+project(TexturedObj)
+file(GLOB_RECURSE c_files  *.cpp *.c)
+
+add_executable(TexturedObj ${c_files})
+
+target_link_libraries(TexturedObj  Engine)

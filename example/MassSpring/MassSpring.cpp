@@ -168,8 +168,8 @@ namespace SpringSolver {
 	void MSpring::Update(float dt) {
 		auto noise = tEngine::SimplexNoise2D(glm::vec2(time,time+0.2)*0.02f);
 		time += dt;
-		constant += vk::su::clamp(noise,-.1f,.1f);
-		fluid = constant * Eigen::Vector3d(0.1,0.1,0.3)*0.1;
+		constant = vk::su::clamp(noise,-.1f,.1f);
+		fluid = constant * Eigen::Vector3d(0.1,0.1,0.3);
 	//	fluid = fluid.normalized();
 	//	fluid = Eigen::Vector3d(tEngine::PerlinNoise3D());
 		//std::cout << x << std::endl;

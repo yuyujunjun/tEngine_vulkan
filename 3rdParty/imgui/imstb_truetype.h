@@ -15,10 +15,10 @@
 //
 //   Todo:
 //        non-MS cmaps
-//        crashproof on bad mappedMemory
+//        crashproof on bad data
 //        hinting? (no longer patented)
 //        cleartype-style AA?
-//        optimize: use simple mappedMemory allocator for intermediates
+//        optimize: use simple memory allocator for intermediates
 //        optimize: build edge-list directly from curves
 //        optimize: rasterize directly from curves?
 //
@@ -64,7 +64,7 @@
 //   1.13 (2017-01-02) support OpenType fonts, certain Apple fonts
 //   1.12 (2016-10-25) suppress warnings about casting away const with -Wcast-qual
 //   1.11 (2016-04-02) fix unused-variable warning
-//   1.10 (2016-04-02) user-defined fabs(); rare mappedMemory leak; remove duplicate typedef
+//   1.10 (2016-04-02) user-defined fabs(); rare memory leak; remove duplicate typedef
 //   1.09 (2016-01-16) warning fix; avoid crash on outofmem; use allocation userdata properly
 //   1.08 (2015-09-13) document stbtt_Rasterize(); fixes for vertical & horizontal edges
 //   1.07 (2015-08-01) allow PackFontRanges to accept arrays of sparse codepoints;
@@ -102,7 +102,7 @@
 //           stbtt_PackEnd()
 //           stbtt_GetPackedQuad()
 //
-//   "Load" a font file from a mappedMemory vkbuffer (you have to keep the vkbuffer loaded)
+//   "Load" a font file from a memory buffer (you have to keep the buffer loaded)
 //           stbtt_InitFont()
 //           stbtt_GetFontOffsetForIndex()        -- indexing for TTC font collections
 //           stbtt_GetNumberOfFonts()             -- number of fonts for TTC font collections
@@ -175,7 +175,7 @@
 //         inch. For example, Windows traditionally uses a convention that
 //         there are 96 pixels per inch, thus making 'inch' measurements have
 //         nothing to do with inches, and thus effectively defining a point to
-//         be 1.333 pixels. Additionally, the TrueType font mappedMemory provides
+//         be 1.333 pixels. Additionally, the TrueType font data provides
 //         an explicit scale factor to scale a given font's glyphs to p,
 //         but the author has observed that this scale factor is often wrong
 //         for non-commercial fonts, thus making fonts scaled in p
@@ -232,15 +232,15 @@
 //      if you don't do this, stb_truetype is forced to do the conversion on
 //      every call.
 //
-//    - There are a lot of mappedMemory allocations. We should modify it to take
-//      a temp vkbuffer and allocate from the temp vkbuffer (without freeing),
+//    - There are a lot of memory allocations. We should modify it to take
+//      a temp buffer and allocate from the temp buffer (without freeing),
 //      should help performance a lot.
 //
 // NOTES
 //
-//   The system uses the raw mappedMemory found in the .ttf file without changing it
-//   and without building auxiliary mappedMemory structures. This is a bit inefficient
-//   on little-endian systems (the mappedMemory is big-endian), but assuming you're
+//   The system uses the raw data found in the .ttf file without changing it
+//   and without building auxiliary data structures. This is a bit inefficient
+//   on little-endian systems (the data is big-endian), but assuming you're
 //   caching the bitmaps or glyph shapes this shouldn't be a big deal.
 //
 //   It appears to be very hard to programmatically determine what font a
@@ -393,10 +393,10 @@ int main(int arg, char **argv)
       stbtt_GetCodepointHMetrics(&font, text[ch], &advance, &lsb);
       stbtt_GetCodepointBitmapBoxSubpixel(&font, text[ch], scale,scale,x_shift,0, &x0,&y0,&x1,&y1);
       stbtt_MakeCodepointBitmapSubpixel(&font, &screen[baseline + y0][(int) xpos + x0], x1-x0,y1-y0, 79, scale,scale,x_shift,0, text[ch]);
-      // note that this stomps the old mappedMemory, so where character boxes overlap (e.g. 'lj') it's wrong
+      // note that this stomps the old data, so where character boxes overlap (e.g. 'lj') it's wrong
       // because this API is really for baking character bitmaps into textures. if you want to render
-      // a sequence of characters, you really need to render each bitmap to a temp vkbuffer, then
-      // "alpha blend" that into the working vkbuffer
+      // a sequence of characters, you really need to render each bitmap to a temp buffer, then
+      // "alpha blend" that into the working buffer
       xpos += (advance * scale);
       if (text[ch+1])
          xpos += scale*stbtt_GetCodepointKernAdvance(&font, text[ch],text[ch+1]);
@@ -547,7 +547,7 @@ typedef struct
    float x1,y1,s1,t1; // bottom-right
 } stbtt_aligned_quad;
 
-STBTT_DEF void stbtt_GetBakedQuad(const stbtt_bakedchar *chardata, int pw, int ph,  // same mappedMemory as above
+STBTT_DEF void stbtt_GetBakedQuad(const stbtt_bakedchar *chardata, int pw, int ph,  // same data as above
                                int char_index,             // character to display
                                float *xpos, float *ypos,   // pointers to current position in screen pixel space
                                stbtt_aligned_quad *q,      // output: quad to draw
@@ -598,7 +598,7 @@ STBTT_DEF int  stbtt_PackBegin(stbtt_pack_context *spc, unsigned char *pixels, i
 // Returns 0 on failure, 1 on success.
 
 STBTT_DEF void stbtt_PackEnd  (stbtt_pack_context *spc);
-// Cleans up the packing context and frees all mappedMemory.
+// Cleans up the packing context and frees all memory.
 
 #define STBTT_POINT_SIZE(x)   (-(x))
 
@@ -655,7 +655,7 @@ STBTT_DEF void stbtt_PackSetSkipMissingCodepoints(stbtt_pack_context *spc, int s
 // codepoints without a glyph recived the font's "missing character" glyph,
 // typically an empty box by convention.
 
-STBTT_DEF void stbtt_GetPackedQuad(const stbtt_packedchar *chardata, int pw, int ph,  // same mappedMemory as above
+STBTT_DEF void stbtt_GetPackedQuad(const stbtt_packedchar *chardata, int pw, int ph,  // same data as above
                                int char_index,             // character to display
                                float *xpos, float *ypos,   // pointers to current position in screen pixel space
                                stbtt_aligned_quad *q,      // output: quad to draw
@@ -666,7 +666,7 @@ STBTT_DEF void stbtt_PackFontRangesPackRects(stbtt_pack_context *spc, stbrp_rect
 STBTT_DEF int  stbtt_PackFontRangesRenderIntoRects(stbtt_pack_context *spc, const stbtt_fontinfo *info, stbtt_pack_range *ranges, int num_ranges, stbrp_rect *rects);
 // Calling these functions in sequence is roughly equivalent to calling
 // stbtt_PackFontRanges(). If you more control over the packing of multiple
-// fonts, or if you want to pack custom mappedMemory into a font texture, take a look
+// fonts, or if you want to pack custom data into a font texture, take a look
 // at the source to of stbtt_PackFontRanges() and create a custom version 
 // using these functions, e.g. call GatherRects multiple times,
 // building up a single array of rects, then call PackRects once,
@@ -723,7 +723,7 @@ struct stbtt_fontinfo
    int index_map;                     // a cmap mapping for our chosen character encoding
    int indexToLocFormat;              // format needed to map from glyph index to glyph
 
-   stbtt__buf cff;                    // cff font mappedMemory
+   stbtt__buf cff;                    // cff font data
    stbtt__buf charstrings;            // the charstring index
    stbtt__buf gsubrs;                 // global charstring subroutines index
    stbtt__buf subrs;                  // private charstring subroutines index
@@ -736,7 +736,7 @@ STBTT_DEF int stbtt_InitFont(stbtt_fontinfo *info, const unsigned char *data, in
 // the necessary cached info for the rest of the system. You must allocate
 // the stbtt_fontinfo yourself, and stbtt_InitFont will fill it out. You don't
 // need to do anything special to free it, because the contents are pure
-// value mappedMemory with no additional mappedMemory structures. Returns 0 on failure.
+// value data with no additional data structures. Returns 0 on failure.
 
 
 //////////////////////////////////////////////////////////////////////////////
@@ -844,7 +844,7 @@ STBTT_DEF int stbtt_GetGlyphShape(const stbtt_fontinfo *info, int glyph_index, s
 // its x,y, using cx,cy as the bezier control point.
 
 STBTT_DEF void stbtt_FreeShape(const stbtt_fontinfo *info, stbtt_vertex *vertices);
-// frees the mappedMemory allocated above
+// frees the data allocated above
 
 //////////////////////////////////////////////////////////////////////////////
 //
@@ -1110,7 +1110,7 @@ typedef int stbtt__test_oversample_pow2[(STBTT_MAX_OVERSAMPLE & (STBTT_MAX_OVERS
 
 //////////////////////////////////////////////////////////////////////////
 //
-// stbtt__buf helpers to parse mappedMemory from file
+// stbtt__buf helpers to parse data from file
 //
 
 static stbtt_uint8 stbtt__buf_get8(stbtt__buf *b)
@@ -1256,7 +1256,7 @@ static stbtt__buf stbtt__cff_index_get(stbtt__buf b, int i)
 
 //////////////////////////////////////////////////////////////////////////
 //
-// accessors to parse mappedMemory from file
+// accessors to parse data from file
 //
 
 // on platforms that don't allow misaligned reads, if we want to allow
@@ -1670,11 +1670,11 @@ static int stbtt__GetGlyphShapeTT(const stbtt_fontinfo *info, int glyph_index, s
       next_move = 0;
       flagcount=0;
 
-      // in first pass, we load uninterpreted mappedMemory into the allocated array
+      // in first pass, we load uninterpreted data into the allocated array
       // above, shifted to the end of the array so we won't overwrite it when
-      // we create our final mappedMemory starting from the front
+      // we create our final data starting from the front
 
-      off = m - n; // starting offset for uninterpreted mappedMemory, regardless of how m ends up being calculated
+      off = m - n; // starting offset for uninterpreted data, regardless of how m ends up being calculated
 
       // first load flags
 
@@ -4815,7 +4815,7 @@ STBTT_DEF int stbtt_CompareUTF8toUTF16_bigendian(const char *s1, int len1, const
 //   1.12 (2016-10-25) suppress warnings about casting away const with -Wcast-qual
 //   1.11 (2016-04-02) fix unused-variable warning
 //   1.10 (2016-04-02) allow user-defined fabs() replacement
-//                     fix mappedMemory leak if fontsize=0.0
+//                     fix memory leak if fontsize=0.0
 //                     fix warning from duplicate typedef
 //   1.09 (2016-01-16) warning fix; avoid crash on outofmem; use alloc userdata for PackFontRanges
 //   1.08 (2015-09-13) document stbtt_Rasterize(); fixes for vertical & horizontal edges
@@ -4829,7 +4829,7 @@ STBTT_DEF int stbtt_CompareUTF8toUTF16_bigendian(const char *s1, int len1, const
 //                     remove need for STBTT_sort
 //   1.05 (2015-04-15) fix misplaced definitions for STBTT_STATIC
 //   1.04 (2015-04-15) typo in example
-//   1.03 (2015-04-12) STBTT_STATIC, fix mappedMemory leak in new packing, various fixes
+//   1.03 (2015-04-12) STBTT_STATIC, fix memory leak in new packing, various fixes
 //   1.02 (2014-12-10) fix various warnings & compile issues w/ stb_rect_pack, C++
 //   1.01 (2014-12-08) fix subpixel position when oversampling to exactly match
 //                        non-oversampled; STBTT_POINT_SIZE for packed case only

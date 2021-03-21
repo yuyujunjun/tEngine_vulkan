@@ -3,8 +3,9 @@
 #define GLFW_INCLUDE_VULKAN
 #endif
 #include"vulkan/vulkan.hpp"
-#include<GLFW/glfw3.h>
-
+#include"GLFW/glfw3.h"
+#include"imgui.h"
+#include"imgui_impl_vulkan.h"
 #include<unordered_map>
 #include"EgTypes.h"
 #include"Device.h"

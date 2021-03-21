@@ -7,9 +7,9 @@
 //新的问题：多个文件加载出一个资源，先按一定规则生成key
 namespace tEngine {
 	class ResourceLoadManager {
-	
+		
 		using Key = std::string;
-		std::string BaseFolder = "";
+		std::string BaseFolder;// = STR2(ASSET_PATH);
 		std::unordered_map<Key, std::weak_ptr<Asset>>assetPool;
 		std::shared_ptr<Asset> GetResource(Key name) {
 			if (assetPool.count(name) == 0)return nullptr;
@@ -25,7 +25,9 @@ namespace tEngine {
 			auto result = name.substr(idx_begin);
 			return result;
 		}
+		
 	public:
+		ResourceLoadManager();
 		friend std::shared_ptr<MeshAsset> LoadMesh(std::string filename);
 		friend std::shared_ptr<ImageAsset> LoadImage(std::string filename);
 		friend std::shared_ptr<ShaderAsset> LoadShader(std::string filename);

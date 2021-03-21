@@ -6,11 +6,16 @@
 #ifndef TINYOBJLOADER_IMPLEMENTATION
 #define TINYOBJLOADER_IMPLEMENTATION
 #endif
+#define STR1(R)  #R
+#define STR2(R)  STR1(R)
 #include"stb_image/stb_image.h"
 #include"tiny_obj_loader.h"
 #include"Log.h"
 namespace tEngine {
 	ResourceLoadManager ResourceLoadManager::manager;
+	ResourceLoadManager::ResourceLoadManager() {
+		BaseFolder = STR2(ASSET_PATH) + std::string("/Assets/");
+	}
 	std::vector<uint32_t> read_binary_file(const std::string& filename, const uint32_t count)
 	{
 		std::vector<uint32_t> data;
@@ -60,7 +65,8 @@ namespace tEngine {
 		auto res = manager.GetResource(key);
 
 		if (res == nullptr) {
-			std::string file = "../Assets/" + manager.BaseFolder + filename;
+			
+			std::string file =  manager.BaseFolder + filename;
 			//Mesh mesh;
 			tinyobj::attrib_t attrib;
 			std::vector<tinyobj::shape_t> shapes;
@@ -114,8 +120,8 @@ namespace tEngine {
 			LOGD(LogLevel::Performance, "LoadImage " + m.getKey(name));
 			
 			int width, height, channels;
-			stbi_set_flip_vertically_on_load(true);
-			stbi_uc* pixels = stbi_load(("../Assets/" + name).c_str(), &width, &height, &channels, STBI_rgb_alpha);
+			stbi_set_flip_vertically_on_load(false);
+			stbi_uc* pixels = stbi_load((m.BaseFolder + name).c_str(), &width, &height, &channels, STBI_rgb_alpha);
 			image = std::make_shared<ImageAsset>();
 			image->pixels = pixels;
 			image->width = width;
@@ -135,8 +141,8 @@ namespace tEngine {
 		auto shader = std::static_pointer_cast<ShaderAsset>(m.GetResource(m.getKey(filename)));
 		//Load image
 		if (shader == nullptr) {
-			std::string shaderFile = "../Assets/Shader/" + filename+".spv";
-			std::string jsonFile = "../Assets/Json/" + filename+".refl";
+			std::string shaderFile = m.BaseFolder+ "Shader/" + filename+".spv";
+			std::string jsonFile = m.BaseFolder + "Json/" + filename+".refl";
 			LOGD(LogLevel::Performance,("LoadShader: " + m.getKey(filename)).c_str());
 			auto shader_source= read_binary_file(shaderFile,0);
 			auto json_code = read_text_file(jsonFile);
