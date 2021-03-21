@@ -11,11 +11,12 @@ int main() {
 	auto& device = context->device;
 
 	ThreadContext* threadContext = new ThreadContext(context);
+
 	auto shader = tShader::Create(device.get());
-	std::vector<std::string> shaders = { "draw.vsh","draw.fsh" };
-	shader->SetShaderModule(shaders, { vk::ShaderStageFlagBits::eVertex, vk::ShaderStageFlagBits::eFragment });
+	shader->SetShaderModule({ "draw.vsh","drawTexture.fsh" }, { vk::ShaderStageFlagBits::eVertex, vk::ShaderStageFlagBits::eFragment });
 	auto material = shader->getInterface();
-	auto renderPass = getSingleRenderpass(device.get(),context->swapChain);
+
+	auto renderPass = getSingleRenderpass(device.get(),context->swapChain->getFormat(),(vk::Format)context->swapChain->getDepth()->get_format());
 
 	//Load Mesh
 	auto mesh = std::make_shared<MeshBuffer>();
@@ -29,47 +30,40 @@ int main() {
 	auto image =createImage(device.get(),
 		ImageCreateInfo::immutable_2d_image(imageAsset->width, imageAsset->height, VK_FORMAT_R8G8B8A8_UNORM), imageAsset, nullptr);
 	
-	material->SetImage("_MainTex", image);
+	//material->SetImage("_MainTex", image);
 	
+	auto CameraBuffer = material->getShader()->requestBufferRange("CameraMatrix", 10);
+	auto modelMatrix = material->getShader()->requestBufferRange("ModelMatrix", 3);
+	material->SetBuffer("CameraMatrix", CameraBuffer.buffer());
+	material->SetBuffer("ModelMatrix", modelMatrix.buffer());
 
-	CameraManipulator camera;
-	auto CameraBuffer = material->getShader()->requestBufferRange("CameraMatrix", 1);
-	auto modelMatrix = material->getShader()->requestBufferRange("ModelMatrix", 1);
-	material->SetBuffer("CameraMatrix", CameraBuffer.buffer(), 3);
-	material->SetBuffer("ModelMatrix", modelMatrix.buffer(), 10);
-
-	context->Update([&](uint32_t imageIdx) {
-		renderPass->SetImageView("back", context->swapChain->getImage(imageIdx));
+	context->Update([&](double timeDelta) {
+		renderPass->SetImageView("back", context->swapChain->getImage(context->imageIdx));
 		renderPass->SetImageView("depth", context->swapChain->getDepth());
 		renderPass->setClearValue("back", { 0,0,0,1 });
 		renderPass->setDepthStencilValue("depth", 1);
-		
-		
-		});
-	context->Record([&](uint32_t idx, CommandBufferHandle& cb) {
-
 		CameraBuffer.NextRangenoLock();
 		modelMatrix.NextRangenoLock();
 		material->SetBuffer("CameraMatrix", CameraBuffer.buffer(), CameraBuffer.getOffset());
 		material->SetBuffer("ModelMatrix", modelMatrix.buffer(), modelMatrix.getOffset());
-
-
 		uploadCameraMatrix(tEngineContext::context.cameraManipulator.getMatrix(), Perspective(context->swapChain->getExtent()), material.get());
 		material->SetValue(ShaderString(SV::_MATRIX_M), glm::mat4(1));
+		});
+	context->Record([&](double timeDelta, CommandBufferHandle& cb) {
 
 
 		auto& frameBuffer = renderPass->requestFrameBuffer();
 		cb->beginRenderPass(renderPass, frameBuffer, true);
 		cb->setViewport(frameBuffer->getViewPort());
 		cb->setScissor(0, frameBuffer->getRenderArea());
-		flushGraphicsShaderState(*material.get(), cb, renderPass.get(), 0);
+		flushGraphicsShaderState(material.get(), cb, renderPass.get(), 0);
 		DrawMesh(mesh.get(), cb);
 
 		cb->endRenderPass();
 		
 		});
 
-
+	
 
 	context->Loop(threadContext);
 

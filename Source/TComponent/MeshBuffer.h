@@ -19,13 +19,13 @@ namespace tEngine {
 			createVertexBuffer(device,cb,domain);
 			createIdxBuffer(device,cb,domain);
 		}
-		void createVertexBuffer(Device* device, CommandBufferHandle& cb, BufferDomain domain = BufferDomain::Device);
-		void createIdxBuffer(Device* device, CommandBufferHandle& cb, BufferDomain domain = BufferDomain::Device);
-		void uploadVertexBuffer(Device* device, CommandBufferHandle& cb) {
+		void createVertexBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain = BufferDomain::Device);
+		void createIdxBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain = BufferDomain::Device);
+		void uploadVertexBuffer(Device* device, CommandBufferHandle cb) {
 			updateBufferUsingStageBuffer(device, VBO, cb, mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
 			
 		}
-		void uploadIdxBuffer(Device* device, CommandBufferHandle& cb) {
+		void uploadIdxBuffer(Device* device, CommandBufferHandle cb) {
 			updateBufferUsingStageBuffer(device, IBO, cb, mesh.indices.data(), mesh.indices.size() * sizeof(uint32_t));
 		}
 		const BufferHandle& getVBO()const {
@@ -35,6 +35,9 @@ namespace tEngine {
 			return IBO;
 		}
 		const Mesh& getMesh()const {
+			return mesh;
+		}
+		Mesh& getMesh() {
 			return mesh;
 		}
 	private:

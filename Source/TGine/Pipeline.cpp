@@ -37,7 +37,7 @@ namespace tEngine {
 		createInfo.multisampleState.sampleShadingEnable = false;
 		//createInfo.multisampleState.SampleMask = 0xFFFFFFFF;
 		//rasterizationState
-		//createInfo.rasterizationState.cullMode = vk::CullModeFlagBits::eBack;
+	//	createInfo.rasterizationState.cullMode = vk::CullModeFlagBits::eNone;
 		//createInfo.rasterizationState.polygonMode = vk::PolygonMode::eFill;
 
 		createInfo.renderPass = renderPass->getVkHandle();

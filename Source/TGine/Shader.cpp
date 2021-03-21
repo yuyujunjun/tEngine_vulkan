@@ -26,9 +26,9 @@ namespace tEngine {
 				auto bId = set.data.bindings[i].binding;
 				auto type = set.data.bindings[i].descriptorType;
 				auto range = set.blockBuffers.at(bId).ByteSize();
-				result[set.set_number][bId]= BindingResourceInfo(bId,type,{},{},{},{},0,range);
+				result[set.set_number][bId] = BindingResourceInfo(bId, type, {}, {}, {}, {}, 0, range);
 			}
-			
+
 		}
 		return result;
 	}
@@ -41,7 +41,7 @@ namespace tEngine {
 		MergeSet(setInfos);
 		CreateShaderLayout();
 		BuildNameBindingInfo();
-		
+
 	}
 	void tShader::BuildNameBindingInfo() {
 		for (auto& set : setInfos) {
@@ -99,7 +99,7 @@ namespace tEngine {
 
 	}
 	//fake viewInfo
-	void tShaderInterface::SetImage(std::string name, ImageHandle image, vk::ImageView vkView , StockSampler sampler) {
+	void tShaderInterface::SetImage(std::string name, ImageHandle image, vk::ImageView vkView, StockSampler sampler) {
 		//	assert(bindResource_to_idx.count(name) != 0);
 		auto s_b = base_shader->getBlockSetBinding(name);
 
@@ -127,7 +127,7 @@ namespace tEngine {
 		}
 		assert(HasSet && "Push Constant Name may be wrong or Push Constant size may be zero");
 	}
-	void tShaderInterface::SetValue(std::string valueName, const void* value,size_t size, BufferHandle buffer) {
+	void tShaderInterface::SetValue(std::string valueName, const void* value, size_t size, BufferHandle buffer) {
 		auto info = base_shader->getVarSetBinding(valueName);
 		if (buffer == nullptr) {
 			assert(bindResources[info.set_number][info.bind_number].buffer != nullptr);
@@ -147,20 +147,20 @@ namespace tEngine {
 	};
 
 
-	const GpuBlockBuffer& tShader:: getBlock(std::string name) {
+	const GpuBlockBuffer& tShader::getBlock(std::string name) {
 		auto s_b = blockToSetBinding.at(name);
 		return setInfos[s_b.first].blockBuffers.at(s_b.second);
 	}
 	bool tShaderInterface::isSetEmpty(int i) {
 
 		for (auto& b : bindResources[i]) {
-			if (!b.emptyResource()) {
+			if (b.dstBinding!=-1) {
 				return false;
 			}
 		}
 		return true;
 	}
-	const BufferHandle& tShader::requestBuffer(std::string name, uint32_t rangeCount )const {
+	const BufferHandle& tShader::requestBuffer(std::string name, uint32_t rangeCount)const {
 		return requestBufferRange(name, 1).buffer();
 	}
 	BufferRangeManager tShader::requestBufferRange(std::string name, uint32_t rangeCount)const {
@@ -193,7 +193,29 @@ namespace tEngine {
 	const std::vector<ResSetBinding>& tShaderInterface::getResSetBinding()const {
 		return bindResources;
 	}
-
+	const Device* tShaderInterface::getDevice() {
+		return base_shader->device;
+	}
+	std::vector<ResSetBinding>& tShaderInterface::getResSetBinding()
+	{
+		return bindResources;
+	}
+	void fillWithDirtyImage(ResSetBinding& rb, const Device* device) {
+		for (auto& bindingInfo : rb) {
+			if (bindingInfo.emptyResource()) {
+				auto& resource = bindingInfo;
+				switch (resource.type) {
+				case vk::DescriptorType::eCombinedImageSampler:
+				case vk::DescriptorType::eStorageImage:
+					resource.image = tImage::requestDummyImage(device);
+					resource.view = resource.image->get_view()->getDefaultView();
+					resource.sampler = tEngine::StockSampler::LinearClamp;
+					break;
+		
+				}
+			}
+		}
+	}
 
 	void collectDescriptorSets(std::vector<DescriptorSetHandle>& bindedSets, std::vector<uint32_t>& offsets,
 		const ResSetBinding& setBindings, const DescSetAllocHandle& setAllocator)
@@ -235,11 +257,13 @@ namespace tEngine {
 			}
 		};
 		for (uint32_t i = 0; i < state.setCount(); ++i) {
+			
 			if (state.isSetEmpty(i)) {
 
 				bindNow(i - bindedSets.size());
 
 			}
+			fillWithDirtyImage(state.getResSetBinding()[i], state.getDevice());
 			collectDescriptorSets(bindedSets, offsets, state.getResSetBinding()[i], state.getDescSetAllocator(i));
 		}
 		bindNow(state.setCount() - bindedSets.size());
@@ -262,13 +286,13 @@ namespace tEngine {
 			cb->pushConstants(state.getShader()->getPipelineLayout()->getVkHandle(), (VkShaderStageFlags)state.getShader()->getAllStagesFlag(), state.getPushConstantBlock());
 		}
 	}
-	void flushGraphicsShaderState(tShaderInterface& state, CommandBufferHandle& cb, tRenderPass* renderPass, uint32_t subpass) {
-		flushGraphicsPipeline(cb, state, renderPass, subpass);
-		flushDescriptorSet(cb, state);
+	void flushGraphicsShaderState(tShaderInterface* state, CommandBufferHandle& cb, tRenderPass* renderPass, uint32_t subpass) {
+		flushGraphicsPipeline(cb, *state, renderPass, subpass);
+		flushDescriptorSet(cb, *state);
 	}
-	void flushComputeShaderState(tShaderInterface& state, CommandBufferHandle& cb) {
-		flushComptuePipeline(cb, state);
-		flushDescriptorSet(cb, state);
+	void flushComputeShaderState(tShaderInterface* state, CommandBufferHandle& cb) {
+		flushComptuePipeline(cb, *state);
+		flushDescriptorSet(cb, *state);
 	}
 
 

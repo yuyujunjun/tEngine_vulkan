@@ -111,17 +111,18 @@ namespace tEngine {
 
 
 	}
-	RenderPassHandle getSingleRenderpass(Device* device,SwapChainHandle& swapChain) {
+	RenderPassHandle getSingleRenderpass(Device* device, vk::Format format, vk::Format depthFormat) {
 		auto& handle = std::make_shared<tRenderPass>(device);
 		auto& pass = handle->getPass("Single");
 		pass.addColorOutput("back", (vk::ImageLayout)VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		pass.setDepth("depth", vk::ImageLayout::eDepthStencilAttachmentOptimal);
 		//	pass.addColorOutput("debug", (vk::ImageLayout)VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-		handle->SetAttachmentDescription("back", StartColorDescription(swapChain->getFormat()));
+		handle->SetAttachmentDescription("back", StartColorDescription(format));
 		//	handle->SetAttachmentDescription("debug", StartColorDescription(vk::Format::eR8G8B8A8Srgb));
-		handle->SetAttachmentDescription("depth", StartDepthDescription(vk::Format::eD16Unorm));
+		handle->SetAttachmentDescription("depth", StartDepthDescription(depthFormat));
 		handle->SetDependencies(SingleDependencies());
-
+		handle->setClearValue("back", {0,0,0,0});
+		handle->setDepthStencilValue("depth",1,0);
 		handle->setupRenderPass();
 		return handle;
 	}

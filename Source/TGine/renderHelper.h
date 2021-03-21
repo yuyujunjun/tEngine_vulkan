@@ -1,5 +1,5 @@
 #pragma once
-#include<vulkan/vulkan.h>
+#include<vulkan/vulkan.hpp>
 #include<memory>
 namespace tEngine {
 	class Device;
@@ -11,6 +11,6 @@ namespace tEngine {
 	class tSwapChain;
 	using SwapChainHandle = std::shared_ptr<tSwapChain>;
 
-	RenderPassHandle getSingleRenderpass(Device* device,SwapChainHandle& swapChain);
+	RenderPassHandle getSingleRenderpass(Device* device,vk::Format format,vk::Format depthFormat);
 
 }

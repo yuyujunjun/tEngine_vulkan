@@ -109,7 +109,7 @@ namespace tEngine {
 				}
 			}
 			
-			assert(check && "binded descriptorSet must have resource");
+		//	assert(check && "binded descriptorSet must have resource");
 			vkSets.emplace_back(set->getVkHandle());
 		}
 		cb.bindDescriptorSets(bindingPoint, pipelineLayout->getVkHandle(), firstSet, vkSets, dynamicOffsets);

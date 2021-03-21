@@ -526,6 +526,21 @@ namespace tEngine {
 			 device->destroyImageView(view);
 		 }
 	 }
+	 std::shared_ptr<tImage> tImage::requestDummyImage(const Device* device) {
+		 static std::shared_ptr<tImage> dummyImage;
+		 if (dummyImage == nullptr) {
+			 ImageCreateInfo info = ImageCreateInfo::immutable_2d_image(1,1,(VkFormat)vk::Format::eR8Srgb,false);
+			 std::vector<unsigned char> color(1);
+			 color = { 255 };
+			 auto asset=std::make_shared<ImageAsset>();
+			 asset->pixels = static_cast<stbi_uc*>(color.data());
+			 
+			 dummyImage = createImage(device, info, asset);
+			 asset->pixels = nullptr;
+
+		 }
+		 return dummyImage;
+	 }
 	 tImage::~tImage() {
 
 		 if (vkImage) {
@@ -1166,7 +1181,7 @@ namespace tEngine {
 		 return handle;
 	 }
 	 //If need commandBuffer but don't provide, use transient
-
+	
 
 	 ImageHandle createImage(const Device* device, const ImageCreateInfo& info, std::shared_ptr<ImageAsset> initial, CommandBufferHandle cb) {
 		 if (initial) {

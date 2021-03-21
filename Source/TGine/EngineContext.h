@@ -58,26 +58,71 @@ namespace tEngine {
 		SwapChainHandle swapChain;
 		vk::DebugUtilsMessengerEXT debugUtilsMessenger;
 		CameraManipulator cameraManipulator;
+		clock_t time=0;
+		uint32_t imageIdx = -1;
+		std::function<void(double)> prepareStage;
+		std::function<void(double, CommandBufferHandle& cb)> loopStage;
 	
-		std::function<void(uint32_t)> prepareStage;
-		std::function<void(uint32_t, CommandBufferHandle& cb)> loopStage;
-	
-		void Update(const std::function<void(uint32_t)>& f) {
+		void Update(const std::function<void(double)>& f) {
 			prepareStage = f;
 		}
 		
-		void Record(const std::function<void(uint32_t,CommandBufferHandle& cb)>& f) {
+		void Record(const std::function<void(double,CommandBufferHandle& cb)>& f) {
 			loopStage = f;
 		}
+		void Render(ThreadContext* threadContext) {
+			double deltaTime = time==0?0:(static_cast<double>(clock()) - time) / 1e3;
+			time = clock();
+			SemaphoreHandle	acquireSemaphore = device->getSemaphoreManager()->requestSemaphore();
+			SemaphoreHandle presentSemaphore = device->getSemaphoreManager()->requestSemaphore();
+			FenceHandle fence = device->getFenceManager()->requestSingaledFence();
+			
+			auto currentBuffer = (VkResult)device->acquireNextImageKHR(swapChain->getVkHandle(), -1, acquireSemaphore->getVkHandle(), {}, &imageIdx);
+			if (currentBuffer == VK_ERROR_OUT_OF_DATE_KHR || currentBuffer == VK_SUBOPTIMAL_KHR) {
+				updateSwapChain(gWindow, surface, swapChain, device.get());
+			}
+			else if (currentBuffer != VK_SUCCESS) {
+				throw std::runtime_error("failed to present swap chain image!");
+			}
+			prepareStage(imageIdx);
+			auto& cb = threadContext->cmdBuffers[imageIdx];
+			auto result = device->waitForFences(fence->getVkHandle(), true, -1);
+			device->resetFences(fence->getVkHandle());
+			cb->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
+			cb->begin(vk::CommandBufferUsageFlags());
+			loopStage(imageIdx, cb);
+			cb->end();
+			tSubmitInfo info;
+			info.setCommandBuffers(cb);
+			info.waitSemaphore(acquireSemaphore, vk::PipelineStageFlagBits::eFragmentShader);
+
+			info.signalSemaphore(presentSemaphore);
+
+			device->requestQueue(cb->getQueueFamilyIdx()).submit(info.getSubmitInfo(), fence->getVkHandle());
+
+			auto presentInfo = vk::PresentInfoKHR(presentSemaphore->getVkHandle(), swapChain->getVkHandle(), imageIdx);
+			auto presentResult = (VkResult)device->requestQueue(vk::QueueFlagBits::eGraphics).presentKHR(&presentInfo);
+			if (presentResult == VK_ERROR_OUT_OF_DATE_KHR || presentResult == VK_SUBOPTIMAL_KHR) {
+				updateSwapChain(gWindow, surface, swapChain, device.get());
+			}
+			else if (presentResult != VK_SUCCESS) {
+				throw std::runtime_error("failed to present swap chain image!");
+			}
+			glfwPollEvents();
+			device->waitForFences(fence->getVkHandle(), true, -1);
+			threadContext->cmdBuffers[imageIdx]->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
+			device->getFenceManager()->recycle(fence);
+			device->getSemaphoreManager()->recycle(acquireSemaphore);
+			device->getSemaphoreManager()->recycle(presentSemaphore);
+		}
 		void Loop(ThreadContext* threadContext){
-			SemaphoreHandle acquireSemaphore;
-			SemaphoreHandle presentSemaphore;
-			FenceHandle fence;
-			fence = device->getFenceManager()->requestSingaledFence();
-			acquireSemaphore = device->getSemaphoreManager()->requestSemaphore();
-			presentSemaphore = device->getSemaphoreManager()->requestSemaphore();
+			SemaphoreHandle	acquireSemaphore = device->getSemaphoreManager()->requestSemaphore();
+			SemaphoreHandle presentSemaphore = device->getSemaphoreManager()->requestSemaphore();
+			FenceHandle fence = device->getFenceManager()->requestSingaledFence();
+			time = clock();
 			while (!glfwWindowShouldClose(gWindow)) {
-				uint32_t imageIdx;
+				double deltaTime = (static_cast<double>(clock()) - time) / 1e3;
+				time = clock();
 				auto currentBuffer = (VkResult)device->acquireNextImageKHR(swapChain->getVkHandle(), -1, acquireSemaphore->getVkHandle(), {}, &imageIdx);
 				if (currentBuffer == VK_ERROR_OUT_OF_DATE_KHR || currentBuffer == VK_SUBOPTIMAL_KHR) {
 					updateSwapChain(gWindow, surface, swapChain, device.get());
@@ -85,14 +130,14 @@ namespace tEngine {
 				else if (currentBuffer != VK_SUCCESS) {
 					throw std::runtime_error("failed to present swap chain image!");
 				}
-
-				prepareStage(imageIdx);
+				
+				prepareStage(deltaTime);
 				auto& cb = threadContext->cmdBuffers[imageIdx];
 				auto result = device->waitForFences(fence->getVkHandle(), true, -1);
 				device->resetFences(fence->getVkHandle());
 				cb->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
 				cb->begin(vk::CommandBufferUsageFlags());
-				loopStage(imageIdx,cb);
+				loopStage(deltaTime,cb);
 				cb->end();
 				tSubmitInfo info;
 				info.setCommandBuffers(cb);
@@ -118,9 +163,9 @@ namespace tEngine {
 			for (auto& cb : threadContext->cmdBuffers) {
 				cb->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
 			}
-			acquireSemaphore = nullptr;
-			presentSemaphore = nullptr;
-			fence = nullptr;
+			device->getFenceManager()->recycle(fence);
+			device->getSemaphoreManager()->recycle(acquireSemaphore);
+			device->getSemaphoreManager()->recycle(presentSemaphore);
 		}
 		~tEngineContext() {
 	
@@ -131,6 +176,10 @@ namespace tEngine {
 
 	};
 	
-	
+	inline void setupFrameBufferBySwapchain(RenderPassHandle handle) {
+		auto& context = tEngineContext::context;
+		handle->SetImageView("back", context.swapChain->getImage(context.imageIdx));
+		handle->SetImageView("depth", context.swapChain->getDepth());
+	}
 	
 }

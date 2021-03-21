@@ -48,8 +48,9 @@ namespace tEngine {
 
 		const std::vector<uint8_t>& getPushConstantBlock()const;
 		const std::vector<ResSetBinding>& getResSetBinding()const ;
+		std::vector<ResSetBinding>& getResSetBinding();
 		bool isSetEmpty(int i);
-
+		const Device* getDevice();
 	protected:
 
 		std::vector<ResSetBinding> bindResources;
@@ -68,8 +69,9 @@ namespace tEngine {
 	void flushDescriptorSet(const CommandBufferHandle& cb, tShaderInterface& state);
 	void flushGraphicsPipeline(const CommandBufferHandle& cb, tShaderInterface& state, tRenderPass* renderPass, uint32_t subpass);
 	void flushComptuePipeline(const CommandBufferHandle& cb, tShaderInterface& state);
-	void flushGraphicsShaderState(tShaderInterface& state, CommandBufferHandle& cb, tRenderPass* renderPass, uint32_t subpass);
-	void flushComputeShaderState(tShaderInterface& state, CommandBufferHandle& cb);
+	void flushGraphicsShaderState(tShaderInterface* state, CommandBufferHandle& cb, tRenderPass* renderPass, uint32_t subpass);
+	void flushComputeShaderState(tShaderInterface* state, CommandBufferHandle& cb);
+	void fillWithDirtyImage(ResSetBinding& setBindings,const Device* device);
 	void collectDescriptorSets(std::vector<DescriptorSetHandle>& bindedSets, std::vector<uint32_t>& offsets,
 		const ResSetBinding& setBindings, const DescSetAllocHandle& setAllocator);
 }

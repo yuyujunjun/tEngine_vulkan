@@ -16,6 +16,9 @@ namespace tEngine {
 		}
 		//transientCb.reset();
 	//	swapChain.reset();
+		fenceManager.reset();
+		semaphoreManager.reset();
+
 		transientPool.reset();
 		destroyPipelineCache(pipelineCache);
 		vmaDestroyAllocator(allocator);

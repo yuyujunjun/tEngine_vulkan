@@ -211,7 +211,7 @@ namespace tEngine {
 
 	class tImage {
 	public:
-		
+		static std::shared_ptr<tImage> requestDummyImage(const Device* device);
 		friend class tImageView;
 
 
@@ -359,6 +359,7 @@ namespace tEngine {
 	bool imageFormat_is_supported(VkPhysicalDevice physicalDevice, VkFormat format, VkFormatFeatureFlags required, VkImageTiling tiling);
 	VkImageViewType get_image_view_type(const ImageCreateInfo& create_info, const ImageViewCreateInfo* view);
 	vk::AccessFlags getAccesFlagsFromLayout(vk::ImageLayout layout);
+	//ImageHandle createImage(const Device* device, const ImageCreateInfo& info, void* initial = nullptr, CommandBufferHandle cb = nullptr);
 	ImageHandle createImage(const Device* device, const ImageCreateInfo& info, std::shared_ptr<ImageAsset> initial = nullptr, CommandBufferHandle cb = nullptr);
 	ImageHandle create_image_from_staging_buffer(const Device* device, const ImageCreateInfo& info, const InitialImageBuffer* buffer = nullptr, CommandBufferHandle cb = nullptr);
 	InitialImageBuffer create_image_staging_buffer(const Device* device, const ImageCreateInfo& info, const ImageAsset* initial);

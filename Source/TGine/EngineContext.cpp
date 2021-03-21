@@ -196,9 +196,9 @@ namespace tEngine {
 		auto instance = createInstance();
 		auto gWindow = createWindow(vk::Extent2D(width, height));
 		auto surface = createSurface(instance, gWindow);
-		auto vkDevice = createDevice(instance);
+	//	auto vkDevice = createDevice(instance);
 		tEngineContext::context.Set(instance, gWindow, surface, vk::Extent2D(width, height));
-		tEngineContext::context.swapChain->createDepth();
+		tEngineContext::context.swapChain->createDepth(vk::Format::eD32Sfloat);
 		glfwSetCursorPosCallback(gWindow, cursor_position_callback);
 		glfwSetMouseButtonCallback(gWindow, mouseButtonCallback);
 		glfwSetScrollCallback(gWindow, scrollCallback); 
