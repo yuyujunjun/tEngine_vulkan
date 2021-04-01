@@ -117,6 +117,7 @@ namespace tEngine {
 				vertices.push_back(temp);
 			}
 			Mesh box(vertices, indices);
+			box.UpdateNormal();
 			return box;
 		}
 		static Mesh UnitSquare() {
@@ -136,8 +137,9 @@ namespace tEngine {
 				vertices.push_back(temp[i]);
 				
 			}
-			indices = {0,2,1,2,3,1};
+			indices = {0,1,2,2,1,3};
 			Mesh mesh(vertices, indices);
+			mesh.UpdateNormal();
 			return mesh;
 		}
 	};
@@ -146,6 +148,7 @@ namespace tEngine {
 		for (size_t i = 0; i < mesh.indices.size(); i+=3) {
 			std::reverse(mesh.indices.begin() + i, mesh.indices.begin() + i + 2);
 		}
+		mesh.UpdateNormal();
 	}
 	
 }

@@ -69,12 +69,13 @@ namespace tEngine {
 		const vk::ShaderStageFlags  getAllStagesFlag()const {
 			return allstageFlags;
 		}
-		const GpuBlockBuffer& getBlock(std::string name);
-		BufferRangeManager requestBufferRange(std::string name, uint32_t rangeCount)const;
+		const GpuBlockBuffer& getBlock(std::string name)const;
+	
+		BufferRangeManager* requestBufferRange(std::string name)const;
 		const BufferHandle& requestBuffer(std::string name, uint32_t rangeCount = 1)const;
 		std::vector<tDescSetsDataWithSetNumber> setInfos;
 	private:
-
+		BufferRangeManager* requestBufferRange(GpuBlockBuffer block, uint32_t rangeCount)const;
 		std::unordered_map<std::string, sValueMap> valueToSetBinding;//Value,set, binding
 		std::unordered_map<std::string, std::pair<uint8_t, uint16_t>> blockToSetBinding;//Resource Name,set,bind. Tell which set and binding each image or buffer belong to
 
@@ -97,7 +98,10 @@ namespace tEngine {
 		std::vector<vk::ShaderModule> shaderModule;
 		std::vector<vk::ShaderStageFlagBits> shaderStage;
 		vk::ShaderStageFlags allstageFlags;
+		
 		Device* device;
+
+		std::unordered_map<std::string, std::shared_ptr<BufferRangeManager>> bufferManager;
 	};
 	std::vector<ResSetBinding> getResourceBindingInfo(tShader* shader);
 	//给shader里的buffer赋值

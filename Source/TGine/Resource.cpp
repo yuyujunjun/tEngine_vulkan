@@ -471,7 +471,7 @@ namespace tEngine {
 		 }
 		 return vk::BufferUsageFlagBits(0);
 	 }
-	 BufferRangeManager createBufferFromBlock(Device* device, const GpuBlockBuffer& block, uint32_t rangeCount) {
+	 std::shared_ptr<BufferRangeManager> createBufferFromBlock(Device* device, const GpuBlockBuffer& block, uint32_t rangeCount) {
 		 //	auto s_b = blockToSetBinding.at(name);
 			 //auto block = setInfos[s_b.first].blockBuffers.at(s_b.second);
 			 //auto type = setInfos[s_b.first].data.bindingAt(s_b.second).descriptorType;
@@ -484,7 +484,7 @@ namespace tEngine {
 
 		 createInfo.size = rangeSize * rangeCount;
 		 auto buffer = createBuffer(device, createInfo);
-		 return BufferRangeManager(buffer, rangeSize, 0);
+		 return std::make_shared<BufferRangeManager>(buffer, rangeSize, 0);
 	 }
 	 tBuffer::~tBuffer() {
 
@@ -529,9 +529,9 @@ namespace tEngine {
 	 std::shared_ptr<tImage> tImage::requestDummyImage(const Device* device) {
 		 static std::shared_ptr<tImage> dummyImage;
 		 if (dummyImage == nullptr) {
-			 ImageCreateInfo info = ImageCreateInfo::immutable_2d_image(1,1,(VkFormat)vk::Format::eR8Srgb,false);
-			 std::vector<unsigned char> color(1);
-			 color = { 255 };
+			 ImageCreateInfo info = ImageCreateInfo::immutable_2d_image(1,1,(VkFormat)vk::Format::eB8G8R8A8Unorm,false);
+			 std::vector<unsigned char> color(4);
+			 color = { 255,0,255,255 };
 			 auto asset=std::make_shared<ImageAsset>();
 			 asset->pixels = static_cast<stbi_uc*>(color.data());
 			 
@@ -540,6 +540,21 @@ namespace tEngine {
 
 		 }
 		 return dummyImage;
+	 }
+	  std::shared_ptr<tImage> tImage::requestWhiteImage(const Device* device) {
+		 static std::shared_ptr<tImage> whiteImage;
+		 if (whiteImage == nullptr) {
+			 ImageCreateInfo info = ImageCreateInfo::immutable_2d_image(1, 1, (VkFormat)vk::Format::eB8G8R8A8Unorm, false);
+			 std::vector<unsigned char> color(4);
+			 color = { 255,255,255,255 };
+			 auto asset = std::make_shared<ImageAsset>();
+			 asset->pixels = static_cast<stbi_uc*>(color.data());
+
+			 whiteImage = createImage(device, info, asset);
+			 asset->pixels = nullptr;
+
+		 }
+		 return whiteImage;
 	 }
 	 tImage::~tImage() {
 

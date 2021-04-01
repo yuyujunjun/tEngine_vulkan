@@ -256,7 +256,7 @@ namespace tEngine {
 		void executeCommands(const CommandBufferHandle& secondaryCmdBuffer);
 		void executeCommands(const std::vector< CommandBufferHandle>& secondaryCmdBuffer);
 		void CommandBuffer::beginRenderPass(const RenderPassHandle renderPass, const FrameBufferHandle frameBuffer, bool inlineFirstSubpass);
-	
+		void NextSubpass(vk::SubpassContents content);
 		void endRenderPass();
 	};
 	void setImageLayout(CommandBufferHandle const& commandBuffer,

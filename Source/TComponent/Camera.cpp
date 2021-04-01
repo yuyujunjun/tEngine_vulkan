@@ -427,10 +427,11 @@ void CameraManipulator::update()
     }
 }
 namespace tEngine {
-      void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material) {
-        material->SetValue(ShaderString(SV::_MATRIX_V), view);
-        material->SetValue(ShaderString(SV::_MATRIX_P), projection);
-        material->SetValue(ShaderString(SV::_MATRIX_VP), projection * view);
-        material->SetValue(ShaderString(SV::_INV_MATRIX_VP), glm::inverse(projection * view));
+  
+      void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material,BufferHandle buffer) {
+        material->SetValue(ShaderString(SV::_MATRIX_V), view, buffer);
+        material->SetValue(ShaderString(SV::_MATRIX_P), projection, buffer);
+        material->SetValue(ShaderString(SV::_MATRIX_VP), projection * view, buffer);
+        material->SetValue(ShaderString(SV::_INV_MATRIX_VP), glm::inverse(projection * view), buffer);
     }
 }

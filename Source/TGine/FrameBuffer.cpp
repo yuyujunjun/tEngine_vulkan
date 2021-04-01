@@ -3,19 +3,24 @@
 #include"Image.h"
 #include"Device.h"
 #include"Log.h"
+#include"TextureFormatLayout.h"
 namespace tEngine {
-
+	void tSubpass::addInput(std::string name, vk::ImageLayout layout) {
+		auto& r = renderPass.getAttachment(name);
+		;
+		input.emplace_back(vk::AttachmentReference2(r.idx, layout, (vk::ImageAspectFlags)format_to_aspect_mask((VkFormat)r.description.format)));
+	}
 	void tSubpass::addColorOutput(std::string name, vk::ImageLayout layout) {
 		auto& r = renderPass.getAttachment(name);
-		color.emplace_back(vk::AttachmentReference(r.idx, layout));
+		color.emplace_back(vk::AttachmentReference2(r.idx, layout, (vk::ImageAspectFlags)format_to_aspect_mask((VkFormat)r.description.format)));
 	}
 	void tSubpass::setDepth(std::string name, vk::ImageLayout layout) {
 		auto& r = renderPass.getAttachment(name);
-		depth = (vk::AttachmentReference(r.idx, layout));
+		depth = (vk::AttachmentReference2(r.idx, layout, (vk::ImageAspectFlags)format_to_aspect_mask((VkFormat)r.description.format)));
 	}
 	void tSubpass::addResolvedOutput(std::string name, vk::ImageLayout layout) {
 		auto& r = renderPass.getAttachment(name);
-		resolved.emplace_back(r.idx, layout);
+		resolved.emplace_back(r.idx, layout, (vk::ImageAspectFlags)format_to_aspect_mask((VkFormat)r.description.format));
 	}
 	void tSubpass::addPreserve(std::string name) {
 		auto& r = renderPass.getAttachment(name);
@@ -34,7 +39,7 @@ namespace tEngine {
 
 		return result;
 	}
-	vk::SubpassDescription& tSubpass::createDescription(VkPipelineBindPoint pipelineBindPoint) {
+	vk::SubpassDescription2& tSubpass::createDescription(VkPipelineBindPoint pipelineBindPoint) {
 		vkSubpassDescription.setPipelineBindPoint((vk::PipelineBindPoint)pipelineBindPoint);
 		vkSubpassDescription.setInputAttachments(input);
 		if (depth.layout != vk::ImageLayout::eUndefined) {
@@ -62,8 +67,8 @@ namespace tEngine {
 
 	}
 	void tRenderPass::setupRenderPass(VkPipelineBindPoint bindp) {
-		vk::RenderPassCreateInfo info;
-		std::vector<vk::AttachmentDescription> attachments;
+		vk::RenderPassCreateInfo2 info;
+		std::vector<vk::AttachmentDescription2> attachments;
 
 		for (auto& re : resource) {
 			attachments.emplace_back(re.description);
@@ -71,13 +76,14 @@ namespace tEngine {
 
 		info.setAttachments(attachments);//Color attachment 没有设置成功
 		info.setDependencies(dependencies);
-		std::vector<vk::SubpassDescription> subPass;
+		std::vector<vk::SubpassDescription2> subPass;
 		for (auto& pa : passes) {
 			auto& desc = pa->createDescription(bindp);
 			subPass.emplace_back(pa->createDescription(bindp));
 		}
 		info.setSubpasses(subPass);
-		vkRenderPass = device->createRenderPass(info);
+		vkRenderPass = device->createRenderPass2(info);
+	
 		renderFunction.resize(passes.size());
 		images.resize(resource.size());
 		views.resize(resource.size());
@@ -96,6 +102,7 @@ namespace tEngine {
 		info.setLayers(pass->getImages()[0]->get_create_info().layers);
 		info.setRenderPass(pass->getVkHandle());
 		info.setWidth(width);
+	
 		vkFrameBuffer = device->createFramebuffer(info);
 
 	}

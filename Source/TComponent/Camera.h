@@ -71,7 +71,13 @@ namespace tEngine {
         float _viewportAspectRatio = float(extent.width) / extent.height;
         return glm::perspective(fieldOfview, _viewportAspectRatio, nearPlane, farPlane);
     }
+  inline glm::mat4 Ortho(float left,float right ,float bottom,float top,float depth) {
+      auto mat= glm::ortho(left, right, bottom, top, -depth, depth);
+      return glm::ortho(left,right,bottom,top,-depth, depth);
+  }
   class tShaderInterface;
-   void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material);
+  class tBuffer;
+  using BufferHandle = std::shared_ptr<tBuffer>;
+  void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material,BufferHandle buffer);
 }
 

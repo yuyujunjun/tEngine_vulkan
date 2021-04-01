@@ -63,7 +63,7 @@ int main() {
 		ImGui::Text("story begin");
 		ImGui::DragFloat3("lightPos",&lightPos[0],.01,-10,10);
 		ImGui::DragFloat3("uKd",&uKd[0],.01,0,3);
-		ImGui::DragFloat3("uKs",&uKs[0],.01,0,5);
+		ImGui::DragFloat3("uKs",&uKs[0],.01,0,15);
 		ImGui::DragFloat("lightIntensity",&lightIntensity,.01,0,10);
 		ImGui::End();
 
@@ -104,7 +104,7 @@ int main() {
 	renderPass.reset();
 
 	//delete context;
-	//material.reset();
+	//shaderInterface.reset();
 	//CreateImageViewWithImage();
 
 

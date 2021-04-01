@@ -204,6 +204,10 @@ namespace tEngine {
 		nfo.renderArea = frameBuffer->getRenderArea();
 		auto content = inlineFirstSubpass ? vk::SubpassContents::eInline : vk::SubpassContents::eSecondaryCommandBuffers;
 		cb.beginRenderPass(nfo, content);
+		
+	}
+	void CommandBuffer::NextSubpass(vk::SubpassContents content) {
+		cb.nextSubpass(content);
 	}
 	// RenderPasses, Subpasses
 

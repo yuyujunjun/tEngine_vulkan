@@ -26,6 +26,7 @@ namespace tEngine {
 
 		createInfo.depthStencilState.depthTestEnable = true;
 		createInfo.depthStencilState.depthWriteEnable = true;
+		
 		//createInfo.depthStencilState.depthCompareOp = vk::CompareOp::eAlways;
 		//dynamicState
 		createInfo.dynamicState.dynamicStates.emplace_back(vk::DynamicState::eViewport);
@@ -37,7 +38,13 @@ namespace tEngine {
 		createInfo.multisampleState.sampleShadingEnable = false;
 		//createInfo.multisampleState.SampleMask = 0xFFFFFFFF;
 		//rasterizationState
-	//	createInfo.rasterizationState.cullMode = vk::CullModeFlagBits::eNone;
+		//createInfo.rasterizationState.cullMode = vk::CullModeFlagBits::eNone;
+		createInfo.rasterizationState.depthBiasEnable = true;
+		createInfo.rasterizationState.depthClampEnable = true;
+		createInfo.rasterizationState.depthBiasSlopeFactor = 10;
+		
+		createInfo.rasterizationState.depthBiasConstantFactor = 0.1;
+		//createInfo.rasterizationState.de
 		//createInfo.rasterizationState.polygonMode = vk::PolygonMode::eFill;
 
 		createInfo.renderPass = renderPass->getVkHandle();

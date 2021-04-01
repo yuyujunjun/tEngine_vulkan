@@ -74,14 +74,32 @@ namespace tEngine {
 	void tShader::CreateShaderLayout() {
 		auto& d = device;
 		if (setAllocator.size() == 0) {
-			for (int i = 0; i < setInfos.size(); ++i) {
-				setAllocator.emplace_back(tDescriptorSetAllocatorManager::manager.requestSetAllocator(d, setInfos[i].data));
+			int setInfoIterator = 0;
+			for (int i = 0; i < setInfos.back().set_number+1; ++i) {
+				if (i == setInfos[setInfoIterator].set_number) {
+					setAllocator.emplace_back(tDescriptorSetAllocatorManager::manager.requestSetAllocator(d, setInfos[setInfoIterator].data));
+					setInfoIterator++;
+				}//Shader doesn't use this set number
+				else {
+					tEngine::DescriptorLayoutCreateInfo createInfo;
+					createInfo.bindings.emplace_back(vk::DescriptorSetLayoutBinding());
+					createInfo.bindings[0].descriptorCount = 1;
+					setAllocator.emplace_back(tDescriptorSetAllocatorManager::manager.requestSetAllocator(d, createInfo));
+				}
+				
 			}
 		}
+		
 		if (pipelinelayout == nullptr) {
 			std::vector<DescriptorSetLayoutHandle> layouts;
-			for (auto& set : setAllocator) {
+			int setInfoIterator = 0;
+			for (int i = 0; i < setAllocator.size();++i) {
+				
+				
+				auto& set = setAllocator[setInfoIterator];
 				layouts.emplace_back(set->getLayout());
+				setInfoIterator++;
+				
 			}
 			pipelinelayout = createPipelineLayout(d, layouts, pushConstant, allstageFlags);
 
@@ -147,7 +165,7 @@ namespace tEngine {
 	};
 
 
-	const GpuBlockBuffer& tShader::getBlock(std::string name) {
+	const GpuBlockBuffer& tShader::getBlock(std::string name)const {
 		auto s_b = blockToSetBinding.at(name);
 		return setInfos[s_b.first].blockBuffers.at(s_b.second);
 	}
@@ -160,14 +178,32 @@ namespace tEngine {
 		}
 		return true;
 	}
+	
 	const BufferHandle& tShader::requestBuffer(std::string name, uint32_t rangeCount)const {
-		return requestBufferRange(name, 1).buffer();
-	}
-	BufferRangeManager tShader::requestBufferRange(std::string name, uint32_t rangeCount)const {
+		assert(bufferManager.at(name) == 0);
 		auto s_b = blockToSetBinding.at(name);
 		auto block = setInfos[s_b.first].blockBuffers.at(s_b.second);
-		return createBufferFromBlock(device, block, rangeCount);
+		return requestBufferRange(block, 1)->buffer();
+	}
+	BufferRangeManager* tShader::requestBufferRange(GpuBlockBuffer block, uint32_t rangeCount)const {
+		const_cast<tShader*>(this)->bufferManager[block.name] = createBufferFromBlock(device, block, rangeCount);
+		return bufferManager.at(block.name).get();
+	}
+	BufferRangeManager* tShader::requestBufferRange(std::string name)const {
+		if (bufferManager.count(name) != 0) {
+			return bufferManager.at(name).get();
+		}
+		else {
 
+			auto s_b = blockToSetBinding.at(name);
+			for (const auto& s : setInfos) {
+				if (s.set_number == s_b.first) {
+					auto block = s.blockBuffers.at(s_b.second);
+					return requestBufferRange(block, 30);
+				}
+			}
+		}
+		assert(false&&"wrong name");
 	}
 
 	tShader::~tShader() {
@@ -263,8 +299,10 @@ namespace tEngine {
 				bindNow(i - bindedSets.size());
 
 			}
-			fillWithDirtyImage(state.getResSetBinding()[i], state.getDevice());
-			collectDescriptorSets(bindedSets, offsets, state.getResSetBinding()[i], state.getDescSetAllocator(i));
+			else {
+				fillWithDirtyImage(state.getResSetBinding()[i], state.getDevice());
+				collectDescriptorSets(bindedSets, offsets, state.getResSetBinding()[i], state.getDescSetAllocator(i));
+			}
 		}
 		bindNow(state.setCount() - bindedSets.size());
 	}

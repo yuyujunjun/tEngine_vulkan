@@ -108,6 +108,8 @@ namespace tEngine {
 		vk::PhysicalDeviceFeatures features;
 		features.setFillModeNonSolid(true);
 		features.setLogicOp(true);
+		features.setDepthBiasClamp(true);
+		features.setDepthClamp(true);
 		return vk::su::createDevice(phyDevice, findQueueFamilyIndex(phyDevice.getQueueFamilyProperties(), vk::QueueFlagBits::eGraphics), vk::su::getDeviceExtensions(), &features);
 
 	}

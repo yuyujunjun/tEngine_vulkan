@@ -15,7 +15,7 @@ namespace tEngine {
 	struct AttachmentInfo
 	{
 		uint32_t idx=0;
-		vk::AttachmentDescription description;
+		vk::AttachmentDescription2 description;
 		vk::ClearValue value;
 	};
 
@@ -26,7 +26,7 @@ namespace tEngine {
 
 		tSubpass(uint32_t idx, tRenderPass& renderPass) :renderPass(renderPass), passIdx(idx) {}
 
-
+		void addInput(std::string name, vk::ImageLayout layout = vk::ImageLayout::eShaderReadOnlyOptimal);
 		void addColorOutput(std::string name, vk::ImageLayout layout = vk::ImageLayout::eColorAttachmentOptimal);
 		void setDepth(std::string name, vk::ImageLayout layout = vk::ImageLayout::eDepthStencilAttachmentOptimal);
 		void addResolvedOutput(std::string name, vk::ImageLayout layout);
@@ -42,7 +42,7 @@ namespace tEngine {
 		bool operator!=(const tSubpass& subpass)const {
 			return !(operator==(subpass));
 		}
-		vk::SubpassDescription& createDescription(VkPipelineBindPoint pipelineBindPoint);
+		vk::SubpassDescription2& createDescription(VkPipelineBindPoint pipelineBindPoint);
 		size_t getColorAttachmentCount()const {
 			return (color.size() + resolved.size());
 		}
@@ -50,11 +50,11 @@ namespace tEngine {
 
 
 	private:
-		vk::SubpassDescription vkSubpassDescription;
-		std::vector<vk::AttachmentReference> input;
-		std::vector<vk::AttachmentReference> color;
-		vk::AttachmentReference depth = {};
-		std::vector<vk::AttachmentReference> resolved;
+		vk::SubpassDescription2 vkSubpassDescription;
+		std::vector<vk::AttachmentReference2> input;
+		std::vector<vk::AttachmentReference2> color;
+		vk::AttachmentReference2 depth = {};
+		std::vector<vk::AttachmentReference2> resolved;
 		std::vector<uint32_t> preserve;
 
 		uint32_t passIdx;
@@ -64,8 +64,8 @@ namespace tEngine {
 
 	class tFrameBuffer;
 	using FrameBufferHandle = std::shared_ptr<tFrameBuffer>;
-	std::vector<vk::SubpassDependency> SingleDependencies();
-	std::vector<vk::SubpassDependency> WriteBeforeShaderReadDependencies();
+	std::vector<vk::SubpassDependency2> SingleDependencies();
+	std::vector<vk::SubpassDependency2> WriteBeforeShaderReadDependencies();
 	class tRenderPass {
 	public:
 		const uint32_t allocatedFrameBufferCount = 8;
@@ -93,7 +93,7 @@ namespace tEngine {
 			}
 
 		}
-		void SetAttachmentDescription(std::string name, vk::AttachmentDescription& description) {
+		void SetAttachmentDescription(std::string name, vk::AttachmentDescription2& description) {
 			getAttachment(name).description = description;
 		}
 		AttachmentInfo& getAttachment(std::string name) {
@@ -111,7 +111,7 @@ namespace tEngine {
 		}
 
 
-		void SetDependencies(std::vector<vk::SubpassDependency>& dependencies) {
+		void SetDependencies(std::vector<vk::SubpassDependency2>& dependencies) {
 			this->dependencies = dependencies;
 		}
 		void setupRenderPass(VkPipelineBindPoint bindp = VK_PIPELINE_BIND_POINT_GRAPHICS);
@@ -167,7 +167,7 @@ namespace tEngine {
 
 		vk::RenderPass vkRenderPass;
 		const Device* device;
-		std::vector<vk::SubpassDependency> dependencies;
+		std::vector<vk::SubpassDependency2> dependencies;
 		std::vector<std::unique_ptr<tSubpass>> passes;
 		std::vector<AttachmentInfo> resource;
 		//std::vector<std::unique_ptr<RenderResource>> resources;
@@ -198,7 +198,7 @@ namespace tEngine {
 			return vk::Rect2D({ 0, 0 }, { width, height });
 		}
 		vk::Viewport getViewPort()const {
-			return vk::Viewport(0, 0, static_cast<float>(width), static_cast<float>(height), 0, 1);
+			return vk::Viewport(0, static_cast<float>(height), static_cast<float>(width), -static_cast<float>(height), 0, 1);
 		}
 		void setupFrameBuffer();
 		const vk::Framebuffer getVkHandle() const {

@@ -1,0 +1,6 @@
+project(PCSS)
+file(GLOB_RECURSE c_files  *.cpp *.c)
+
+add_executable(PCSS ${c_files})
+
+target_link_libraries(PCSS  Engine)

@@ -212,6 +212,7 @@ namespace tEngine {
 	class tImage {
 	public:
 		static std::shared_ptr<tImage> requestDummyImage(const Device* device);
+		static std::shared_ptr<tImage> requestWhiteImage(const Device* device);
 		friend class tImageView;
 
 

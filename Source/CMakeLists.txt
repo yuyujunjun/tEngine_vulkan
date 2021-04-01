@@ -14,8 +14,9 @@ set(SRC_FILES ${USER_SRC_PATH} ${SRC_FILES})
 file(GLOB USER_SRC_PATH ../3rdParty/imgui/*.cpp)
 set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
 # Imgui for vulkan
-set(SRC_FILES ${SRC_FILES} "../3rdParty/imgui/impl/imgui_impl_vulkan.cpp")
-
+file(GLOB USER_SRC_PATH ../3rdParty/imgui/impl/*.cpp)
+set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
+message(${SRC_FILES})
 # file(GLOB_RECURSE USER_SRC_PATH 3rdParty/assimp/code/*.*)
 # set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
 # file(GLOB_RECURSE USER_SRC_PATH 3rdParty/assimp/code/*.h)

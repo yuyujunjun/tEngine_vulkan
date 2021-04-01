@@ -70,6 +70,12 @@ namespace tEngine {
 			*this = *this + block;
 			return *this;
 		}
+		const GpuBlockMember& operator[](std::string name) const{
+			for (const auto& m : data) {
+				if (m.name == name)return m;
+			}
+			return GpuBlockMember();
+		}
 		using iterator = std::vector<GpuBlockMember>::iterator;
 		using const_iterator = std::vector<GpuBlockMember>::const_iterator;
 		const_iterator begin()const { return data.cbegin(); }

@@ -116,7 +116,7 @@ namespace tEngine {
 	size_t getAllocationSize(VmaAllocation allocation);
 	static inline VkPipelineStageFlags buffer_usage_to_possible_stages(VkBufferUsageFlags usage);
 	static inline VkAccessFlags buffer_usage_to_possible_access(VkBufferUsageFlags usage);
-	BufferRangeManager createBufferFromBlock(Device* device, const GpuBlockBuffer& block, uint32_t rangeCount);
+	std::shared_ptr<BufferRangeManager> createBufferFromBlock(Device* device, const GpuBlockBuffer& block, uint32_t rangeCount);
 	BufferHandle createBuffer(const Device* device, BufferCreateInfo& createInfo, const void* initial = nullptr, CommandBufferHandle cb = nullptr);
 	
 

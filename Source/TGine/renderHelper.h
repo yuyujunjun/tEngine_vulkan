@@ -13,4 +13,6 @@ namespace tEngine {
 
 	RenderPassHandle getSingleRenderpass(Device* device,vk::Format format,vk::Format depthFormat);
 	RenderPassHandle getUIRenderpass(Device* device, vk::Format format, vk::Format depthFormat);
+	RenderPassHandle getShadowMapPass(Device* device, vk::Format format, vk::Format depthFormat);
+	
 }
