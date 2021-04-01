@@ -16,7 +16,8 @@ namespace tEngine {
 		 default:
 			 std::cout << stream; break;
 			}
-		 std::cout <<"\n"<< termcolor::reset;
+		 std::cout << termcolor::reset;
+	
 		 
 	 }
 }

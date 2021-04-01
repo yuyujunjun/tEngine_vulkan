@@ -8,6 +8,7 @@
 #include"Pipeline.h"
 #include"FrameBuffer.h"
 #include"Device.h"
+#include"Log.h"
 #include"AssetLoadManager.h"
 namespace tEngine {
 	uint32_t tShader::setCount()const {
@@ -186,6 +187,7 @@ namespace tEngine {
 		return requestBufferRange(block, 1)->buffer();
 	}
 	BufferRangeManager* tShader::requestBufferRange(GpuBlockBuffer block, uint32_t rangeCount)const {
+		LOG(LogLevel::Performance, "request Buffer:",block.name);
 		const_cast<tShader*>(this)->bufferManager[block.name] = createBufferFromBlock(device, block, rangeCount);
 		return bufferManager.at(block.name).get();
 	}

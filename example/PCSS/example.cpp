@@ -5,13 +5,18 @@
 #include"TextureFormatLayout.h"
 #include"bufferHelper.h"
 #include<random>
+#include"Log.h"
 using namespace tEngine;
-
+struct Scene {
+	std::vector<GameObject> gobj;
+	tEngineContext context;
+	GameObject Light;
+};
 int main() {
 
 
 	ContextInit();
-
+	tEngine::LOG(LogLevel::Information,"Welcome","","world");
 	auto context = &tEngineContext::context;
 	auto& device = context->device;
 
@@ -30,7 +35,7 @@ int main() {
 	auto shader = tShader::Create(device.get());
 	shader->SetShaderModule({ "draw.vsh","Pcss.fsh" }, { vk::ShaderStageFlagBits::eVertex, vk::ShaderStageFlagBits::eFragment });
 	auto CameraBuffer = shader->requestBufferRange("CameraMatrix");
-	character->setMaterial(  shader->getInterface());
+	character->setMaterial(shader->getInterface());
 	plane->setMaterial(shader->getInterface());
 	//Normal shader
 	auto lightShader = tShader::Create(device.get());
@@ -40,6 +45,7 @@ int main() {
 	auto postShader = tShader::Create(device.get());
 	postShader->SetShaderModule({ "Quad.vsh","MainTex.fsh" }, { vk::ShaderStageFlagBits::eVertex,vk::ShaderStageFlagBits::eFragment });
 	auto debugQuad = postShader->getInterface();
+
 	std::vector<std::shared_ptr<Material>> needCamera = { character->material ,plane->material,Light->material };
 	auto updateCamera=[&]() {
 		CameraBuffer->NextRangenoLock();
@@ -67,13 +73,13 @@ int main() {
 		Light->setMesh(box);
 	}
 	//Light->transform.scale = glm::vec3(.1,.1,.1);
-	Light->transform.position = glm::vec3(0, 5, -2);
+	Light->transform.position = glm::vec3(1, 1, 1);
 	Light->transform.rotation = glm::vec3(-120,0,0);
 	Light->transform.scale = glm::vec3(1, 1, 1);
 	auto uploadTransform = [&](GameObject& obj) {
 		obj->material->SetValue(ShaderString(SV::_MATRIX_M), obj->transform.Matrix());
 	};
-	float lightIntensity = 2;
+	float lightIntensity = .2;
 	glm::vec3 uKd = glm::vec3(0.2, 0.2, 0.2);
 	glm::vec3 uKs = glm::vec3(0.2, 0.2, 0.2);
 
@@ -90,13 +96,16 @@ int main() {
 	shadowMapCreateInfo.usage |= (VkImageUsageFlagBits)vk::ImageUsageFlagBits::eInputAttachment;
 	shadowMapCreateInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
 	auto ShadowMap = createImage(device.get(), shadowMapCreateInfo);
-	auto lightArea = glm::vec4(-10, 10, -10, 10);
+	auto lightArea = glm::vec4(-15, 15, -15, 15);
 	auto uploadMaterial = [&](GameObject& obj) {
 		obj->material->SetImage("_ShadowMap", ShadowMap, ShadowMap->get_view()->get_float_view(), tEngine::StockSampler::NearestShadow);
 		obj->material->SetValue("uKd", uKd);
 		obj->material->SetValue("uKs", uKs);
+		
+		glm::vec3 lightDir = Light->transform.Matrix() * glm::vec4(0, 0, 1, 1);
+		lightDir = glm::normalize(lightDir);
+		obj->material->SetValue("lightDir", lightDir);
 		obj->material->SetValue<float>("lightIntensity", lightIntensity);
-		obj->material->SetValue("lightPos", Light->transform.position);
 		obj->material->SetValue("cameraPos", tEngineContext::context.cameraManipulator.getCameraPosition());
 		obj->material->SetValue("world_to_light", Ortho(lightArea.x,lightArea.y,lightArea.z,lightArea.w,20)* glm::inverse(Light->transform.Matrix()));
 	
@@ -109,7 +118,7 @@ int main() {
 		renderPass->setDepthStencilValue("depth", 1);
 		
 		ImGui::Begin("test");
-		ImGui::DragFloat3("lightPos",&Light->transform.position[0],0.1,-10,10);
+	//	ImGui::DragFloat3("lightPos",&Light->transform.position[0],0.1,-10,10);
 		ImGui::DragFloat3("lightRotation", &Light->transform.rotation[0],1,-360,360);
 		ImGui::InputFloat3("lightScale", &Light->transform.scale[0]);
 		ImGui::InputFloat4("area", &lightArea[0]);
