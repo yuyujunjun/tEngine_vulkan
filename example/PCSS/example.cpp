@@ -7,11 +7,7 @@
 #include<random>
 #include"Log.h"
 using namespace tEngine;
-struct Scene {
-	std::vector<GameObject> gobj;
-	tEngineContext context;
-	GameObject Light;
-};
+
 int main() {
 
 
@@ -27,6 +23,7 @@ int main() {
 	GameObject Light = std::make_shared<GameObject_>();
 	
 	///Shader
+	
 	//ShadowMap Shader
 	auto shadowShader = tShader::Create(device.get());
 	shadowShader->SetShaderModule({ "ShadowPass.vsh","ShadowPass.fsh" }, { vk::ShaderStageFlagBits::eVertex, vk::ShaderStageFlagBits::eFragment });
@@ -73,22 +70,23 @@ int main() {
 		Light->setMesh(box);
 	}
 	//Light->transform.scale = glm::vec3(.1,.1,.1);
-	Light->transform.position = glm::vec3(1, 1, 1);
+	Light->transform.position = glm::vec3(1, 2, 2);
 	Light->transform.rotation = glm::vec3(-120,0,0);
 	Light->transform.scale = glm::vec3(1, 1, 1);
+	float area = 1;
 	auto uploadTransform = [&](GameObject& obj) {
 		obj->material->SetValue(ShaderString(SV::_MATRIX_M), obj->transform.Matrix());
 	};
 	float lightIntensity = .2;
 	glm::vec3 uKd = glm::vec3(0.2, 0.2, 0.2);
 	glm::vec3 uKs = glm::vec3(0.2, 0.2, 0.2);
-
+	
 
 	//Load Textue
 	auto imageAsset = tEngine::LoadImage("Obj/MC003_Kozakura_Mari.png");
 	auto image =createImage(device.get(),
 		ImageCreateInfo::immutable_2d_image(imageAsset->width, imageAsset->height, VK_FORMAT_R8G8B8A8_UNORM), imageAsset, nullptr);
-
+	
 	//Config shaderInterface
 	character->material->SetImage("_MainTex", image);
 	plane->material->SetImage("_MainTex", tImage::requestWhiteImage(device.get()));
@@ -102,13 +100,14 @@ int main() {
 		obj->material->SetValue("uKd", uKd);
 		obj->material->SetValue("uKs", uKs);
 		
-		glm::vec3 lightDir = Light->transform.Matrix() * glm::vec4(0, 0, 1, 1);
-		lightDir = glm::normalize(lightDir);
-		obj->material->SetValue("lightDir", lightDir);
+		obj->material->SetValue("lightPosArea", glm::vec4(Light->transform.position,area));
+	//	obj->material->SetValue("lightDir", lightDir);
 		obj->material->SetValue<float>("lightIntensity", lightIntensity);
 		obj->material->SetValue("cameraPos", tEngineContext::context.cameraManipulator.getCameraPosition());
-		obj->material->SetValue("world_to_light", Ortho(lightArea.x,lightArea.y,lightArea.z,lightArea.w,20)* glm::inverse(Light->transform.Matrix()));
-	
+		obj->material->SetValue("world_to_light", Ortho(lightArea.x,lightArea.y,lightArea.z,lightArea.w,40)* (glm::lookAt(Light->transform.position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0))));
+		obj->material->SetValue("halfblockSize", 8);
+		obj->material->SetValue("maxKernelSize",8);
+		obj->material->SetValue("depthMapSize",glm::vec2(ShadowMap->get_width(),ShadowMap->get_height()) );
 	};
 	context->Update([&](double timeDelta) {
 		renderPass->SetImageView("shadow", ShadowMap);
@@ -118,7 +117,8 @@ int main() {
 		renderPass->setDepthStencilValue("depth", 1);
 		
 		ImGui::Begin("test");
-	//	ImGui::DragFloat3("lightPos",&Light->transform.position[0],0.1,-10,10);
+		ImGui::DragFloat3("lightPos",&Light->transform.position[0],0.1,-10,10);
+		ImGui::DragFloat("lightArea", &area, 0.1, 0.01, 5);
 		ImGui::DragFloat3("lightRotation", &Light->transform.rotation[0],1,-360,360);
 		ImGui::InputFloat3("lightScale", &Light->transform.scale[0]);
 		ImGui::InputFloat4("area", &lightArea[0]);
@@ -134,9 +134,9 @@ int main() {
 			cb->beginRenderPass(renderPass, frameBuffer, true);
 			cb->setViewport(viewPort);
 			cb->setScissor(0, frameBuffer->getRenderArea());
-			//ÉèÖÃshadowInterface
-			auto view = glm::inverse(Light->transform.Matrix());
-			auto projection = Ortho(lightArea.x, lightArea.y, lightArea.z, lightArea.w, 20);
+			//Update shadowmap
+			auto view = (glm::lookAt(Light->transform.position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
+			auto projection = Ortho(lightArea.x, lightArea.y, lightArea.z, lightArea.w, 40);
 			CameraBuffer->NextRangenoLock();
 			shadowMateial->SetBuffer("CameraMatrix", CameraBuffer->buffer(), CameraBuffer->getOffset());
 			shadowMateial->SetValue(ShaderString(SV::_MATRIX_V), view);

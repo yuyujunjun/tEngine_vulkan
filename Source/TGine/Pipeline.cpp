@@ -39,8 +39,8 @@ namespace tEngine {
 		//createInfo.multisampleState.SampleMask = 0xFFFFFFFF;
 		//rasterizationState
 		//createInfo.rasterizationState.cullMode = vk::CullModeFlagBits::eNone;
-		createInfo.rasterizationState.depthBiasEnable = true;
-		createInfo.rasterizationState.depthClampEnable = true;
+		createInfo.rasterizationState.depthBiasEnable = false;
+		createInfo.rasterizationState.depthClampEnable = false;
 		createInfo.rasterizationState.depthBiasSlopeFactor = 10;
 		
 		createInfo.rasterizationState.depthBiasConstantFactor = 0.1;
