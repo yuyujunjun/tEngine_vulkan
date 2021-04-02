@@ -17,12 +17,12 @@ layout(set = 1, binding = 3) uniform MaterialInfo {
 };
 layout(set = 0,binding = 2)uniform globalVar{
     vec3 cameraPos;int halfblockSize;
-    mat4 world_to_light;
+    mat4 world_to_shadow;
     vec2 depthMapSize;int maxKernelSize;
 
 };
 float CmpTexture(vec2 uv,float v){
-    return texture(_ShadowMap,uv).r+0.01<v?0.f:1.f;
+    return texture(_ShadowMap,uv).r<v?0.f:1.f;
 }
 
 float calculateShadowFactor(vec2 uv,float depth,int kernelSize){
@@ -50,7 +50,7 @@ vec2 avgOccdepth(vec2 uv,float depth){
     for(int i=-halfblockSize;i<=halfblockSize;++i){
         for(int j=-halfblockSize;j<=halfblockSize;++j){
             float d=texture(_ShadowMap,uv+vec2(i*offset.x,j*offset.y)).r;
-            if(d+0.01<depth){
+            if(d<depth){
                 occAvg+=d;
                 count++;
             }
@@ -62,16 +62,13 @@ vec2 avgOccdepth(vec2 uv,float depth){
     return vec2(occAvg,float(count));
 }
 float pcss(vec2 uv,float depth){
+  //  return texture(_ShadowMap,uv).r;
     vec2 occDepth=avgOccdepth(uv,depth);
-  if(occDepth.y==0)return 1;
+    if(occDepth.y==0)return 1;
     float occAvg=occDepth.x;
-    vec3 lightDir=(lightPosArea.xyz-worldPosition);
-    lightDir=(world_to_light*vec4(lightDir,1)).xyz;
-    float distance_to_light=length(lightDir);
-    float penmubraSize= (lightPosArea.w*(distance_to_light-occAvg)/occAvg);
+    float penmubraSize= (lightPosArea.w*(depth-occAvg)/occAvg);
     
-    penmubraSize=min(penmubraSize,1.f);
-    penmubraSize=max(penmubraSize,0);
+    penmubraSize=max(min(penmubraSize,1.f),0);
     int kernelSize=int(maxKernelSize*penmubraSize+0.5);
    // kernelSize=max(kernelSize,1);
    // return kernelSize/float(maxKernelSize);
@@ -98,14 +95,14 @@ void main() {
     vec3 specular=uKs*light_atten_coff*spec;
 	
     //shadow
-    vec4 position_in_light=world_to_light*vec4(worldPosition,1);
+    vec4 position_in_light=world_to_shadow*vec4(worldPosition,1);
     position_in_light.y=- position_in_light.y;
     vec2 uv_shadow=position_in_light.xy*0.5+0.5;
     float light_z=position_in_light.z;
-    float shadowFactor= pcss(uv_shadow,light_z);
+    float shadowFactor = pcss(uv_shadow,light_z);
     vec3 lighten=(diffuse+specular)*shadowFactor;
     outColor=  vec4(pow(ambient+lighten,vec3(1.0/2.2)),1.0);
- //   outColor= vec4(shadowFactor);
+  //  outColor= vec4(shadowFactor);
 //    outColor=vec4(nearest_depth);
 // outColor=vec4(uv_shadow,0,1);
 }

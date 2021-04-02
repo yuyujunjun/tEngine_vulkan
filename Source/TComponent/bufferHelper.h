@@ -2,6 +2,7 @@
 #include"Sampler.h"
 
 #include<unordered_map>
+#include"GraphicsState.h"
 namespace tEngine {
 	class tShaderInterface;
 	class tImage;
@@ -9,6 +10,7 @@ namespace tEngine {
 	class tBuffer;
 	using BufferHandle = std::shared_ptr<tBuffer>;
 	class BufferRangeManager;
+	struct GraphicsState;
 	struct Material {
 		Material(std::shared_ptr<tShaderInterface> shader);
 		struct value_offset {
@@ -26,10 +28,11 @@ namespace tEngine {
 		void SetBuffer(const std::string& name, const BufferHandle& buffer, size_t offset = 0);
 		void SetImage(std::string name, ImageHandle image, vk::ImageView vkView = {}, StockSampler sampler = StockSampler::LinearClamp);
 		std::shared_ptr<tShaderInterface> shader;
+		GraphicsState graphicsState;
 	private:
 		std::unordered_map<std::string, value_offset> storedValue;
 
 	};
 		
-	
+
 }

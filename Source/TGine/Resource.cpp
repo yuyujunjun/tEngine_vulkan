@@ -775,8 +775,26 @@ namespace tEngine {
 			 }
 
 			 //VkDevice vkdevice = device->get_device();
+			 if ((info.subresourceRange.aspectMask & VK_IMAGE_ASPECT_DEPTH_BIT) != 0) {
+				 if ((image_create_info.usage & ~VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0) {
+					 if (info.subresourceRange.levelCount > 1)
+					 {
+						 LOGI("Cannot create depth stencil attachments with more than 1 mip level currently, and non-DS usage flags.\n");
+						 return false;
+					 }
+					 if (info.subresourceRange.layerCount > 1)
+					 {
+						 LOGI("Cannot create layered depth stencil attachments with non-DS usage flags.\n");
+						 return false;
+					 }
+					 auto view_info = info;
 
-			 if (info.subresourceRange.aspectMask == (VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT))
+					 // We need this to be able to sample the texture, or otherwise use it as a non-pure DS attachment.
+					 view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+					 depth_view = device->createImageView(view_info);
+				 }
+			 }
+			 if ((info.subresourceRange.aspectMask & VK_IMAGE_ASPECT_STENCIL_BIT)!=0)
 			 {
 				 if ((image_create_info.usage & ~VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) != 0)
 				 {
@@ -796,8 +814,8 @@ namespace tEngine {
 					 auto view_info = info;
 
 					 // We need this to be able to sample the texture, or otherwise use it as a non-pure DS attachment.
-					 view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-					 depth_view = device->createImageView(view_info);
+					/* view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+					 depth_view = device->createImageView(view_info);*/
 
 
 					 view_info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_STENCIL_BIT;

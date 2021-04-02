@@ -561,7 +561,7 @@ namespace vk
 
     std::vector<std::string> getDeviceExtensions()
     {
-      return { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+      return { VK_KHR_SWAPCHAIN_EXTENSION_NAME,VK_EXT_DEPTH_RANGE_UNRESTRICTED_EXTENSION_NAME };
     }
 
     std::vector<std::string> getInstanceExtensions()

@@ -58,7 +58,7 @@ namespace tEngine {
 
 #endif
 		extensions.push_back("VK_EXT_debug_utils");
-
+		
 		return extensions;
 	}
 	 GLFWwindow* createWindow(vk::Extent2D extent, std::string name ) {
@@ -110,6 +110,8 @@ namespace tEngine {
 		features.setLogicOp(true);
 		features.setDepthBiasClamp(true);
 		features.setDepthClamp(true);
+		features.setDepthBounds(false);
+	
 		return vk::su::createDevice(phyDevice, findQueueFamilyIndex(phyDevice.getQueueFamilyProperties(), vk::QueueFlagBits::eGraphics), vk::su::getDeviceExtensions(), &features);
 
 	}

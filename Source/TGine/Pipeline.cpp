@@ -6,8 +6,9 @@
 #include"Device.h"
 #include"Log.h"
 #include"DescriptorPool.h"
+#include"GraphicsState.h"
 namespace tEngine {
-	GraphicsPipelineCreateInfo getDefaultPipelineCreateInfo(tShaderInterface* shader, const tRenderPass* renderPass, uint32_t subpass, const tFrameBuffer* frameBuffer) {
+	GraphicsPipelineCreateInfo getDefaultPipelineCreateInfo(tShaderInterface* shader, const GraphicsState& state, const tRenderPass* renderPass, uint32_t subpass, const tFrameBuffer* frameBuffer) {
 		// Shader
 		GraphicsPipelineCreateInfo createInfo;
 		for (uint32_t i = 0; i < shader->getShader()->getShaderCount(); ++i) {
@@ -24,8 +25,8 @@ namespace tEngine {
 		}
 		//DepthStencil
 
-		createInfo.depthStencilState.depthTestEnable = true;
-		createInfo.depthStencilState.depthWriteEnable = true;
+		createInfo.depthStencilState.depthTestEnable = state.depthTestEnable;
+		createInfo.depthStencilState.depthWriteEnable = state.depthWriteEnable;
 		
 		//createInfo.depthStencilState.depthCompareOp = vk::CompareOp::eAlways;
 		//dynamicState
@@ -39,11 +40,13 @@ namespace tEngine {
 		//createInfo.multisampleState.SampleMask = 0xFFFFFFFF;
 		//rasterizationState
 		//createInfo.rasterizationState.cullMode = vk::CullModeFlagBits::eNone;
-		createInfo.rasterizationState.depthBiasEnable = false;
-		createInfo.rasterizationState.depthClampEnable = false;
-		createInfo.rasterizationState.depthBiasSlopeFactor = 10;
+		createInfo.rasterizationState.depthBiasEnable = state.depthBias.depthBiasEnable;
+		createInfo.rasterizationState.depthClampEnable = state.depthClampEnable;
+		createInfo.rasterizationState.depthBiasClamp = state.depthBias.depthBiasClamp;
+		createInfo.rasterizationState.depthBiasSlopeFactor = state.depthBias.depthBiasSlopeFactor;
 		
-		createInfo.rasterizationState.depthBiasConstantFactor = 0.1;
+		createInfo.rasterizationState.depthBiasConstantFactor = state.depthBias.depthBiasConstantFactor;
+		
 		//createInfo.rasterizationState.de
 		//createInfo.rasterizationState.polygonMode = vk::PolygonMode::eFill;
 

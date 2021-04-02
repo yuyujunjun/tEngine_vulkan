@@ -6,6 +6,7 @@
 #include"bufferHelper.h"
 #include<random>
 #include"Log.h"
+#include"GraphicsState.h"
 using namespace tEngine;
 
 int main() {
@@ -95,26 +96,31 @@ int main() {
 	shadowMapCreateInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
 	auto ShadowMap = createImage(device.get(), shadowMapCreateInfo);
 	auto lightArea = glm::vec4(-15, 15, -15, 15);
+	GraphicsState debugState;
+	GraphicsState shadowMapState;
+	shadowMapState.depthBias.depthBiasEnable = true;
+	shadowMapState.depthBias.depthBiasConstantFactor = 1e5;
+	shadowMapState.depthBias.depthBiasSlopeFactor = 1;
+	shadowMapState.depthBias.depthBiasClamp = 0.2;
 	auto uploadMaterial = [&](GameObject& obj) {
 		obj->material->SetImage("_ShadowMap", ShadowMap, ShadowMap->get_view()->get_float_view(), tEngine::StockSampler::NearestShadow);
 		obj->material->SetValue("uKd", uKd);
 		obj->material->SetValue("uKs", uKs);
-		
 		obj->material->SetValue("lightPosArea", glm::vec4(Light->transform.position,area));
-	//	obj->material->SetValue("lightDir", lightDir);
 		obj->material->SetValue<float>("lightIntensity", lightIntensity);
 		obj->material->SetValue("cameraPos", tEngineContext::context.cameraManipulator.getCameraPosition());
-		obj->material->SetValue("world_to_light", Ortho(lightArea.x,lightArea.y,lightArea.z,lightArea.w,40)* (glm::lookAt(Light->transform.position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0))));
+		obj->material->SetValue("world_to_shadow", Ortho(lightArea.x, lightArea.y, lightArea.z, lightArea.w, 40)* glm::lookAt(Light->transform.position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
 		obj->material->SetValue("halfblockSize", 8);
 		obj->material->SetValue("maxKernelSize",8);
 		obj->material->SetValue("depthMapSize",glm::vec2(ShadowMap->get_width(),ShadowMap->get_height()) );
 	};
 	context->Update([&](double timeDelta) {
-		renderPass->SetImageView("shadow", ShadowMap);
+		renderPass->SetImageView("shadow", ShadowMap,ShadowMap->get_view()->get_float_view());
 		renderPass->SetImageView("back", context->swapChain->getImage(context->imageIdx));
 		renderPass->SetImageView("depth", context->swapChain->getDepth());
 		renderPass->setClearValue("back", { 0,0,0,1 });
 		renderPass->setDepthStencilValue("depth", 1);
+		renderPass->setDepthStencilValue("shadow", 1);
 		
 		ImGui::Begin("test");
 		ImGui::DragFloat3("lightPos",&Light->transform.position[0],0.1,-10,10);
@@ -128,10 +134,12 @@ int main() {
 		ImGui::End();
 
 		});
-		context->Record([&](double timeDelta, CommandBufferHandle& cb) {
+	context->Record([&](double timeDelta, CommandBufferHandle& cb) {
 			auto& frameBuffer = renderPass->requestFrameBuffer();
 			auto viewPort = frameBuffer->getViewPort();
 			cb->beginRenderPass(renderPass, frameBuffer, true);
+			viewPort.maxDepth = 1;
+			viewPort.minDepth = 0;
 			cb->setViewport(viewPort);
 			cb->setScissor(0, frameBuffer->getRenderArea());
 			//Update shadowmap
@@ -142,7 +150,7 @@ int main() {
 			shadowMateial->SetValue(ShaderString(SV::_MATRIX_V), view);
 			shadowMateial->SetValue(ShaderString(SV::_MATRIX_P), projection);
 			shadowMateial->SetValue(ShaderString(SV::_MATRIX_VP), projection* view);
-			shadowMateial->SetValue(ShaderString(SV::_INV_MATRIX_VP), glm::inverse(projection* view));
+		//	shadowMateial->SetValue(ShaderString(SV::_INV_MATRIX_VP), glm::inverse(projection* view));
 			
 			
 			for (auto& r : needRender) {
@@ -150,27 +158,30 @@ int main() {
 				bufferRange->NextRangenoLock();
 				shadowMateial->SetBuffer("ModelMatrix",bufferRange->buffer(),bufferRange->getOffset());
 				shadowMateial->SetValue(ShaderString(SV::_MATRIX_M), r->transform.Matrix());
-				flushGraphicsShaderState(shadowMateial.get(), cb, renderPass.get(), 0);
+				flushGraphicsShaderState(shadowMateial.get(),shadowMapState, cb, renderPass.get(), 0);
 				DrawMesh(r->meshbuffer.get(), cb);
 			}
 			cb->NextSubpass(vk::SubpassContents::eInline);
+
+			cb->setViewport(frameBuffer->getViewPort());
 			updateCamera();
 			for (auto& r : needRender) {
 				uploadTransform(r);
 				uploadMaterial(r);
 				r->material->flushMaterialState();
-				flushGraphicsShaderState(r->material->shader.get(), cb, renderPass.get(), 1);
+				flushGraphicsShaderState(r->material->shader.get(),r->material->graphicsState, cb, renderPass.get(), 1);
 				DrawMesh(r->meshbuffer.get(), cb);
 			}
 			uploadTransform(Light);
 			Light->material->flushMaterialState();
-			flushGraphicsShaderState(Light->material->shader.get(), cb, renderPass.get(), 1);
+			flushGraphicsShaderState(Light->material->shader.get(),Light->material->graphicsState, cb, renderPass.get(), 1);
 			DrawMesh(Light->meshbuffer.get(), cb);
 			debugQuad->SetImage("_MainTex",ShadowMap,ShadowMap->get_view()->get_float_view(),tEngine::StockSampler::NearestShadow);
-			flushGraphicsShaderState(debugQuad.get(), cb, renderPass.get(), 1);
+			flushGraphicsShaderState(debugQuad.get(),debugState, cb, renderPass.get(), 1);
 			
 			viewPort.height /= 3;
 			viewPort.width /= 3;
+		
 			auto area = frameBuffer->getRenderArea();
 			area.extent.height /= 3;
 			area.extent.width /= 3;

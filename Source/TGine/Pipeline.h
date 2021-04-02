@@ -91,7 +91,7 @@ namespace tEngine {
 			vk::StencilOpState front = {};
 			vk::StencilOpState back = {};
 			float minDepthBounds = 0.f;
-			float maxDepthBounds = 1.f;
+			float maxDepthBounds = 100.f;
 			bool operator==(const DepthStencilState& state)const {
 				return depthTestEnable == state.depthTestEnable
 					&& depthWriteEnable == state.depthWriteEnable
@@ -232,9 +232,11 @@ namespace tEngine {
 	using DescriptorSetLayoutHandle = std::shared_ptr<tDescriptorSetLayout>;
 	class tRenderPass;
 	class tFrameBuffer;
+	struct GraphicsState;
 	PipelineLayoutHandle createPipelineLayout(const Device* device, std::vector<DescriptorSetLayoutHandle>& descLayouts, GpuBlockBuffer& pushConstant, vk::ShaderStageFlags shaderStage);
 	//without shader
-	GraphicsPipelineCreateInfo getDefaultPipelineCreateInfo(tShaderInterface* shader, const tRenderPass* renderPass, uint32_t subpass, const tFrameBuffer* frameBuffer);
+	GraphicsPipelineCreateInfo getDefaultPipelineCreateInfo(tShaderInterface* shader,const GraphicsState& state, const tRenderPass* renderPass, uint32_t subpass, const tFrameBuffer* frameBuffer);
+	//mini version of graphicsPipelineCreateInfo
 
 	
 }

@@ -10,6 +10,7 @@
 #include"Device.h"
 #include"Log.h"
 #include"AssetLoadManager.h"
+#include"GraphicsState.h"
 namespace tEngine {
 	uint32_t tShader::setCount()const {
 		uint32_t maxSet = 0;
@@ -308,8 +309,8 @@ namespace tEngine {
 		}
 		bindNow(state.setCount() - bindedSets.size());
 	}
-	void flushGraphicsPipeline(const CommandBufferHandle& cb, tShaderInterface& state, tRenderPass* renderPass, uint32_t subpass) {
-		auto createInfo = getDefaultPipelineCreateInfo(&state, renderPass, subpass, renderPass->requestFrameBuffer().get());
+	void flushGraphicsPipeline(const CommandBufferHandle& cb, GraphicsState& gState, tShaderInterface& state, tRenderPass* renderPass, uint32_t subpass) {
+		auto createInfo = getDefaultPipelineCreateInfo(&state, gState, renderPass, subpass, renderPass->requestFrameBuffer().get());
 
 
 		cb->bindPipeline(state.getShader()->getPipelineLayout()->requestGraphicsPipeline(createInfo));
@@ -326,8 +327,8 @@ namespace tEngine {
 			cb->pushConstants(state.getShader()->getPipelineLayout()->getVkHandle(), (VkShaderStageFlags)state.getShader()->getAllStagesFlag(), state.getPushConstantBlock());
 		}
 	}
-	void flushGraphicsShaderState(tShaderInterface* state, CommandBufferHandle& cb, tRenderPass* renderPass, uint32_t subpass) {
-		flushGraphicsPipeline(cb, *state, renderPass, subpass);
+	void flushGraphicsShaderState(tShaderInterface* state, GraphicsState& gState, CommandBufferHandle& cb, tRenderPass* renderPass, uint32_t subpass) {
+		flushGraphicsPipeline(cb, gState, *state,renderPass, subpass);
 		flushDescriptorSet(cb, *state);
 	}
 	void flushComputeShaderState(tShaderInterface* state, CommandBufferHandle& cb) {
