@@ -12,7 +12,7 @@ namespace tEngine {
 		void setImages(std::vector<ImageHandle>& images) {
 			imageList = images;
 		}
-		void createDepth(vk::Format format=vk::Format::eUndefined);
+		//void createDepth(vk::Format format=vk::Format::eUndefined);
 		size_t getSwapchainLength() {
 			return imageList.size();
 		}
@@ -27,16 +27,16 @@ namespace tEngine {
 		const ImageHandle& getImage(uint32_t imageIdx)const {
 			return imageList[imageIdx];
 		}
-		const ImageHandle& getDepth()const {
+	/*	const ImageHandle& getDepth()const {
 			return depth;
-		}
+		}*/
 	private:
 		const Device* device;
 		vk::SwapchainKHR swapChain;
 		vk::SurfaceKHR surface;
 		vk::Extent2D extent;
 		std::vector<ImageHandle> imageList;
-		ImageHandle depth;
+	//	ImageHandle depth;
 	};
 	using SwapChainHandle = std::shared_ptr<tSwapChain>;
 	SwapChainHandle createSwapChain(Device* device, vk::SurfaceKHR const& surface, vk::Extent2D const& extent, vk::ImageUsageFlags usage, vk::SwapchainKHR const& oldSwapChain, uint32_t graphicsQueueFamilyIndex, uint32_t presentQueueFamilyIndex);

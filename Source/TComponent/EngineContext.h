@@ -93,10 +93,10 @@ namespace tEngine {
 		}
 		
 	};
-	inline void setupFrameBufferBySwapchain(RenderPassHandle handle) {
-		auto& context = tEngineContext::context;
-		handle->SetImageView("back", context.swapChain->getImage(context.imageIdx));
-		handle->SetImageView("depth", context.swapChain->getDepth());
-	}
+	//inline void setupFrameBufferBySwapchain(RenderPassHandle handle) {
+	//	auto& context = tEngineContext::context;
+	//	handle->SetImageView("back", context.swapChain->getImage(context.imageIdx));
+	////	handle->SetImageView("depth", context.swapChain->getDepth());
+	//}
 	
 }

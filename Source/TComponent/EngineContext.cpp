@@ -95,9 +95,9 @@ namespace tEngine {
 				glfwGetFramebufferSize(gWindow, &width, &height);
 				glfwWaitEvents();
 			}
-			vk::Format depth_format = swapChain->getDepth()->getFormat();
+			//vk::Format depth_format = swapChain->getDepth()->getFormat();
 			swapChain = createSwapChain(device, (vk::SurfaceKHR) surface, vk::Extent2D(width, height), swapChain->getVkHandle());
-			swapChain->createDepth(depth_format);
+			//swapChain->createDepth(depth_format);
 		}
 	}
 	 vk::Instance createInstance() {

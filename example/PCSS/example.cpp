@@ -9,33 +9,26 @@
 #include"GraphicsState.h"
 #include<glm/gtx/quaternion.hpp>
 using namespace tEngine;
-struct stupidScene {
-	std::vector<GameObject> gameObjects;
-
-};
-void StupidDraw() {
-	ContextInit();
-	tEngine::LOG(LogLevel::Information, "Welcome", "", "world");
-	tEngineContext::context.swapChain->createDepth(vk::Format::eD32Sfloat);
-	tEngineContext::context.cameraManipulator.setWindowSize(glm::u32vec2(tEngineContext::context.swapChain->getExtent().width, tEngineContext::context.swapChain->getExtent().height));
-	auto context = &tEngineContext::context;
-	auto& device = context->device;
-	auto threadContext = context->AddThreadContext();
 
 
-}
 
 int main() {
 
 	
 	ContextInit();
-	tEngineContext::context.swapChain->createDepth(vk::Format::eD32Sfloat);
+	//tEngineContext::context.swapChain->createDepth(vk::Format::eD32Sfloat);
 	tEngineContext::context.cameraManipulator.setWindowSize(glm::u32vec2(tEngineContext::context.swapChain->getExtent().width, tEngineContext::context.swapChain->getExtent().height));
 	auto context = &tEngineContext::context;
 	auto& device = context->device;
-	auto threadContext = context->AddThreadContext();
+	
+
 	auto shadowPass = getCollectShadowPass(device.get(), vk::Format::eR32Sfloat);
-	auto renderPass = getSingleRenderpass(device.get(), context->swapChain->getFormat(), (vk::Format)context->swapChain->getDepth()->getFormat());
+	auto shadowMapCreateInfo = ImageCreateInfo::render_target(1024, 1024, (VkFormat)vk::Format::eR32Sfloat);
+	shadowMapCreateInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+	auto ShadowMap = createImage(device.get(), shadowMapCreateInfo);
+
+	auto renderPass = getSingleRenderpass(device.get(), context->swapChain->getFormat());
+	
 	GameObject character=std::make_shared<GameObject_>();
 	GameObject plane = std::make_shared<GameObject_>();
 	GameObject Light = std::make_shared<GameObject_>();
@@ -53,7 +46,7 @@ int main() {
 	character->setMaterial(shader->getInterface());
 	plane->setMaterial(shader->getInterface());
 	//Normal shader
-	Light->setMaterial( tShaderInterface::requestTexturedShader(device.get()));
+	Light->setMaterial(tShaderInterface::requestTexturedShader(device.get()));
 	//Post Shader
 	auto postShader = tShader::Create(device.get());
 	postShader->SetShaderModule({ "Quad.vsh","MainTex.fsh" }, { vk::ShaderStageFlagBits::eVertex,vk::ShaderStageFlagBits::eFragment });
@@ -107,10 +100,7 @@ int main() {
 	//Config shaderInterface
 	character->material->SetImage("_MainTex", image);
 	plane->material->SetImage("_MainTex", tImage::requestWhiteImage(device.get()));
-	auto shadowMapCreateInfo = ImageCreateInfo::render_target(context->swapChain->getExtent().width, context->swapChain->getExtent().height, (VkFormat)vk::Format::eR32Sfloat);
-	shadowMapCreateInfo.usage |= (VkImageUsageFlagBits)vk::ImageUsageFlagBits::eInputAttachment;
-	shadowMapCreateInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
-	auto ShadowMap = createImage(device.get(), shadowMapCreateInfo);
+
 	auto lightArea = glm::vec4(-15, 15, -15, 15);
 	GraphicsState debugState;
 	GraphicsState shadowMapState;
@@ -119,7 +109,7 @@ int main() {
 	shadowMapState.depthBias.depthBiasSlopeFactor = 1;
 	shadowMapState.depthBias.depthBiasClamp = 0.2;
 	auto uploadMaterial = [&](GameObject& obj) {
-		obj->material->SetImage("_ShadowMap", ShadowMap, ShadowMap->get_view()->get_float_view(), tEngine::StockSampler::NearestShadow);
+		obj->material->SetImage("_ShadowMap", ShadowMap, ShadowMap->get_view()->get_float_view(), tEngine::StockSampler::LinearShadow);
 		obj->material->SetValue("uKd", uKd);
 		obj->material->SetValue("uKs", uKs);
 		obj->material->SetValue("lightPosArea", glm::vec4(Light->transform.position,area));
@@ -135,7 +125,7 @@ int main() {
 		shadowPass->setDepthBufferView("depth");
 		//renderPass->SetImageView("shadow", ShadowMap, ShadowMap->get_view()->get_float_view());
 		renderPass->SetImageView("back", context->swapChain->getImage(context->imageIdx));
-		renderPass->SetImageView("depth", context->swapChain->getDepth());
+		renderPass->setDepthBufferView("depth");
 		renderPass->setClearValue("back", { 0,0,0,1 });
 		renderPass->setDepthStencilValue("depth", 1);
 		
@@ -217,7 +207,7 @@ int main() {
 		});
 
 	
-
+	auto threadContext = context->AddThreadContext();
 	context->Loop(threadContext);
 
 

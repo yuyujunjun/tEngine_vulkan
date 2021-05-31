@@ -140,11 +140,11 @@ namespace tEngine {
 		handle->setImages(images);
 			return handle;
 	}
-	void tSwapChain::createDepth(vk::Format format) {
-		if (format == vk::Format::eUndefined) {
-			format = depth->getFormat();
-		}
-		depth = (createImage(device, ImageCreateInfo::render_target(getExtent().width, getExtent().height, (VkFormat)format)));
+	//void tSwapChain::createDepth(vk::Format format) {
+	//	if (format == vk::Format::eUndefined) {
+	//		format = depth->getFormat();
+	//	}
+	//	depth = (createImage(device, ImageCreateInfo::render_target(getExtent().width, getExtent().height, (VkFormat)format)));
 
-	}
+	//}
 }
