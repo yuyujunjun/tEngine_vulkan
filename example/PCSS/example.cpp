@@ -7,18 +7,35 @@
 #include<random>
 #include"Log.h"
 #include"GraphicsState.h"
+#include<glm/gtx/quaternion.hpp>
 using namespace tEngine;
+struct stupidScene {
+	std::vector<GameObject> gameObjects;
+
+};
+void StupidDraw() {
+	ContextInit();
+	tEngine::LOG(LogLevel::Information, "Welcome", "", "world");
+	tEngineContext::context.swapChain->createDepth(vk::Format::eD32Sfloat);
+	tEngineContext::context.cameraManipulator.setWindowSize(glm::u32vec2(tEngineContext::context.swapChain->getExtent().width, tEngineContext::context.swapChain->getExtent().height));
+	auto context = &tEngineContext::context;
+	auto& device = context->device;
+	auto threadContext = context->AddThreadContext();
+
+
+}
 
 int main() {
 
-
+	
 	ContextInit();
-	tEngine::LOG(LogLevel::Information,"Welcome","","world");
+	tEngineContext::context.swapChain->createDepth(vk::Format::eD32Sfloat);
+	tEngineContext::context.cameraManipulator.setWindowSize(glm::u32vec2(tEngineContext::context.swapChain->getExtent().width, tEngineContext::context.swapChain->getExtent().height));
 	auto context = &tEngineContext::context;
 	auto& device = context->device;
-
-	ThreadContext* threadContext = new ThreadContext(context);
-	auto renderPass = getShadowMapPass(device.get(), context->swapChain->getFormat(), (vk::Format)context->swapChain->getDepth()->getFormat());
+	auto threadContext = context->AddThreadContext();
+	auto shadowPass = getCollectShadowPass(device.get(), vk::Format::eR32Sfloat);
+	auto renderPass = getSingleRenderpass(device.get(), context->swapChain->getFormat(), (vk::Format)context->swapChain->getDepth()->getFormat());
 	GameObject character=std::make_shared<GameObject_>();
 	GameObject plane = std::make_shared<GameObject_>();
 	GameObject Light = std::make_shared<GameObject_>();
@@ -36,9 +53,7 @@ int main() {
 	character->setMaterial(shader->getInterface());
 	plane->setMaterial(shader->getInterface());
 	//Normal shader
-	auto lightShader = tShader::Create(device.get());
-	lightShader->SetShaderModule({ "draw.vsh","draw.fsh" }, { vk::ShaderStageFlagBits::eVertex, vk::ShaderStageFlagBits::eFragment });
-	Light->setMaterial( lightShader->getInterface());
+	Light->setMaterial( tShaderInterface::requestTexturedShader(device.get()));
 	//Post Shader
 	auto postShader = tShader::Create(device.get());
 	postShader->SetShaderModule({ "Quad.vsh","MainTex.fsh" }, { vk::ShaderStageFlagBits::eVertex,vk::ShaderStageFlagBits::eFragment });
@@ -82,6 +97,7 @@ int main() {
 	glm::vec3 uKd = glm::vec3(0.2, 0.2, 0.2);
 	glm::vec3 uKs = glm::vec3(0.2, 0.2, 0.2);
 	
+	
 
 	//Load Textue
 	auto imageAsset = tEngine::LoadImage("Obj/MC003_Kozakura_Mari.png");
@@ -91,7 +107,7 @@ int main() {
 	//Config shaderInterface
 	character->material->SetImage("_MainTex", image);
 	plane->material->SetImage("_MainTex", tImage::requestWhiteImage(device.get()));
-	auto shadowMapCreateInfo = ImageCreateInfo::render_target(context->swapChain->getExtent().width, context->swapChain->getExtent().height, (VkFormat)vk::Format::eD32Sfloat);
+	auto shadowMapCreateInfo = ImageCreateInfo::render_target(context->swapChain->getExtent().width, context->swapChain->getExtent().height, (VkFormat)vk::Format::eR32Sfloat);
 	shadowMapCreateInfo.usage |= (VkImageUsageFlagBits)vk::ImageUsageFlagBits::eInputAttachment;
 	shadowMapCreateInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
 	auto ShadowMap = createImage(device.get(), shadowMapCreateInfo);
@@ -115,12 +131,14 @@ int main() {
 		obj->material->SetValue("depthMapSize",glm::vec2(ShadowMap->get_width(),ShadowMap->get_height()) );
 	};
 	context->Update([&](double timeDelta) {
-		renderPass->SetImageView("shadow", ShadowMap,ShadowMap->get_view()->get_float_view());
+		shadowPass->SetImageView("shadowMap", ShadowMap, ShadowMap->get_view()->getDefaultView());
+		shadowPass->setDepthBufferView("depth");
+		//renderPass->SetImageView("shadow", ShadowMap, ShadowMap->get_view()->get_float_view());
 		renderPass->SetImageView("back", context->swapChain->getImage(context->imageIdx));
 		renderPass->SetImageView("depth", context->swapChain->getDepth());
 		renderPass->setClearValue("back", { 0,0,0,1 });
 		renderPass->setDepthStencilValue("depth", 1);
-		renderPass->setDepthStencilValue("shadow", 1);
+		
 		
 		ImGui::Begin("test");
 		ImGui::DragFloat3("lightPos",&Light->transform.position[0],0.1,-10,10);
@@ -135,13 +153,11 @@ int main() {
 
 		});
 	context->Record([&](double timeDelta, CommandBufferHandle& cb) {
-			auto& frameBuffer = renderPass->requestFrameBuffer();
-			auto viewPort = frameBuffer->getViewPort();
-			cb->beginRenderPass(renderPass, frameBuffer, true);
-			viewPort.maxDepth = 1;
-			viewPort.minDepth = 0;
-			cb->setViewport(viewPort);
-			cb->setScissor(0, frameBuffer->getRenderArea());
+			auto depthFB = shadowPass->requestFrameBuffer();
+			cb->beginRenderPass(shadowPass, depthFB,true);
+
+			cb->setViewport(depthFB->getViewPort());
+			cb->setScissor(0, depthFB->getRenderArea());
 			//Update shadowmap
 			auto view = (glm::lookAt(Light->transform.position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
 			auto projection = Ortho(lightArea.x, lightArea.y, lightArea.z, lightArea.w, 40);
@@ -158,26 +174,30 @@ int main() {
 				bufferRange->NextRangenoLock();
 				shadowMateial->SetBuffer("ModelMatrix",bufferRange->buffer(),bufferRange->getOffset());
 				shadowMateial->SetValue(ShaderString(SV::_MATRIX_M), r->transform.Matrix());
-				flushGraphicsShaderState(shadowMateial.get(),shadowMapState, cb, renderPass.get(), 0);
+				flushGraphicsShaderState(shadowMateial.get(),shadowMapState, cb, shadowPass.get(), 0);
 				DrawMesh(r->meshbuffer.get(), cb);
 			}
-			cb->NextSubpass(vk::SubpassContents::eInline);
-
+			cb->endRenderPass();
+			
+			auto& frameBuffer = renderPass->requestFrameBuffer();
+			
+			auto viewPort = frameBuffer->getViewPort();
+			cb->beginRenderPass(renderPass, frameBuffer, true);
 			cb->setViewport(frameBuffer->getViewPort());
 			updateCamera();
 			for (auto& r : needRender) {
 				uploadTransform(r);
 				uploadMaterial(r);
 				r->material->flushMaterialState();
-				flushGraphicsShaderState(r->material->shader.get(),r->material->graphicsState, cb, renderPass.get(), 1);
+				flushGraphicsShaderState(r->material->shader.get(),r->material->graphicsState, cb, renderPass.get(), 0);
 				DrawMesh(r->meshbuffer.get(), cb);
 			}
 			uploadTransform(Light);
 			Light->material->flushMaterialState();
-			flushGraphicsShaderState(Light->material->shader.get(),Light->material->graphicsState, cb, renderPass.get(), 1);
+			flushGraphicsShaderState(Light->material->shader.get(),Light->material->graphicsState, cb, renderPass.get(), 0);
 			DrawMesh(Light->meshbuffer.get(), cb);
 			debugQuad->SetImage("_MainTex",ShadowMap,ShadowMap->get_view()->get_float_view(),tEngine::StockSampler::NearestShadow);
-			flushGraphicsShaderState(debugQuad.get(),debugState, cb, renderPass.get(), 1);
+			flushGraphicsShaderState(debugQuad.get(),debugState, cb, renderPass.get(), 0);
 			
 			viewPort.height /= 3;
 			viewPort.width /= 3;
@@ -207,7 +227,7 @@ int main() {
 	
 	
 	
-	delete threadContext;
+	
 	shader.reset();
 	
 	image.reset();

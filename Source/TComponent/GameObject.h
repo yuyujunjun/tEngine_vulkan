@@ -6,6 +6,9 @@
 #include"tComponent.h"
 #include"bufferHelper.h"
 namespace tEngine {
+
+	
+
 	class GameObject_ {
 	public:
 		GameObject_() = default;

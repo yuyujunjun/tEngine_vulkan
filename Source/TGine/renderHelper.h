@@ -12,7 +12,8 @@ namespace tEngine {
 	using SwapChainHandle = std::shared_ptr<tSwapChain>;
 
 	RenderPassHandle getSingleRenderpass(Device* device,vk::Format format,vk::Format depthFormat);
-	RenderPassHandle getUIRenderpass(Device* device, vk::Format format, vk::Format depthFormat);
+	RenderPassHandle getUIRenderpass(Device* device, vk::Format format);
 	RenderPassHandle getShadowMapPass(Device* device, vk::Format format, vk::Format depthFormat);
+	RenderPassHandle getCollectShadowPass(Device* device, vk::Format format);
 	
 }

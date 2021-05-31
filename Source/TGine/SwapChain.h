@@ -12,7 +12,7 @@ namespace tEngine {
 		void setImages(std::vector<ImageHandle>& images) {
 			imageList = images;
 		}
-		void createDepth(vk::Format format=vk::Format::eD16Unorm);
+		void createDepth(vk::Format format=vk::Format::eUndefined);
 		size_t getSwapchainLength() {
 			return imageList.size();
 		}

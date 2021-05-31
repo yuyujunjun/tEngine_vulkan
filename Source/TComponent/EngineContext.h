@@ -65,20 +65,20 @@ namespace tEngine {
 		uint32_t imageIdx = -1;
 		std::function<void(double)> prepareStage;
 		std::function<void(double, CommandBufferHandle& cb)> loopStage;
-		
+		ThreadContext* AddThreadContext() { threadContext.emplace_back(std::make_unique<ThreadContext>(this)); return threadContext.back().get(); }
+
+
 		void Update(const std::function<void(double)>& f) {
 			prepareStage = f;
 		}
-		
 		void Record(const std::function<void(double,CommandBufferHandle& cb)>& f) {
 			loopStage = f;
 		}
-
-
 		void coreRender(ThreadContext* threadContext, SemaphoreHandle	acquireSemaphore
 			, SemaphoreHandle presentSemaphore, FenceHandle fence);
 		void Render(ThreadContext* threadContext);
 		void Loop(ThreadContext* threadContext);
+		std::vector<std::unique_ptr<ThreadContext>> threadContext;
 		~tEngineContext();
 	};
 	struct IMGUI {

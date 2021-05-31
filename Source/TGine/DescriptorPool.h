@@ -18,7 +18,7 @@ namespace tEngine {
 		//DECLARE_SHARED(tDescriptorSetLayout);
 	
 		
-		tDescriptorSetLayout(Device* device,vk::DescriptorSetLayout layout, const DescriptorLayoutCreateInfo& bindings) :device(device), info(bindings),vkLayout(layout) {
+		tDescriptorSetLayout(const Device* device,vk::DescriptorSetLayout layout, const DescriptorLayoutCreateInfo& bindings) :device(device), info(bindings),vkLayout(layout) {
 		}
 		const DescriptorLayoutCreateInfo& getCreateInfo()const {
 			return info;
@@ -92,7 +92,7 @@ namespace tEngine {
 		}
 		~tDescriptorPool();
 	private:
-
+		
 		const Device* device;
 		vk::DescriptorPool pool;
 	};
@@ -121,7 +121,7 @@ namespace tEngine {
 	};
 	class tDescriptorSetAllocator {
 	public:
-		tDescriptorSetAllocator(Device* device, DescriptorSetLayoutHandle layout):device(device), layout(layout){
+		tDescriptorSetAllocator(const Device* device, DescriptorSetLayoutHandle layout):device(device), layout(layout){
 			createPool();
 		}
 		void createPool();
@@ -131,7 +131,7 @@ namespace tEngine {
 		}
 	private:
 		const uint32_t RingSize = 8;
-		Device* device;
+		const Device* device;
 		DescriptorPoolHandle pool;
 		descRingPool descriptorSetPool;
 		const DescriptorSetLayoutHandle layout;
@@ -143,7 +143,7 @@ namespace tEngine {
 		static tDescriptorSetAllocatorManager manager;
 		tDescriptorSetAllocatorManager() {}
 
-		DescSetAllocHandle requestSetAllocator(Device* device, const DescriptorLayoutCreateInfo& bindings);
+		DescSetAllocHandle requestSetAllocator(const Device* device, const DescriptorLayoutCreateInfo& bindings);
 
 	private:
 		std::mutex mtx;

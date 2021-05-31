@@ -57,9 +57,12 @@ namespace tEngine {
 			, image(image), view(view), sampler(sampler), buffer(buffer), offset(offset), range(range) {}
 		void updateBufferHandle(BufferHandle handle, uint32_t offset, uint32_t range) { buffer = handle; this->offset = offset; this->range = range; }
 		void updateImageView(ImageHandle image, vk::ImageView view, StockSampler sampler) { this->image = image; this->view = view; this->sampler = sampler; }
-		bool emptyResource() const { return buffer == nullptr && image == nullptr; }
-		uint32_t dstBinding = 0;
-		uint32_t dstArrayElement = 0;
+		bool isEmptyResource() const { return buffer == nullptr && image == nullptr; }
+		//Don't compare offset
+		bool operator==(const BindingResourceInfo& info)const;
+		bool operator!=(const BindingResourceInfo& info)const {
+			return !(*this == info);
+		}
 		vk::DescriptorType type;
 		ImageHandle image = nullptr;
 		vk::ImageView view;
@@ -67,11 +70,9 @@ namespace tEngine {
 		BufferHandle buffer = nullptr;
 		uint32_t offset = 0;
 		uint32_t range = 0;
-		//Don't compare offset
-		bool operator==(const BindingResourceInfo& info)const;
-		bool operator!=(const BindingResourceInfo& info)const {
-			return !(*this == info);
-		}
+		uint32_t dstBinding = 0;
+		uint32_t dstArrayElement = 0;
+		
 	};
 
 	using ResSetBinding = std::vector<BindingResourceInfo>;

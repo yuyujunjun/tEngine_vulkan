@@ -69,7 +69,7 @@ namespace tEngine {
 			//if bindPoint is empty or 
 			for (int i = 0; i < value.size();++i) {
 				const auto& v = value[i];
-				if (!attribute[a][i].emptyResource()&&!v.emptyResource()&&attribute[a][i] != v)return false;
+				if (!attribute[a][i].isEmptyResource()&&!v.isEmptyResource()&&attribute[a][i] != v)return false;
 			}
 			return true;
 			}
@@ -107,7 +107,7 @@ namespace tEngine {
 		auto vkpool = device->createDescriptorPool(info);
 		pool = std::make_shared<tDescriptorPool>(device, vkpool);
 	}
-	DescSetAllocHandle tDescriptorSetAllocatorManager::requestSetAllocator(Device* device, const DescriptorLayoutCreateInfo& bindings) {
+	DescSetAllocHandle tDescriptorSetAllocatorManager::requestSetAllocator(const Device* device, const DescriptorLayoutCreateInfo& bindings) {
 		//find first
 		for (size_t i = 0; i < bindingInfoList.size(); ++i) {
 			if (bindings.bindings == bindingInfoList[i].bindings) {
@@ -200,7 +200,7 @@ namespace tEngine {
 		imageInfo.reserve(rb.size());
 		//imageInfo.reserve(rb.getImages().size());
 		for (auto& bindingInfo : rb) {
-			if (bindingInfo.emptyResource())continue;
+			if (bindingInfo.isEmptyResource())continue;
 			auto& resource = bindingInfo;
 			switch (resource.type) {
 			case vk::DescriptorType::eUniformBufferDynamic:

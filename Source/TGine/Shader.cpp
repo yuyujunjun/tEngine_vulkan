@@ -165,7 +165,14 @@ namespace tEngine {
 	tShaderInterface::tShaderInterface(const tShader* shader) : base_shader(shader) {
 		bindResources = getResourceBindingInfo(shader);
 	};
-
+	std::shared_ptr<tShaderInterface> tShaderInterface::requestTexturedShader(const Device* device) {
+		static tShader::SharedPtr shadowShader;
+		if (shadowShader == nullptr) {
+			shadowShader = tShader::Create(device);
+			shadowShader->SetShaderModule({ "draw.vsh","drawTexture.fsh" }, { vk::ShaderStageFlagBits::eVertex, vk::ShaderStageFlagBits::eFragment });
+		}
+		return shadowShader->getInterface();
+	}
 
 	const GpuBlockBuffer& tShader::getBlock(std::string name)const {
 		auto s_b = blockToSetBinding.at(name);
@@ -241,7 +248,7 @@ namespace tEngine {
 	}
 	void fillWithDirtyImage(ResSetBinding& rb, const Device* device) {
 		for (auto& bindingInfo : rb) {
-			if (bindingInfo.emptyResource()) {
+			if (bindingInfo.isEmptyResource()) {
 				auto& resource = bindingInfo;
 				switch (resource.type) {
 				case vk::DescriptorType::eCombinedImageSampler:

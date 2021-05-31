@@ -245,6 +245,7 @@ namespace tEngine {
 		info.usage = (format_has_depth_or_stencil_aspect(format) ? VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT :
 			VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) |
 			VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT;
+		info.usage = info.usage |= VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT;
 		info.samples = VK_SAMPLE_COUNT_1_BIT;
 		info.flags = 0;
 		info.misc = 0;
@@ -471,7 +472,7 @@ namespace tEngine {
 		 }
 		 return vk::BufferUsageFlagBits(0);
 	 }
-	 std::shared_ptr<BufferRangeManager> createBufferFromBlock(Device* device, const GpuBlockBuffer& block, uint32_t rangeCount) {
+	 std::shared_ptr<BufferRangeManager> createBufferFromBlock(const Device* device, const GpuBlockBuffer& block, uint32_t rangeCount) {
 		 //	auto s_b = blockToSetBinding.at(name);
 			 //auto block = setInfos[s_b.first].blockBuffers.at(s_b.second);
 			 //auto type = setInfos[s_b.first].data.bindingAt(s_b.second).descriptorType;
@@ -526,32 +527,29 @@ namespace tEngine {
 			 device->destroyImageView(view);
 		 }
 	 }
+	 std::shared_ptr<tImage> tImage::createColorImage(const Device* device, std::vector<unsigned char> color) {
+		 ImageCreateInfo info = ImageCreateInfo::immutable_2d_image(1, 1, (VkFormat)vk::Format::eB8G8R8A8Unorm, false);
+		 auto asset = std::make_shared<ImageAsset>();
+		 asset->pixels = static_cast<stbi_uc*>(color.data());
+		 auto dummyImage = createImage(device, info, asset);
+		 asset->pixels = nullptr;
+		 return dummyImage;
+	 }
 	 std::shared_ptr<tImage> tImage::requestDummyImage(const Device* device) {
 		 static std::shared_ptr<tImage> dummyImage;
 		 if (dummyImage == nullptr) {
-			 ImageCreateInfo info = ImageCreateInfo::immutable_2d_image(1,1,(VkFormat)vk::Format::eB8G8R8A8Unorm,false);
 			 std::vector<unsigned char> color(4);
 			 color = { 255,0,255,255 };
-			 auto asset=std::make_shared<ImageAsset>();
-			 asset->pixels = static_cast<stbi_uc*>(color.data());
-			 
-			 dummyImage = createImage(device, info, asset);
-			 asset->pixels = nullptr;
-
+			 dummyImage = createColorImage(device, color);
 		 }
 		 return dummyImage;
 	 }
-	  std::shared_ptr<tImage> tImage::requestWhiteImage(const Device* device) {
+	 std::shared_ptr<tImage> tImage::requestWhiteImage(const Device* device) {
 		 static std::shared_ptr<tImage> whiteImage;
 		 if (whiteImage == nullptr) {
-			 ImageCreateInfo info = ImageCreateInfo::immutable_2d_image(1, 1, (VkFormat)vk::Format::eB8G8R8A8Unorm, false);
 			 std::vector<unsigned char> color(4);
 			 color = { 255,255,255,255 };
-			 auto asset = std::make_shared<ImageAsset>();
-			 asset->pixels = static_cast<stbi_uc*>(color.data());
-
-			 whiteImage = createImage(device, info, asset);
-			 asset->pixels = nullptr;
+			 whiteImage = createColorImage(device, color);
 
 		 }
 		 return whiteImage;

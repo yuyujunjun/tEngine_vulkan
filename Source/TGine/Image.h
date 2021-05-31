@@ -207,14 +207,20 @@ namespace tEngine {
 		static ImageCreateInfo render_target(unsigned width, unsigned height, VkFormat format);
 		static ImageCreateInfo transient_render_target(unsigned width, unsigned height, VkFormat format);
 		static uint32_t compute_view_formats(const ImageCreateInfo& info, VkFormat* formats);
+		bool operator==(const ImageCreateInfo& info)const {
+			return  info.domain == domain && width == info.width && height == info.height && levels == info.levels
+				&& format == info.format && type == info.type && layers == info.layers && usage == info.usage && samples == info.samples && flags == info.flags
+				&& misc == info.misc && initial_layout == info.initial_layout;
+		}
 	};
 
 	class tImage {
 	public:
+
+		friend class tImageView;
+		static std::shared_ptr<tImage> createColorImage(const Device* device, std::vector<unsigned char>);
 		static std::shared_ptr<tImage> requestDummyImage(const Device* device);
 		static std::shared_ptr<tImage> requestWhiteImage(const Device* device);
-		friend class tImageView;
-
 
 		tImage(const Device* device, vk::Image image, vk::ImageView default_view, const VmaAllocation& alloc,
 			const ImageCreateInfo& cinfo, VkImageViewType view_type) :vkImage(image), device(device), create_info(cinfo), alloc(alloc), view(view) {

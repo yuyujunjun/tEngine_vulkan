@@ -6,29 +6,48 @@
 #include"TextureFormatLayout.h"
 namespace tEngine {
 	void tSubpass::addInput(std::string name, vk::ImageLayout layout) {
-		auto& r = renderPass.getAttachment(name);
-		;
+		auto& r = renderPass.getAttachment(name,false);
 		input.emplace_back(vk::AttachmentReference2(r.idx, layout, (vk::ImageAspectFlags)format_to_aspect_mask((VkFormat)r.description.format)));
 	}
 	void tSubpass::addColorOutput(std::string name, vk::ImageLayout layout) {
-		auto& r = renderPass.getAttachment(name);
+		auto& r = renderPass.getAttachment(name, false);
 		color.emplace_back(vk::AttachmentReference2(r.idx, layout, (vk::ImageAspectFlags)format_to_aspect_mask((VkFormat)r.description.format)));
 	}
 	void tSubpass::setDepth(std::string name, vk::ImageLayout layout) {
-		auto& r = renderPass.getAttachment(name);
+		auto& r = renderPass.getAttachment(name, false);
 		depth = (vk::AttachmentReference2(r.idx, layout, (vk::ImageAspectFlags)format_to_aspect_mask((VkFormat)r.description.format)));
 	}
 	void tSubpass::addResolvedOutput(std::string name, vk::ImageLayout layout) {
-		auto& r = renderPass.getAttachment(name);
+		auto& r = renderPass.getAttachment(name, false);
 		resolved.emplace_back(r.idx, layout, (vk::ImageAspectFlags)format_to_aspect_mask((VkFormat)r.description.format));
 	}
 	void tSubpass::addPreserve(std::string name) {
-		auto& r = renderPass.getAttachment(name);
+		auto& r = renderPass.getAttachment(name, false);
 		resolved.emplace_back(r.idx);
+	}
+	void tRenderPass::setDepthBufferView(std::string name,vk::Extent2D extent , bool sampled){
+		vk::Format format = getAttachment(name,false).description.format;
+		if (extent.height == static_cast<uint32_t>(-1)) {
+			assert(getImages().size()>0);
+			extent.width = getImages()[0]->get_width();
+			extent.height = getImages()[0]->get_height();
+		}
+		auto shadowMapCreateInfo = ImageCreateInfo::transient_render_target(extent.width, extent.height, (VkFormat)format);
+		if (sampled) {
+			shadowMapCreateInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
+		}
+		//If already have required image
+		if (resource_to_idx.count(name) != 0) {
+			auto img = getImages()[resource_to_idx.at(name)];
+			if(img && getImages()[resource_to_idx.at(name)]->get_create_info() == shadowMapCreateInfo)
+			return;
+		}
+		auto ShadowMap = createImage(device, shadowMapCreateInfo);
+		this->SetImageView(name, ShadowMap, ShadowMap->get_view()->getDefaultView());
 	}
 	FrameBufferHandle tRenderPass::requestFrameBuffer() {
 
-
+		
 		auto result = frameBuffersPool.request(views);
 		if (result == nullptr) {
 			LOGD(LogLevel::Performance, "create frameBuffer");

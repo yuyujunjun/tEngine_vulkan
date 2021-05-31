@@ -66,8 +66,10 @@ namespace tEngine {
 	using FrameBufferHandle = std::shared_ptr<tFrameBuffer>;
 	std::vector<vk::SubpassDependency2> SingleDependencies();
 	std::vector<vk::SubpassDependency2> WriteBeforeShaderReadDependencies();
+	
 	class tRenderPass {
 	public:
+		
 		const uint32_t allocatedFrameBufferCount = 8;
 		using SharedPtr = std::shared_ptr<tRenderPass>;
 		tRenderPass(Device* device) :device(device) {
@@ -96,14 +98,14 @@ namespace tEngine {
 		void SetAttachmentDescription(std::string name, vk::AttachmentDescription2& description) {
 			getAttachment(name).description = description;
 		}
-		AttachmentInfo& getAttachment(std::string name) {
+		AttachmentInfo& getAttachment(std::string name,bool create=true) {
 			auto iter = resource_to_idx.find(name);
 			if (iter != resource_to_idx.end()) {
 				return resource[iter->second];
 			}
 			else {
+				assert(create&&"cannot find attachement with name");
 				resource_to_idx[name] = static_cast<uint32_t>(resource.size());
-
 				resource.emplace_back(AttachmentInfo());
 				resource.back().idx = static_cast<uint32_t>(resource.size()) - 1;
 				return resource.back();
@@ -116,6 +118,8 @@ namespace tEngine {
 		}
 		void setupRenderPass(VkPipelineBindPoint bindp = VK_PIPELINE_BIND_POINT_GRAPHICS);
 		void SetImageView(std::string name, const ImageHandle& handle, vk::ImageView view = {});
+		//Create and set depthBuffer, if you already have depth buffer, use SetImageView
+		void setDepthBufferView(std::string name, vk::Extent2D extent = vk::Extent2D(-1, -1), bool sampled = false);
 		void SetRenderFunctor(uint32_t subpass, std::function<void(CommandBufferHandle&, tRenderPass*, uint32_t subpass)> fun) {
 			//if (renderFunction.size() <= subpass) { renderFunction.resize(subpass + 1); }
 			renderFunction[subpass] = std::move(fun);
@@ -155,7 +159,7 @@ namespace tEngine {
 			setClearValue(name, vk::ClearValue(vk::ClearDepthStencilValue(depth, stencil)));
 		}
 		void setClearValue(std::string name, vk::ClearValue value) {
-			getAttachment(name).value = value;
+			getAttachment(name,false).value = value;
 		}
 		size_t getAttachmentCount() {
 			return resource.size();
@@ -163,6 +167,7 @@ namespace tEngine {
 		const std::vector<AttachmentInfo>& getAttachments() const {
 			return resource;
 		}
+		
 	private:
 
 		vk::RenderPass vkRenderPass;
@@ -197,8 +202,8 @@ namespace tEngine {
 		vk::Rect2D getRenderArea() const {
 			return vk::Rect2D({ 0, 0 }, { width, height });
 		}
-		vk::Viewport getViewPort()const {
-			return vk::Viewport(0, static_cast<float>(height), static_cast<float>(width), -static_cast<float>(height), 0, 1);
+		const vk::Viewport getViewPort()const {
+			return vk::Viewport(0.f, static_cast<float>(height), static_cast<float>(width), -static_cast<float>(height), 0.f, 1.f);
 		}
 		void setupFrameBuffer();
 		const vk::Framebuffer getVkHandle() const {

@@ -32,10 +32,10 @@ namespace tEngine {
 		};
 		friend class tShaderInterface;
 		using SharedPtr = std::shared_ptr<tShader>;
-		static SharedPtr Create(Device* device) {
+		static SharedPtr Create(const Device* device) {
 			return std::make_shared<tShader>(device);
 		}
-		tShader( Device* device) :device(device) {}
+		tShader(const Device* device) :device(device) {}
 		void SetShaderModule(const vk::ArrayProxy<const std::string>& fileName, const vk::ArrayProxy<const vk::ShaderStageFlagBits>& stageFlag);
 		const vk::ShaderModule& getShaderModule(int i) const {
 			return shaderModule[i];
@@ -99,7 +99,7 @@ namespace tEngine {
 		std::vector<vk::ShaderStageFlagBits> shaderStage;
 		vk::ShaderStageFlags allstageFlags;
 		
-		Device* device;
+		const Device* device;
 
 		std::unordered_map<std::string, std::shared_ptr<BufferRangeManager>> bufferManager;
 	};

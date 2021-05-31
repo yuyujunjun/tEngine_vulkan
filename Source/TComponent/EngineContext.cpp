@@ -95,8 +95,9 @@ namespace tEngine {
 				glfwGetFramebufferSize(gWindow, &width, &height);
 				glfwWaitEvents();
 			}
+			vk::Format depth_format = swapChain->getDepth()->getFormat();
 			swapChain = createSwapChain(device, (vk::SurfaceKHR) surface, vk::Extent2D(width, height), swapChain->getVkHandle());
-			swapChain->createDepth();
+			swapChain->createDepth(depth_format);
 		}
 	}
 	 vk::Instance createInstance() {
@@ -248,7 +249,7 @@ namespace tEngine {
 		init_info.ImageCount = context.swapChain->getSwapchainLength();
 		init_info.CheckVkResultFn = nullptr;
 
-		IMGUI::uiPass = getUIRenderpass(context.device.get(), context.swapChain->getFormat(), context.swapChain->getDepth()->getFormat());
+		IMGUI::uiPass = getUIRenderpass(context.device.get(), context.swapChain->getFormat());
 		
 		ImGui_ImplVulkan_Init(&init_info, uiPass->getVkHandle());
 		auto cmd = device->requestTransientCommandBuffer();
@@ -265,9 +266,7 @@ namespace tEngine {
 		auto surface = createSurface(context.instance, gWindow);
 	//	auto vkDevice = createDevice(instance);
 		tEngineContext::context.Set(context.instance, gWindow, surface, vk::Extent2D(width, height));
-		tEngineContext::context.swapChain->createDepth(vk::Format::eD32Sfloat);
-		
-		tEngineContext::context.cameraManipulator.setWindowSize(glm::u32vec2(width, height));
+
 		IMGUI::m_gui.Init(context);
 		glfwSetCursorPosCallback(gWindow, cursor_position_callback);
 		glfwSetMouseButtonCallback(gWindow, mouseButtonCallback);
@@ -299,9 +298,9 @@ namespace tEngine {
 		
 		auto& uiPass = IMGUI::m_gui.uiPass;
 		uiPass->SetImageView("back", swapChain->getImage(imageIdx));
-		uiPass->SetImageView("depth", swapChain->getDepth());
-		uiPass->setClearValue("back", { 0,0,0,1 });
-		uiPass->setDepthStencilValue("depth", 1);
+		//uiPass->SetImageView("depth", swapChain->getDepth());
+		//uiPass->setClearValue("back", { 0,0,0,1 });
+		//uiPass->setDepthStencilValue("depth", 1);
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
@@ -376,6 +375,7 @@ namespace tEngine {
 	tEngineContext::~tEngineContext() {
 		IMGUI::m_gui.Destroy();
 		swapChain.reset();
+		threadContext.clear();
 		device->clearDeviceObject();
 		device = nullptr;
 	}

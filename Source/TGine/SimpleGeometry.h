@@ -10,6 +10,8 @@
 namespace tEngine {
 	struct Vertex
 	{
+		Vertex() = default;
+		Vertex(glm::vec3 pos) :Position(pos) {}
 		glm::vec3 Position=glm::vec3(0,0,0);
 		glm::vec3 Normal=glm::vec3(0,1,0);
 		glm::vec2 TexCoords=glm::vec2(0,0);
@@ -19,16 +21,39 @@ namespace tEngine {
 			return v.Position == Position && v.TexCoords == TexCoords && v.Color == Color ;
 		}
 	};
-	struct Mesh {
+	struct Geo {
 		
-		Mesh(std::vector<Vertex> _vertices, std::vector<uint32_t> _indices) :vertices(_vertices), indices(_indices) {}
-		Mesh() {};
+		Geo(std::vector<Vertex> _vertices,std::vector<uint32_t> _indices) :vertices(_vertices), indices(_indices) {}
+		Geo() {};
+		std::vector<Vertex> vertices;
+		std::vector<uint32_t> indices;
 		size_t VertexBufferSize() {
 			return vertices.size() * sizeof(Vertex);
 		}
 		size_t IndexBufferSize() {
 			return indices.size() * sizeof(uint32_t);
 		}
+	};
+	struct Line :public Geo {
+		Line(std::vector<Vertex> _vertices) {
+			vertices = _vertices;
+			for (int i = 0; i < vertices.size(); ++i) {
+				indices.push_back(i);
+			}
+		}
+		Line(std::vector<Vertex> _vertices, std::vector<uint32_t> _indices) :Geo(_vertices, _indices) {}
+		void Append(Vertex a, Vertex b) {
+			indices.push_back(vertices.size());
+			vertices.push_back(a);
+			indices.push_back(vertices.size());
+			vertices.push_back(b);
+		}
+	};
+	struct Mesh:public Geo {
+		
+		Mesh(std::vector<Vertex> _vertices, std::vector<uint32_t> _indices) :Geo(_vertices, _indices) {}
+		Mesh() {};
+		
 		void UpdateNormal() {
 			for (auto& v : vertices) {
 				v.Normal = glm::vec3(0, 0, 0);
@@ -60,8 +85,7 @@ namespace tEngine {
 				v.Normal = glm::normalize(v.Normal);
 			}
 		}
-		std::vector<Vertex> vertices;
-		std::vector<uint32_t> indices;
+		
 		static Mesh UnitBox(float length = 2) {
 			float skyboxVertices[] = {
 				// positions
