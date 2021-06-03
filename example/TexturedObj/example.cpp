@@ -11,28 +11,29 @@ int main() {
 	auto& device = context->device;
 
 	ThreadContext* threadContext = new ThreadContext(context);
-
+	GameObject obj = std::make_shared<GameObject_>();
 	auto shader = tShader::Create(device.get());
 	shader->SetShaderModule({ "draw.vsh","blingPhong.fsh" }, { vk::ShaderStageFlagBits::eVertex, vk::ShaderStageFlagBits::eFragment });
-	auto material = shader->getInterface();
-	auto renderPass = getSingleRenderpass(device.get(),context->swapChain->getFormat(),(vk::Format)context->swapChain->getDepth()->getFormat());
-
+	obj->setMaterial( shader->getInterface());
+	auto renderPass = getSingleRenderpass(device.get(),context->swapChain->getFormat());
+	
 	//Load Mesh
-	auto mesh = std::make_shared<MeshBuffer>();
+	
 	auto meshAsset = tEngine::LoadMesh("Obj/Marry.obj");
-	mesh->setMeshUpload(meshAsset->mesh, device.get());
+	obj->setMesh(meshAsset->mesh);
+	
 	//Load Textue
 	auto imageAsset = tEngine::LoadImage("Obj/MC003_Kozakura_Mari.png");
 	auto image =createImage(device.get(),
 		ImageCreateInfo::immutable_2d_image(imageAsset->width, imageAsset->height, VK_FORMAT_R8G8B8A8_UNORM), imageAsset, nullptr);
-	material->SetImage("_MainTex", image);
+	obj->material->SetImage("_MainTex", image);
 	
-	auto CameraBuffer = material->getShader()->requestBufferRange("CameraMatrix", 10);
-	auto modelMatrix = material->getShader()->requestBufferRange("ModelMatrix", 3);
-	auto materialInfo = material->getShader()->requestBufferRange("MaterialInfo",3);
-	material->SetBuffer("MaterialInfo", materialInfo.buffer());
-	material->SetBuffer("CameraMatrix", CameraBuffer.buffer());
-	material->SetBuffer("ModelMatrix", modelMatrix.buffer());
+	auto CameraBuffer = shader->requestBufferRange("CameraMatrix");
+	auto modelMatrix = shader->requestBufferRange("ModelMatrix");
+	auto materialInfo = shader->requestBufferRange("MaterialInfo");
+	obj->material->SetBuffer("MaterialInfo", materialInfo->buffer());
+	obj->material->SetBuffer("CameraMatrix", CameraBuffer->buffer());
+	obj->material->SetBuffer("ModelMatrix", modelMatrix->buffer());
 
 	glm::vec3 lightPos(0.2, 0.2, 0.2);
 	float lightIntensity = 3;
@@ -41,21 +42,22 @@ int main() {
 
 	context->Update([&](double timeDelta) {
 		renderPass->SetImageView("back", context->swapChain->getImage(context->imageIdx));
-		renderPass->SetImageView("depth", context->swapChain->getDepth());
+		renderPass->setDepthBufferView("depth");
 		renderPass->setClearValue("back", { 0,0,0,1 });
 		renderPass->setDepthStencilValue("depth", 1);
-		CameraBuffer.NextRangenoLock();
-		modelMatrix.NextRangenoLock();
-		materialInfo.NextRangenoLock();
-		material->SetBuffer("CameraMatrix", CameraBuffer.buffer(), CameraBuffer.getOffset());
-		material->SetBuffer("ModelMatrix", modelMatrix.buffer(), modelMatrix.getOffset());
-		material->SetBuffer("MaterialInfo", materialInfo.buffer(), materialInfo.getOffset());
+		CameraBuffer->NextRangenoLock();
+		modelMatrix->NextRangenoLock();
+		materialInfo->NextRangenoLock();
+		auto material = obj->material;
+		material->SetBuffer("CameraMatrix", CameraBuffer->buffer(), CameraBuffer->getOffset());
+		material->SetBuffer("ModelMatrix", modelMatrix->buffer(), modelMatrix->getOffset());
+		material->SetBuffer("MaterialInfo", materialInfo->buffer(), materialInfo->getOffset());
 		material->SetValue("lightPos", lightPos);
 		material->SetValue<float>("lightIntensity", lightIntensity);
 		material->SetValue("uKd", uKd);
 		material->SetValue("uKs", uKs);
 		material->SetValue("cameraPos", tEngineContext::context.cameraManipulator.getCameraPosition());
-		uploadCameraMatrix(tEngineContext::context.cameraManipulator.getMatrix(), Perspective(context->swapChain->getExtent()), material.get());
+		uploadCameraMatrix(tEngineContext::context.cameraManipulator.getMatrix(), Perspective(context->swapChain->getExtent()), material->shader.get());
 		material->SetValue(ShaderString(SV::_MATRIX_M), glm::mat4(1));
 		ImGui::ShowDemoWindow();
 		ImGui::Begin("test");

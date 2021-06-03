@@ -147,12 +147,12 @@ namespace tEngine {
 		}
 		assert(HasSet && "Push Constant Name may be wrong or Push Constant size may be zero");
 	}
-	void tShaderInterface::SetValue(std::string valueName, const void* value, size_t size, BufferHandle buffer) {
+	void tShaderInterface::SetValueOnBuffer(std::string valueName, size_t size, const void* value) {
 		auto info = base_shader->getVarSetBinding(valueName);
-		if (buffer == nullptr) {
-			assert(bindResources[info.set_number][info.bind_number].buffer != nullptr);
-			buffer = bindResources[info.set_number][info.bind_number].buffer;
-		}
+		 
+		assert(bindResources[info.set_number][info.bind_number].buffer != nullptr);
+		auto buffer = bindResources[info.set_number][info.bind_number].buffer;
+		
 		auto rangeOffset = bindResources[info.set_number][info.bind_number].offset;
 
 		buffer->setRange(value, info.offset + rangeOffset, size);

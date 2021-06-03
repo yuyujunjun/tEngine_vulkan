@@ -9,8 +9,8 @@ int main() {
 	shader->SetShaderModule({ "draw.vsh","draw.fsh" }, { vk::ShaderStageFlagBits::eVertex,vk::ShaderStageFlagBits::eFragment });
 	auto clothMaterial = shader->getInterface();
 	auto sphereMaterial = shader->getInterface();
-	//clothMaterial->SetImage("_MainTex", tImage::requestDummyImage(device.get()));
-//	sphereMaterial->SetImage("_MainTex", tImage::requestDummyImage(device.get()));
+	//clothMaterial->SetImage("_MainTex", tImage::requestDummyImage(device.getComponent()));
+//	sphereMaterial->SetImage("_MainTex", tImage::requestDummyImage(device.getComponent()));
 
 	auto renderPass = getSingleRenderpass(device.get(), context.swapChain->getFormat(),(vk::Format)context.swapChain->getDepth()->getFormat());
 
@@ -37,8 +37,8 @@ int main() {
 		//Update
 		uploadCameraMatrix(context.cameraManipulator.getMatrix(), Perspective(context.swapChain->getExtent()), clothMaterial.get());
 		uploadCameraMatrix(context.cameraManipulator.getMatrix(), Perspective(context.swapChain->getExtent()), sphereMaterial.get());
-		clothMaterial->SetValue(ShaderString(SV::_MATRIX_M), glm::mat4(1));
-		sphereMaterial->SetValue(ShaderString(SV::_MATRIX_M), sphereTransform.Matrix());
+		clothMaterial->SetValueOnBuffer(ShaderString(SV::_MATRIX_M), glm::mat4(1));
+		sphereMaterial->SetValueOnBuffer(ShaderString(SV::_MATRIX_M), sphereTransform.Matrix());
 
 		//FrameBuffer
 		setupFrameBufferBySwapchain(renderPass);

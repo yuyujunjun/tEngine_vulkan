@@ -8,16 +8,80 @@
 #include"Log.h"
 #include"GraphicsState.h"
 #include<glm/gtx/quaternion.hpp>
+#include"ComponentFactory.h"
 using namespace tEngine;
 
+struct requireRender {};
+ComponentManager<requireCamera> cameraList;
+ComponentManager<requireRender> requireRenderList;
 
+void defaultRender(std::vector<GameObject>objs,const CameraComponent& cam) {
+	auto& context = tEngineContext::context;
+	if (!context.hasInitialized()) {
+		ContextInit();
+	}
+	auto device = tEngineContext::context.device.get();
+	static auto renderPass = getSingleRenderpass(device, context.swapChain->getFormat());
+	renderPass->setClearValue("back", { 0,0,0,1 });
+	renderPass->setDepthStencilValue("depth", 1);
+	auto shader = tShaderInterface::requestTexturedShader(device);
+	auto camBuffer = shader->getShader()->requestBufferRange("CameraMatrix");
+	context.Record([&](double timeDelta, CommandBufferHandle& cb) {
+		camBuffer->NextRangenoLock();
+		shader->SetBuffer("CameraMatrix", camBuffer->buffer(), camBuffer->getOffset());
+		uploadCameraMatrix(cam.m_matrix, Perspective(context.swapChain->getExtent()), shader.get());
+		renderPass->SetImageView("back", context.swapChain->getImage(context.getImageIdx()));
+		renderPass->setDepthBufferView("depth");
+		for (auto& r : objs) {
+			r->material->SetBuffer("CameraMatrix", camBuffer->buffer(), camBuffer->getOffset());
+			r->material->flushBuffer();
 
+		}
+		auto frameBuffer = renderPass->requestFrameBuffer();
+		cb->beginRenderPass(renderPass,frameBuffer,true);
+		cb->setViewport(frameBuffer->getViewPort());
+		cb->setScissor(0,frameBuffer->getRenderArea());
+		for (auto& r : objs) {
+			flushGraphicsShaderState(r->material->shader.get(), r->material->graphicsState, cb, renderPass.get(), 0);
+			DrawMesh(r->meshbuffer.get(), cb);
+		}
+		cb->endRenderPass();
+	});
+	context.Loop(context.AddThreadContext());
+}
+int mainT() {
+	ContextInit();
+	auto& context=tEngine::tEngineContext::context;
+	auto& device = context.device;
+	GameObject character = std::make_shared<GameObject_>();
+	character->setMaterial(tShaderInterface::requestTexturedShader(device.get()));
+	auto meshAsset = tEngine::LoadMesh("Obj/Marry.obj");
+	character->setMesh(meshAsset->mesh);
+	auto imageAsset = tEngine::LoadImage("Obj/MC003_Kozakura_Mari.png");
+	auto image = createImage(device.get(),
+		ImageCreateInfo::immutable_2d_image(imageAsset->width, imageAsset->height, VK_FORMAT_R8G8B8A8_UNORM), imageAsset, nullptr);
+	character->material->SetImage("_MainTex", image);
+	character->material->SetValue(ShaderString(SV::_MATRIX_M), character->transform.Matrix());
+
+	CameraComponent cam;
+	CameraSystem cam_sys;
+	cam_sys.setCamera(&cam);
+	context.Update([&](double timeDelta) {
+		auto& io = ImGui::GetIO();
+		updateCameraBehavior(io, cam_sys);
+	});
+	defaultRender({ character },cam);
+	return 0;
+}
 int main() {
 
 	
 	ContextInit();
-	//tEngineContext::context.swapChain->createDepth(vk::Format::eD32Sfloat);
-	tEngineContext::context.cameraManipulator.setWindowSize(glm::u32vec2(tEngineContext::context.swapChain->getExtent().width, tEngineContext::context.swapChain->getExtent().height));
+	CameraComponent c[2];
+	auto camera_id = 0;
+	CameraSystem cam;
+	cam.setCamera(c);
+	cam.setWindowSize(glm::u32vec2(tEngineContext::context.swapChain->getExtent().width, tEngineContext::context.swapChain->getExtent().height));
 	auto context = &tEngineContext::context;
 	auto& device = context->device;
 	
@@ -58,7 +122,7 @@ int main() {
 		for (auto& shader : needCamera) {
 			shader->SetBuffer("CameraMatrix", CameraBuffer->buffer(), CameraBuffer->getOffset());
 		}
-		uploadCameraMatrix(tEngineContext::context.cameraManipulator.getMatrix(), Perspective(context->swapChain->getExtent()), character->material->shader.get(),CameraBuffer->buffer());
+		uploadCameraMatrix(cam.getMatrix(), Perspective(context->swapChain->getExtent()), character->material->shader.get());
 		
 	};
 	std::vector<GameObject> needRender = {character,plane};
@@ -114,17 +178,25 @@ int main() {
 		obj->material->SetValue("uKs", uKs);
 		obj->material->SetValue("lightPosArea", glm::vec4(Light->transform.position,area));
 		obj->material->SetValue<float>("lightIntensity", lightIntensity);
-		obj->material->SetValue("cameraPos", tEngineContext::context.cameraManipulator.getCameraPosition());
+		obj->material->SetValue("cameraPos", cam.getCameraPosition());
 		obj->material->SetValue("world_to_shadow", Ortho(lightArea.x, lightArea.y, lightArea.z, lightArea.w, 40)* glm::lookAt(Light->transform.position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
 		obj->material->SetValue("halfblockSize", 8);
 		obj->material->SetValue("maxKernelSize",8);
 		obj->material->SetValue("depthMapSize",glm::vec2(ShadowMap->get_width(),ShadowMap->get_height()) );
 	};
+
 	context->Update([&](double timeDelta) {
+		auto& io = ImGui::GetIO();
+		if (ImGui::IsKeyPressed(GLFW_KEY_T,0)) {
+			camera_id += 1;
+			camera_id = camera_id % 2;
+			cam.setCamera(c + camera_id);
+		}
+		updateCameraBehavior(io, cam);
 		shadowPass->SetImageView("shadowMap", ShadowMap, ShadowMap->get_view()->getDefaultView());
 		shadowPass->setDepthBufferView("depth");
 		//renderPass->SetImageView("shadow", ShadowMap, ShadowMap->get_view()->get_float_view());
-		renderPass->SetImageView("back", context->swapChain->getImage(context->imageIdx));
+		renderPass->SetImageView("back", context->swapChain->getImage(context->getImageIdx()));
 		renderPass->setDepthBufferView("depth");
 		renderPass->setClearValue("back", { 0,0,0,1 });
 		renderPass->setDepthStencilValue("depth", 1);
@@ -139,6 +211,8 @@ int main() {
 		ImGui::DragFloat3("uKd",&uKd[0],.01,0,3);
 		ImGui::DragFloat3("uKs",&uKs[0],.01,0,15);
 		ImGui::DragFloat("lightIntensity",&lightIntensity,.01,0,10);
+
+		
 		ImGui::End();
 
 		});
@@ -153,17 +227,17 @@ int main() {
 			auto projection = Ortho(lightArea.x, lightArea.y, lightArea.z, lightArea.w, 40);
 			CameraBuffer->NextRangenoLock();
 			shadowMateial->SetBuffer("CameraMatrix", CameraBuffer->buffer(), CameraBuffer->getOffset());
-			shadowMateial->SetValue(ShaderString(SV::_MATRIX_V), view);
-			shadowMateial->SetValue(ShaderString(SV::_MATRIX_P), projection);
-			shadowMateial->SetValue(ShaderString(SV::_MATRIX_VP), projection* view);
-		//	shadowMateial->SetValue(ShaderString(SV::_INV_MATRIX_VP), glm::inverse(projection* view));
+			shadowMateial->SetValueOnBuffer(ShaderString(SV::_MATRIX_V), view);
+			shadowMateial->SetValueOnBuffer(ShaderString(SV::_MATRIX_P), projection);
+			shadowMateial->SetValueOnBuffer(ShaderString(SV::_MATRIX_VP), projection* view);
+		//	shadowMateial->SetValueOnBuffer(ShaderString(SV::_INV_MATRIX_VP), glm::inverse(projection* view));
 			
 			
 			for (auto& r : needRender) {
 				auto bufferRange = shadowMateial->getShader()->requestBufferRange("ModelMatrix");
 				bufferRange->NextRangenoLock();
 				shadowMateial->SetBuffer("ModelMatrix",bufferRange->buffer(),bufferRange->getOffset());
-				shadowMateial->SetValue(ShaderString(SV::_MATRIX_M), r->transform.Matrix());
+				shadowMateial->SetValueOnBuffer(ShaderString(SV::_MATRIX_M), r->transform.Matrix());
 				flushGraphicsShaderState(shadowMateial.get(),shadowMapState, cb, shadowPass.get(), 0);
 				DrawMesh(r->meshbuffer.get(), cb);
 			}
@@ -178,12 +252,12 @@ int main() {
 			for (auto& r : needRender) {
 				uploadTransform(r);
 				uploadMaterial(r);
-				r->material->flushMaterialState();
+				r->material->flushBuffer();
 				flushGraphicsShaderState(r->material->shader.get(),r->material->graphicsState, cb, renderPass.get(), 0);
 				DrawMesh(r->meshbuffer.get(), cb);
 			}
 			uploadTransform(Light);
-			Light->material->flushMaterialState();
+			Light->material->flushBuffer();
 			flushGraphicsShaderState(Light->material->shader.get(),Light->material->graphicsState, cb, renderPass.get(), 0);
 			DrawMesh(Light->meshbuffer.get(), cb);
 			debugQuad->SetImage("_MainTex",ShadowMap,ShadowMap->get_view()->get_float_view(),tEngine::StockSampler::NearestShadow);
@@ -218,16 +292,16 @@ int main() {
 	
 	
 	
-	shader.reset();
+	//shader.reset();
 	
-	image.reset();
+	//image.reset();
 	//CameraBuffer.removeBuffer();
 	//modelMatrix.removeBuffer();
-	renderPass.reset();
+	//renderPass.reset();
 
 	//delete context;
 	//shaderInterface.reset();
 	//CreateImageViewWithImage();
 
-
+	return 0;
 }

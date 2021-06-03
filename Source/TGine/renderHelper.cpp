@@ -116,7 +116,7 @@ namespace tEngine {
 		auto& handle = std::make_shared<tRenderPass>(device);
 		//	pass.addColorOutput("debug", (vk::ImageLayout)VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		handle->SetAttachmentDescription("back", StartColorDescription(format));
-		//	handle->SetAttachmentDescription("debug", StartColorDescription(vk::Format::eR8G8B8A8Srgb));
+		//	Handle->SetAttachmentDescription("debug", StartColorDescription(vk::Format::eR8G8B8A8Srgb));
 		handle->SetAttachmentDescription("depth", StartDepthDescription((vk::Format)default_depth_format(device->getPhysicalDevice().physicalDevice)));
 		auto& pass = handle->getPass("Single");
 		pass.addColorOutput("back", (vk::ImageLayout)VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
@@ -134,13 +134,13 @@ namespace tEngine {
 	//	pass.setDepth("depth", vk::ImageLayout::eDepthStencilAttachmentOptimal);
 		//	pass.addColorOutput("debug", (vk::ImageLayout)VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		handle->SetAttachmentDescription("back", EndColorDescription(format));
-		//	handle->SetAttachmentDescription("debug", StartColorDescription(vk::Format::eR8G8B8A8Srgb));
-		//handle->SetAttachmentDescription("depth", EndDepthDescription(depthFormat));
+		//	Handle->SetAttachmentDescription("debug", StartColorDescription(vk::Format::eR8G8B8A8Srgb));
+		//Handle->SetAttachmentDescription("depth", EndDepthDescription(depthFormat));
 		auto& pass = handle->getPass("Single");
 		pass.addColorOutput("back", (vk::ImageLayout)VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		handle->SetDependencies(SingleDependencies());
 		handle->setClearValue("back", { 0,0,0,0 });
-	//	handle->setDepthStencilValue("depth", 1, 0);
+	//	Handle->setDepthStencilValue("depth", 1, 0);
 		handle->setupRenderPass();
 		return handle;
 	}
@@ -154,7 +154,7 @@ namespace tEngine {
 		pass.addColorOutput("shadowMap", vk::ImageLayout::eColorAttachmentOptimal);
 		pass.setDepth("depth", vk::ImageLayout::eDepthStencilAttachmentOptimal);
 		handle->SetDependencies(SingleDependencies());
-		//handle->setClearValue("shadowMap", { 0,0,0,0 });
+		//Handle->setClearValue("shadowMap", { 0,0,0,0 });
 		handle->setDepthStencilValue("depth", 1.);
 		handle->setupRenderPass();
 		return handle;

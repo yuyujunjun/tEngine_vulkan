@@ -3,7 +3,7 @@
 #include"ShaderInterface.h"
 #include"EngineContext.h"
 #include"tTransform.h"
-#include"tComponent.h"
+#include"Component.h"
 #include"bufferHelper.h"
 namespace tEngine {
 
@@ -27,6 +27,7 @@ namespace tEngine {
 		void setMaterial(std::shared_ptr<tShaderInterface>& shader) {
 			material = std::make_shared<Material>(shader);
 		}
+
 		Transform transform;
 		std::shared_ptr<MeshBuffer> meshbuffer;
 		std::shared_ptr<Material> material;

@@ -63,8 +63,8 @@ namespace tEngine {
 	//	bool operator!=(const ImageBindInfo& a)const {
 	//		return !(*this == a);
 	//	}
-	//	void SetImage(ImageHandle& handle) {
-	//		image = handle;
+	//	void SetImage(ImageHandle& Handle) {
+	//		image = Handle;
 	//	}
 	//
 	//	void SetView(VkImageView view) {

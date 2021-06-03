@@ -25,6 +25,7 @@
 #include<functional>
 #include"Camera.h"
 #include<imgui/imgui.h>
+#include"Log.h"
 namespace tEngine {
 	
 	
@@ -52,20 +53,25 @@ namespace tEngine {
 	class tEngineContext {
 	public:
 		static tEngineContext context;
-		tEngineContext() = default;
+		
+		tEngineContext() :hasInitialized_(false),gWindow(nullptr) {};
 		void Set(vk::Instance instance,GLFWwindow* gWindow,vk::SurfaceKHR surface, vk::Extent2D extent);
+		
 		std::unique_ptr<Device> device;
 		GLFWwindow* gWindow;
 		vk::SurfaceKHR surface;
 		SwapChainHandle swapChain;
 		vk::Instance instance;
 		vk::DebugUtilsMessengerEXT debugUtilsMessenger;
-		CameraManipulator cameraManipulator;
-		clock_t time=0;
-		uint32_t imageIdx = -1;
-		std::function<void(double)> prepareStage;
-		std::function<void(double, CommandBufferHandle& cb)> loopStage;
-		ThreadContext* AddThreadContext() { threadContext.emplace_back(std::make_unique<ThreadContext>(this)); return threadContext.back().get(); }
+		ThreadContext* AddThreadContext(uint32_t idx=0) 
+		{
+			if (threadContext.size() > idx) {
+				return threadContext[idx].get();
+			}
+			LOG(tEngine::LogLevel::Information, "Add new ThreadContext");
+			threadContext.emplace_back(std::make_unique<ThreadContext>(this));
+			return threadContext.back().get();
+		}
 
 
 		void Update(const std::function<void(double)>& f) {
@@ -74,12 +80,20 @@ namespace tEngine {
 		void Record(const std::function<void(double,CommandBufferHandle& cb)>& f) {
 			loopStage = f;
 		}
-		void coreRender(ThreadContext* threadContext, SemaphoreHandle	acquireSemaphore
-			, SemaphoreHandle presentSemaphore, FenceHandle fence);
 		void Render(ThreadContext* threadContext);
 		void Loop(ThreadContext* threadContext);
-		std::vector<std::unique_ptr<ThreadContext>> threadContext;
 		~tEngineContext();
+		bool hasInitialized() const { return hasInitialized_; }
+		uint32_t getImageIdx() const{ return imageIdx; }
+	private:
+		clock_t time = 0;
+		uint32_t imageIdx = -1;
+		std::function<void(double)> prepareStage;
+		std::function<void(double, CommandBufferHandle& cb)> loopStage;
+		void coreRender(CommandBufferHandle* cb, SemaphoreHandle	acquireSemaphore
+			, SemaphoreHandle presentSemaphore, FenceHandle fence);
+		std::vector<std::unique_ptr<ThreadContext>> threadContext;
+		bool hasInitialized_ = false;
 	};
 	struct IMGUI {
 		static IMGUI m_gui;
@@ -93,10 +107,10 @@ namespace tEngine {
 		}
 		
 	};
-	//inline void setupFrameBufferBySwapchain(RenderPassHandle handle) {
+	//inline void setupFrameBufferBySwapchain(RenderPassHandle Handle) {
 	//	auto& context = tEngineContext::context;
-	//	handle->SetImageView("back", context.swapChain->getImage(context.imageIdx));
-	////	handle->SetImageView("depth", context.swapChain->getDepth());
+	//	Handle->SetImageView("back", context.swapChain->getImage(context.imageIdx));
+	////	Handle->SetImageView("depth", context.swapChain->getDepth());
 	//}
 	
 }

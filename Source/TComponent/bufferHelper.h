@@ -15,7 +15,7 @@ namespace tEngine {
 		Material(std::shared_ptr<tShaderInterface> shader);
 		struct value_offset {
 			std::vector<uint8_t> data;
-			size_t offset=-1;
+		//	size_t offset=-1;
 			std::string bufferName="";
 		};
 		void SetValue(const std::string& name, const void* value, size_t size);
@@ -23,7 +23,8 @@ namespace tEngine {
 		void SetValue(const std::string& name, const T& value) {
 			SetValue(name,&value,sizeof(T));
 		}
-		void flushMaterialState();
+		//Create buffer(if required) and update it, connect the buffer to its descriptorSet
+		void flushBuffer();
 		
 		void SetBuffer(const std::string& name, const BufferHandle& buffer, size_t offset = 0);
 		void SetImage(std::string name, ImageHandle image, vk::ImageView vkView = {}, StockSampler sampler = StockSampler::LinearClamp);

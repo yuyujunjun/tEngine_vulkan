@@ -28,7 +28,7 @@ namespace tEngine {
 	void tRenderPass::setDepthBufferView(std::string name,vk::Extent2D extent , bool sampled){
 		vk::Format format = getAttachment(name,false).description.format;
 		if (extent.height == static_cast<uint32_t>(-1)) {
-			assert(getImages().size()>0);
+			assert(getImages().size()>0&&getImages()[0]);
 			extent.width = getImages()[0]->get_width();
 			extent.height = getImages()[0]->get_height();
 		}

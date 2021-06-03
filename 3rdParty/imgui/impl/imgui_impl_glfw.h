@@ -14,7 +14,7 @@
 
 // About GLSL version:
 // The 'glsl_version' initialization parameter defaults to "#version 150" if NULL.
-// Only override if your GL version doesn't handle this GLSL version. Keep NULL if unsure!
+// Only override if your GL version doesn't Handle this GLSL version. Keep NULL if unsure!
 
 #pragma once
 #include "imgui.h"      // IMGUI_IMPL_API

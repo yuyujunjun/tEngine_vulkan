@@ -2052,7 +2052,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         dst_tmp.GlyphsHighest = ImMax(dst_tmp.GlyphsHighest, src_tmp.GlyphsHighest);
     }
 
-    // 2. For every requested codepoint, check for their presence in the font data, and handle redundancy or overlaps between source fonts to avoid unused glyphs.
+    // 2. For every requested codepoint, check for their presence in the font data, and Handle redundancy or overlaps between source fonts to avoid unused glyphs.
     int total_glyphs_count = 0;
     for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
     {
@@ -2701,7 +2701,7 @@ void ImFont::BuildLookupTable()
         Used4kPagesMap[page_n >> 3] |= 1 << (page_n & 7);
     }
 
-    // Create a glyph to handle TAB
+    // Create a glyph to Handle TAB
     // FIXME: Needs proper TAB handling but it needs to be contextualized (or we could arbitrary say that each string starts at "column 0" ?)
     if (FindGlyph((ImWchar)' '))
     {
@@ -3030,7 +3030,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip) const
 {
     if (!text_end)
-        text_end = text_begin + strlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
+        text_end = text_begin + strlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to Handle direct calls.
 
     // Align to be pixel perfect
     pos.x = IM_FLOOR(pos.x + DisplayOffset.x);

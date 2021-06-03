@@ -6,10 +6,19 @@
 #include <glm/glm.hpp>
 #include<glm/gtc/matrix_transform.hpp>
 #include"ShaderVariable.h"
+#include"imgui.h"
 namespace tEngine {
-
+    struct CameraComponent {
+        CameraComponent() { update(); }
+        glm::vec3 m_cameraPosition = glm::vec3(5, 5, 5);
+        glm::vec3 m_centerPosition = glm::vec3(0, 0, 0);
+        glm::vec3 m_upVector = glm::vec3(0, 1, 0);
+        float     m_roll = 0;                      // Rotation around the Z axis in RAD
+        glm::mat4 m_matrix = glm::mat4(1);
+        void update();
+    };
   
-    class CameraManipulator
+    class CameraSystem
     {
     public:
         enum class Action { None, Orbit, Dolly, Pan, LookAround };
@@ -19,7 +28,7 @@ namespace tEngine {
         using ModifierFlags = uint32_t;
 
     public:
-        CameraManipulator();
+        CameraSystem();
 
         glm::vec3 const& getCameraPosition() const;
         glm::vec3 const& getCenterPosition() const;
@@ -39,7 +48,7 @@ namespace tEngine {
         void setSpeed(float speed);
         void setWindowSize(glm::ivec2 const& size);
         void wheel(int value);
-      
+        void setCamera(CameraComponent* cam);
     private:
         void dolly(glm::vec2 const& delta);
         void motion(glm::ivec2 const& position, Action action = Action::None);
@@ -47,14 +56,11 @@ namespace tEngine {
         void pan(glm::vec2 const& delta);
         double projectOntoTBSphere(const glm::vec2& p);
         void trackball(glm::ivec2 const& position);
-        void update();
+       // void update();
 
     private:
-        glm::vec3 m_cameraPosition = glm::vec3(5, 5, 5);
-        glm::vec3 m_centerPosition = glm::vec3(0, 0, 0);
-        glm::vec3 m_upVector = glm::vec3(0, 1, 0);
-        float     m_roll = 0;                      // Rotation around the Z axis in RAD
-        glm::mat4 m_matrix = glm::mat4(1);
+        CameraComponent* cam;
+
 
         glm::u32vec2 m_windowSize = glm::u32vec2(1080, 960);
 
@@ -78,6 +84,7 @@ namespace tEngine {
   class tShaderInterface;
   class tBuffer;
   using BufferHandle = std::shared_ptr<tBuffer>;
-  void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material,BufferHandle buffer);
+  void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material);
+  void updateCameraBehavior(ImGuiIO& io, CameraSystem& cam);
 }
 

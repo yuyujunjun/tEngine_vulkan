@@ -309,7 +309,7 @@ namespace tEngine {
 	}
 
 	// dynamic commands
-	void CommandBuffer::setViewport(const Viewport& viewport) { cb.setViewport(0, viewport); }//; getDevice()->getVkBindings().vkCmdSetViewport(getDefaultView(), 0, 1, &viewport.get());
+	void CommandBuffer::setViewport(const Viewport& viewport) { cb.setViewport(0, viewport); }//; getDevice()->getVkBindings().vkCmdSetViewport(getDefaultView(), 0, 1, &viewport.getComponent());
 
 
 	void CommandBuffer::setScissor(uint32_t firstScissor, vk::ArrayProxy< const vk::Rect2D>const& scissors)

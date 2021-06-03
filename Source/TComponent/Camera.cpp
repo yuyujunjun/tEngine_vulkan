@@ -47,58 +47,58 @@ inline float sign(float s)
     return (s < 0.f) ? -1.f : 1.f;
 }
 
-CameraManipulator::CameraManipulator()
+CameraSystem::CameraSystem()
 {
-    update();
+   
 }
 
-glm::vec3 const& CameraManipulator::getCameraPosition() const
+glm::vec3 const& CameraSystem::getCameraPosition() const
 {
-    return m_cameraPosition;
+    return cam->m_cameraPosition;
 }
 
-glm::vec3 const& CameraManipulator::getCenterPosition() const
+glm::vec3 const& CameraSystem::getCenterPosition() const
 {
-    return m_centerPosition;
+    return cam->m_centerPosition;
 }
 
-glm::mat4 const& CameraManipulator::getMatrix() const
+glm::mat4 const& CameraSystem::getMatrix() const
 {
-    return m_matrix;
+    return cam->m_matrix;
 }
 
-CameraManipulator::Mode CameraManipulator::getMode() const
+CameraSystem::Mode CameraSystem::getMode() const
 {
     return m_mode;
 }
 
-glm::ivec2 const& CameraManipulator::getMousePosition() const
+glm::ivec2 const& CameraSystem::getMousePosition() const
 {
     return m_mousePosition;
 }
 
-float CameraManipulator::getRoll() const
+float CameraSystem::getRoll() const
 {
-    return m_roll;
+    return cam->m_roll;
 }
 
-float CameraManipulator::getSpeed() const
+float CameraSystem::getSpeed() const
 {
     return m_speed;
 }
 
-glm::vec3 const& CameraManipulator::getUpVector() const
+glm::vec3 const& CameraSystem::getUpVector() const
 {
-    return m_upVector;
+    return cam->m_upVector;
 }
 
-glm::u32vec2 const& CameraManipulator::getWindowSize() const
+glm::u32vec2 const& CameraSystem::getWindowSize() const
 {
     return m_windowSize;
 }
 
-CameraManipulator::Action
-CameraManipulator::mouseMove(glm::ivec2 const& position, MouseButton mouseButton, ModifierFlags& modifiers)
+CameraSystem::Action
+CameraSystem::mouseMove(glm::ivec2 const& position, MouseButton mouseButton, ModifierFlags& modifiers)
 {
     Action curAction = Action::None;
     switch (mouseButton)
@@ -132,59 +132,63 @@ CameraManipulator::mouseMove(glm::ivec2 const& position, MouseButton mouseButton
     return curAction;
 }
 
-void CameraManipulator::setLookat(const glm::vec3& cameraPosition,
+void CameraSystem::setLookat(const glm::vec3& cameraPosition,
     const glm::vec3& centerPosition,
     const glm::vec3& upVector)
 {
-    m_cameraPosition = cameraPosition;
-    m_centerPosition = centerPosition;
-    m_upVector = upVector;
-    update();
+    cam->m_cameraPosition = cameraPosition;
+    cam->m_centerPosition = centerPosition;
+    cam->m_upVector = upVector;
+    cam->update();
 }
 
-void CameraManipulator::setMode(Mode mode)
+void CameraSystem::setMode(Mode mode)
 {
     m_mode = mode;
 }
 
-void CameraManipulator::setMousePosition(glm::ivec2 const& position)
+void CameraSystem::setMousePosition(glm::ivec2 const& position)
 {
     m_mousePosition = position;
 }
 
-void CameraManipulator::setRoll(float roll)
+void CameraSystem::setRoll(float roll)
 {
-    m_roll = roll;
-    update();
+    cam->m_roll = roll;
+    cam->update();
 }
+void CameraSystem::setCamera(CameraComponent* cam) {
+    this->cam = cam;
+    cam->update();
 
-void CameraManipulator::setSpeed(float speed)
+}
+void CameraSystem::setSpeed(float speed)
 {
     m_speed = speed;
 }
 
-void CameraManipulator::setWindowSize(glm::ivec2 const& size)
+void CameraSystem::setWindowSize(glm::ivec2 const& size)
 {
     m_windowSize = size;
 }
 
-void CameraManipulator::wheel(int value)
+void CameraSystem::wheel(int value)
 {
     float fValue = static_cast<float>(value);
     float dx = (fValue * std::abs(fValue)) / static_cast<float>(m_windowSize[0]);
 
-    glm::vec3 z = m_cameraPosition - m_centerPosition;
+    glm::vec3 z = cam->m_cameraPosition - cam->m_centerPosition;
     float     length = z.length() * 0.1f;
     length = length < 0.001f ? 0.001f : length;
 
     dx *= m_speed;
     dolly(glm::vec2(dx, dx));
-    update();
+    cam->update();
 }
 
-void CameraManipulator::dolly(glm::vec2 const& delta)
+void CameraSystem::dolly(glm::vec2 const& delta)
 {
-    glm::vec3 z = m_centerPosition - m_cameraPosition;
+    glm::vec3 z = cam->m_centerPosition - cam->m_cameraPosition;
     float     length = glm::length(z);
 
     // We are at the point of interest, and don't know any direction, so do nothing!
@@ -222,7 +226,7 @@ void CameraManipulator::dolly(glm::vec2 const& delta)
     // Not going up
     if (m_mode == Mode::Walk)
     {
-        if (m_upVector.y > m_upVector.z)
+        if (cam->m_upVector.y > cam->m_upVector.z)
         {
             z.y = 0;
         }
@@ -232,16 +236,16 @@ void CameraManipulator::dolly(glm::vec2 const& delta)
         }
     }
 
-    m_cameraPosition += z;
+    cam->m_cameraPosition += z;
 
     // In fly mode, the interest moves with us.
     if (m_mode != Mode::Examine)
     {
-        m_centerPosition += z;
+        cam->m_centerPosition += z;
     }
 }
 
-void CameraManipulator::motion(glm::ivec2 const& position, Action action)
+void CameraSystem::motion(glm::ivec2 const& position, Action action)
 {
     glm::vec2 delta(float(position[0] - m_mousePosition[0]) / float(m_windowSize[0]),
         float(position[1] - m_mousePosition[1]) / float(m_windowSize[1]));
@@ -273,12 +277,12 @@ void CameraManipulator::motion(glm::ivec2 const& position, Action action)
     default: break;
     }
 
-    update();
+    cam->update();
 
     m_mousePosition = position;
 }
 
-void CameraManipulator::orbit(glm::vec2 const& delta, bool invert)
+void CameraSystem::orbit(glm::vec2 const& delta, bool invert)
 {
     if (isZero(delta[0]) && isZero(delta[1]))
     {
@@ -290,8 +294,8 @@ void CameraManipulator::orbit(glm::vec2 const& delta, bool invert)
     float dy = delta[1] * float(glm::two_pi<float>());
 
     // Get the camera
-    glm::vec3 origin(invert ? m_cameraPosition : m_centerPosition);
-    glm::vec3 position(invert ? m_centerPosition : m_cameraPosition);
+    glm::vec3 origin(invert ? cam->m_cameraPosition : cam->m_centerPosition);
+    glm::vec3 position(invert ? cam->m_centerPosition : cam->m_cameraPosition);
 
     // Get the length of sight
     glm::vec3 centerToEye(position - origin);
@@ -300,14 +304,14 @@ void CameraManipulator::orbit(glm::vec2 const& delta, bool invert)
 
     // Find the rotation around the UP axis (Y)
     glm::vec3 zAxis(centerToEye);
-    glm::mat4 yRotation = glm::rotate(-dx, m_upVector);
+    glm::mat4 yRotation = glm::rotate(-dx, cam->m_upVector);
 
     // Apply the (Y) rotation to the eye-center vector
     glm::vec4 tmpVector = yRotation * glm::vec4(centerToEye.x, centerToEye.y, centerToEye.z, 0.0f);
     centerToEye = glm::vec3(tmpVector.x, tmpVector.y, tmpVector.z);
 
     // Find the rotation around the X vector: cross between eye-center and up (X)
-    glm::vec3 xAxis = glm::cross(m_upVector, zAxis);
+    glm::vec3 xAxis = glm::cross(cam->m_upVector, zAxis);
     xAxis = glm::normalize(xAxis);
     glm::mat4 xRotation = glm::rotate(-dy, xAxis);
 
@@ -327,20 +331,20 @@ void CameraManipulator::orbit(glm::vec2 const& delta, bool invert)
 
     if (!invert)
     {
-        m_cameraPosition = newPosition;  // Normal: change the position of the camera
+        cam->m_cameraPosition = newPosition;  // Normal: change the position of the camera
     }
     else
     {
-        m_centerPosition = newPosition;  // Inverted: change the interest point
+        cam->m_centerPosition = newPosition;  // Inverted: change the interest point
     }
 }
 
-void CameraManipulator::pan(glm::vec2 const& delta)
+void CameraSystem::pan(glm::vec2 const& delta)
 {
-    glm::vec3 z(m_cameraPosition - m_centerPosition);
+    glm::vec3 z(cam->m_cameraPosition - cam->m_centerPosition);
     float     length = static_cast<float>(glm::length(z)) / 0.785f;  // 45 degrees
     z = glm::normalize(z);
-    glm::vec3 x = glm::normalize(glm::cross(m_upVector, z));
+    glm::vec3 x = glm::normalize(glm::cross(cam->m_upVector, z));
     glm::vec3 y = glm::normalize(glm::cross(z, x));
     x *= -delta[0] * length;
     y *= delta[1] * length;
@@ -351,11 +355,11 @@ void CameraManipulator::pan(glm::vec2 const& delta)
         y = -y;
     }
 
-    m_cameraPosition += x + y;
-    m_centerPosition += x + y;
+    cam->m_cameraPosition += x + y;
+    cam->m_centerPosition += x + y;
 }
 
-double CameraManipulator::projectOntoTBSphere(const glm::vec2& p)
+double CameraSystem::projectOntoTBSphere(const glm::vec2& p)
 {
     double z;
     double d = length(p);
@@ -374,7 +378,7 @@ double CameraManipulator::projectOntoTBSphere(const glm::vec2& p)
     return z;
 }
 
-void CameraManipulator::trackball(glm::ivec2 const& position)
+void CameraSystem::trackball(glm::ivec2 const& position)
 {
     glm::vec2 p0(2 * (m_mousePosition[0] - m_windowSize[0] / 2) / double(m_windowSize[0]),
         2 * (m_windowSize[1] / 2 - m_mousePosition[1]) / double(m_windowSize[1]));
@@ -405,33 +409,63 @@ void CameraManipulator::trackball(glm::ivec2 const& position)
     float rad = 2.0f * asin(t);
 
     {
-        glm::vec4 rot_axis = m_matrix * glm::vec4(axis, 0);
+        glm::vec4 rot_axis = cam->m_matrix * glm::vec4(axis, 0);
         glm::mat4 rot_mat = glm::rotate(rad, glm::vec3(rot_axis.x, rot_axis.y, rot_axis.z));
 
-        glm::vec3 pnt = m_cameraPosition - m_centerPosition;
+        glm::vec3 pnt = cam->m_cameraPosition - cam->m_centerPosition;
         glm::vec4 pnt2 = rot_mat * glm::vec4(pnt.x, pnt.y, pnt.z, 1);
-        m_cameraPosition = m_centerPosition + glm::vec3(pnt2.x, pnt2.y, pnt2.z);
-        glm::vec4 up2 = rot_mat * glm::vec4(m_upVector.x, m_upVector.y, m_upVector.z, 0);
-        m_upVector = glm::vec3(up2.x, up2.y, up2.z);
+        cam->m_cameraPosition = cam->m_centerPosition + glm::vec3(pnt2.x, pnt2.y, pnt2.z);
+        glm::vec4 up2 = rot_mat * glm::vec4(cam->m_upVector.x, cam->m_upVector.y, cam->m_upVector.z, 0);
+        cam->m_upVector = glm::vec3(up2.x, up2.y, up2.z);
     }
 }
 
-void CameraManipulator::update()
+void CameraComponent::update()
 {
-    m_matrix = glm::lookAt(m_cameraPosition, m_centerPosition, m_upVector);
+    auto cam = this;
+    cam->m_matrix = glm::lookAt(cam->m_cameraPosition, cam->m_centerPosition, cam->m_upVector);
 
-    if (!isZero(m_roll))
+    if (!isZero(cam->m_roll))
     {
-        glm::mat4 rot = glm::rotate(m_roll, glm::vec3(0, 0, 1));
-        m_matrix = m_matrix * rot;
+        glm::mat4 rot = glm::rotate(cam->m_roll, glm::vec3(0, 0, 1));
+        cam->m_matrix = cam->m_matrix * rot;
     }
+}
+void tEngine::updateCameraBehavior(ImGuiIO& io,CameraSystem& cam) {
+    CameraSystem::MouseButton mouseButton =
+        (io.MouseDown[0]) ? CameraSystem::MouseButton::Left:
+        (io.MouseDown[2])? CameraSystem::MouseButton::Middle
+        : (io.MouseDown[1]) ? CameraSystem::MouseButton::Right
+        : CameraSystem::MouseButton::None;
+    if (mouseButton != CameraSystem::MouseButton::None)
+    {
+        CameraSystem::ModifierFlags modifiers = 0;
+        
+        if (io.KeyAlt)
+        {
+            modifiers |= static_cast<uint32_t>(CameraSystem::ModifierFlagBits::Alt);
+        }
+        if (io.KeyCtrl)
+        {
+            modifiers |= static_cast<uint32_t>(CameraSystem::ModifierFlagBits::Ctrl);
+        }
+        if (io.KeyShift)
+        {
+            modifiers |= static_cast<uint32_t>(CameraSystem::ModifierFlagBits::Shift);
+        }
+        cam.mouseMove(
+            glm::ivec2(static_cast<int>(io.MousePos.x), static_cast<int>(io.MousePos.y)), mouseButton, modifiers);
+    }
+    cam.setMousePosition(glm::ivec2(static_cast<int>(io.MousePos.x), static_cast<int>(io.MousePos.y)));
+    
+    cam.wheel(io.MouseWheel);
 }
 namespace tEngine {
   
-      void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material,BufferHandle buffer) {
-        material->SetValue(ShaderString(SV::_MATRIX_V), view, buffer);
-        material->SetValue(ShaderString(SV::_MATRIX_P), projection, buffer);
-        material->SetValue(ShaderString(SV::_MATRIX_VP), projection * view, buffer);
-        material->SetValue(ShaderString(SV::_INV_MATRIX_VP), glm::inverse(projection * view), buffer);
+      void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material) {
+        material->SetValueOnBuffer(ShaderString(SV::_MATRIX_V), view);
+        material->SetValueOnBuffer(ShaderString(SV::_MATRIX_P), projection);
+        material->SetValueOnBuffer(ShaderString(SV::_MATRIX_VP), projection * view);
+        material->SetValueOnBuffer(ShaderString(SV::_INV_MATRIX_VP), glm::inverse(projection * view));
     }
 }

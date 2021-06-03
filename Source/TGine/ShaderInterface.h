@@ -21,12 +21,21 @@ namespace tEngine {
 		void SetBuffer(std::string name, BufferHandle buffer, uint32_t offset = 0);
 		//fake viewInfo
 		void SetImage(std::string name, ImageHandle image, vk::ImageView vkView = {}, StockSampler sampler = StockSampler::LinearClamp);
+		/// <summary>
+		/// Set value on buffer, offset stored into ShaderInterface's bindResources
+		/// If pass the buffer nullptr, must SetBuffer before this function
+		/// </summary>
+		/// <typeparam name="Attribute"></typeparam>
+		/// <param name="valueName"></param>
+		/// <param name="value"></param>
+		/// <param name="buffer"></param>
 		template <typename Attribute>
-		void SetValue(std::string valueName, const Attribute& value, BufferHandle buffer = nullptr) {
-			SetValue(valueName, &value, sizeof(Attribute), buffer);
+		void SetValueOnBuffer(std::string valueName, const Attribute& value,size_t size=-1) {
+			if (size == -1)size = sizeof(Attribute);
+			SetValueOnBuffer(valueName, size, &value);
 
 		}
-
+		void SetValueOnBuffer(std::string valueName, size_t size, const void* value);
 
 		template<typename Attribute>
 		void SetPushConstant(std::string name, Attribute value) {
@@ -45,7 +54,7 @@ namespace tEngine {
 			return base_shader;
 		}
 		const DescSetAllocHandle& getDescSetAllocator(uint32_t set_number)const;
-
+		
 		const std::vector<uint8_t>& getPushConstantBlock()const;
 		const std::vector<ResSetBinding>& getResSetBinding()const ;
 		std::vector<ResSetBinding>& getResSetBinding();
@@ -59,7 +68,7 @@ namespace tEngine {
 		std::vector<uint8_t> pushConstantBlock;
 	private:
 		void SetPushConstant(std::string name, const void* attribute, size_t size);
-		void SetValue(std::string valueName, const void* value, size_t size, BufferHandle buffer);
+		
 		const tShader* base_shader;
 
 

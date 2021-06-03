@@ -23,7 +23,7 @@ namespace tEngine {
 		//	std::vector<pvrvk::VulkanLayer> vulkanLayers;
 		if (forceLayers)
 		{
-			// Enable both VK_LAYER_KHRONOS_validation and the deprecated VK_LAYER_LUNARG_standard_validation as the Loader will handle removing duplicate layers
+			// Enable both VK_LAYER_KHRONOS_validation and the deprecated VK_LAYER_LUNARG_standard_validation as the Loader will Handle removing duplicate layers
 			vulkanLayers.push_back("VK_LAYER_KHRONOS_validation");
 			//	vulkanLayers.push_back("VK_LAYER_LUNARG_standard_validation");
 			//	vulkanLayers.push_back("VK_LAYER_LUNARG_assistant_layer");
@@ -130,7 +130,7 @@ namespace tEngine {
 		auto vkdevice=createDevice(instance);
 		this->device = std::make_unique<Device>(vkdevice, instance,surface);
 		this->swapChain = createSwapChain(device.get(), surface, extent);
-		
+		hasInitialized_ = true;
 				
 	}
 
@@ -161,34 +161,8 @@ namespace tEngine {
 		auto& io = ImGui::GetIO();
 	
 		if (io.WantCaptureMouse)return;
-		CameraManipulator::MouseButton mouseButton =
-			(glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_LEFT) == GLFW_PRESS)
-			? CameraManipulator::MouseButton::Left
-			: (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_MIDDLE) == GLFW_PRESS)
-			? CameraManipulator::MouseButton::Middle
-			: (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS)
-			? CameraManipulator::MouseButton::Right
-			: CameraManipulator::MouseButton::None;
-		if (mouseButton != CameraManipulator::MouseButton::None)
-		{
-			CameraManipulator::ModifierFlags modifiers = 0;
-			if (glfwGetKey(window, GLFW_KEY_LEFT_ALT) == GLFW_PRESS)
-			{
-				modifiers |= static_cast<uint32_t>(CameraManipulator::ModifierFlagBits::Alt);
-			}
-			if (glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS)
-			{
-				modifiers |= static_cast<uint32_t>(CameraManipulator::ModifierFlagBits::Ctrl);
-			}
-			if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-			{
-				modifiers |= static_cast<uint32_t>(CameraManipulator::ModifierFlagBits::Shift);
-			}
-
-
-			tEngineContext::context.cameraManipulator.mouseMove(
-				glm::ivec2(static_cast<int>(xpos), static_cast<int>(ypos)), mouseButton, modifiers);
-		}
+		
+	
 	}
 	static void mouseButtonCallback(GLFWwindow* window, int /*button*/, int /*action*/, int /*mods*/)
 	{
@@ -198,14 +172,14 @@ namespace tEngine {
 		double xpos, ypos;
 		glfwGetCursorPos(window, &xpos, &ypos);
 
-		tEngineContext::context.cameraManipulator.setMousePosition(glm::ivec2(static_cast<int>(xpos), static_cast<int>(ypos)));
+		//tEngineContext::context.cameraManipulator.setMousePosition(glm::ivec2(static_cast<int>(xpos), static_cast<int>(ypos)));
 	}
 	static void scrollCallback(GLFWwindow* window, double /*xoffset*/, double yoffset)
 	{
 		
 		auto& io = ImGui::GetIO();
 		if (io.WantCaptureMouse)return;
-		tEngineContext::context.cameraManipulator.wheel(static_cast<int>(yoffset));
+		//tEngineContext::context.cameraManipulator.wheel(static_cast<int>(yoffset));
 	}
 	void IMGUI::Init(tEngineContext& context) {
 		IMGUI_CHECKVERSION();
@@ -259,20 +233,19 @@ namespace tEngine {
 	}
 	void ContextInit() {
 		auto& context = tEngineContext::context;
-		const int width = 1200;
-		const int height = 800;
-		context.instance = createInstance();
-		auto gWindow = createWindow(vk::Extent2D(width, height));
-		auto surface = createSurface(context.instance, gWindow);
-	//	auto vkDevice = createDevice(instance);
-		tEngineContext::context.Set(context.instance, gWindow, surface, vk::Extent2D(width, height));
-
-		IMGUI::m_gui.Init(context);
-		glfwSetCursorPosCallback(gWindow, cursor_position_callback);
-		glfwSetMouseButtonCallback(gWindow, mouseButtonCallback);
-		glfwSetScrollCallback(gWindow, scrollCallback);
+		if (!context.hasInitialized()) {
+			const int width = 1200;
+			const int height = 800;
+			context.instance = createInstance();
+			auto gWindow = createWindow(vk::Extent2D(width, height));
+			auto surface = createSurface(context.instance, gWindow);
+			//	auto vkDevice = createDevice(instance);
+			tEngineContext::context.Set(context.instance, gWindow, surface, vk::Extent2D(width, height));
+			IMGUI::m_gui.Init(context);
+			
+		}
 	}
-	void tEngineContext::coreRender(ThreadContext* threadContext, SemaphoreHandle	acquireSemaphore
+	void tEngineContext::coreRender(CommandBufferHandle* cb_list, SemaphoreHandle	acquireSemaphore
 	, SemaphoreHandle presentSemaphore, FenceHandle fence) {
 		glfwPollEvents();
 		double deltaTime = time == 0 ? 0 : (static_cast<double>(clock()) - time) / 1e3;
@@ -301,6 +274,7 @@ namespace tEngine {
 		//uiPass->SetImageView("depth", swapChain->getDepth());
 		//uiPass->setClearValue("back", { 0,0,0,1 });
 		//uiPass->setDepthStencilValue("depth", 1);
+		
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
@@ -308,9 +282,10 @@ namespace tEngine {
 	
 
 		//
-		auto& cb = threadContext->cmdBuffers[imageIdx];
+		//auto& cb = threadContext->cmdBuffers[imageIdx];
 		auto result = device->waitForFences(fence->getVkHandle(), true, -1);
 		device->resetFences(fence->getVkHandle());
+		auto& cb = cb_list[imageIdx];
 		cb->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
 		cb->begin(vk::CommandBufferUsageFlags());
 		loopStage(deltaTime, cb);
@@ -349,7 +324,7 @@ namespace tEngine {
 		SemaphoreHandle presentSemaphore = device->getSemaphoreManager()->requestSemaphore();
 		FenceHandle fence = device->getFenceManager()->requestSingaledFence();
 
-		coreRender(threadContext,acquireSemaphore,presentSemaphore,fence);
+		coreRender(threadContext->cmdBuffers.data(),acquireSemaphore,presentSemaphore,fence);
 		device->waitForFences(fence->getVkHandle(), true, -1);
 		threadContext->cmdBuffers[imageIdx]->reset(vk::CommandBufferResetFlagBits::eReleaseResources);
 		device->getFenceManager()->recycle(fence);
@@ -362,7 +337,7 @@ namespace tEngine {
 		FenceHandle fence = device->getFenceManager()->requestSingaledFence();
 		time = clock();
 		while (!glfwWindowShouldClose(gWindow)) {
-			coreRender(threadContext, acquireSemaphore, presentSemaphore, fence);
+			coreRender(threadContext->cmdBuffers.data(), acquireSemaphore, presentSemaphore, fence);
 		}
 		device->waitForFences(fence->getVkHandle(), true, -1);
 		for (auto& cb : threadContext->cmdBuffers) {

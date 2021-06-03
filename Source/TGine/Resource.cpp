@@ -627,7 +627,7 @@ namespace tEngine {
 
 		 }
 		 else {
-			 //assert(static_cast<uint8_t*>(handle->getAllocation()->GetMappedData()));
+			 //assert(static_cast<uint8_t*>(Handle->getAllocation()->GetMappedData()));
 
 			 memset(static_cast<uint8_t*>(getMappedData(handle->getAllocation())) + offset, zero, size);
 			 handle->Flush();
