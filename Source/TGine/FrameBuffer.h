@@ -119,7 +119,7 @@ namespace tEngine {
 		void setupRenderPass(VkPipelineBindPoint bindp = VK_PIPELINE_BIND_POINT_GRAPHICS);
 		void SetImageView(std::string name, const ImageHandle& handle, vk::ImageView view = {});
 		//Create and set depthBuffer, if you already have depth buffer, use SetImageView
-		void setDepthBufferView(std::string name, vk::Extent2D extent = vk::Extent2D(-1, -1), bool sampled = false);
+		void setTransientImageView(std::string name, vk::Extent2D extent = vk::Extent2D(-1, -1));
 		void SetRenderFunctor(uint32_t subpass, std::function<void(CommandBufferHandle&, tRenderPass*, uint32_t subpass)> fun) {
 			//if (renderFunction.size() <= subpass) { renderFunction.resize(subpass + 1); }
 			renderFunction[subpass] = std::move(fun);

@@ -42,7 +42,7 @@ int main() {
 
 	context->Update([&](double timeDelta) {
 		renderPass->SetImageView("back", context->swapChain->getImage(context->imageIdx));
-		renderPass->setDepthBufferView("depth");
+		renderPass->setTransientImageView("depth");
 		renderPass->setClearValue("back", { 0,0,0,1 });
 		renderPass->setDepthStencilValue("depth", 1);
 		CameraBuffer->NextRangenoLock();

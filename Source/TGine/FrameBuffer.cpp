@@ -25,7 +25,7 @@ namespace tEngine {
 		auto& r = renderPass.getAttachment(name, false);
 		resolved.emplace_back(r.idx);
 	}
-	void tRenderPass::setDepthBufferView(std::string name,vk::Extent2D extent , bool sampled){
+	void tRenderPass::setTransientImageView(std::string name,vk::Extent2D extent){
 		vk::Format format = getAttachment(name,false).description.format;
 		if (extent.height == static_cast<uint32_t>(-1)) {
 			assert(getImages().size()>0&&getImages()[0]);
@@ -33,9 +33,9 @@ namespace tEngine {
 			extent.height = getImages()[0]->get_height();
 		}
 		auto shadowMapCreateInfo = ImageCreateInfo::transient_render_target(extent.width, extent.height, (VkFormat)format);
-		if (sampled) {
+		/*if (sampled) {
 			shadowMapCreateInfo.usage |= VK_IMAGE_USAGE_SAMPLED_BIT;
-		}
+		}*/
 		//If already have required image
 		if (resource_to_idx.count(name) != 0) {
 			auto img = getImages()[resource_to_idx.at(name)];

@@ -31,11 +31,10 @@ void defaultRender(std::vector<GameObject>objs,const CameraComponent& cam) {
 		shader->SetBuffer("CameraMatrix", camBuffer->buffer(), camBuffer->getOffset());
 		uploadCameraMatrix(cam.m_matrix, Perspective(context.swapChain->getExtent()), shader.get());
 		renderPass->SetImageView("back", context.swapChain->getImage(context.getImageIdx()));
-		renderPass->setDepthBufferView("depth");
+		renderPass->setTransientImageView("depth");
 		for (auto& r : objs) {
 			r->material->SetBuffer("CameraMatrix", camBuffer->buffer(), camBuffer->getOffset());
 			r->material->flushBuffer();
-
 		}
 		auto frameBuffer = renderPass->requestFrameBuffer();
 		cb->beginRenderPass(renderPass,frameBuffer,true);
@@ -194,10 +193,10 @@ int main() {
 		}
 		updateCameraBehavior(io, cam);
 		shadowPass->SetImageView("shadowMap", ShadowMap, ShadowMap->get_view()->getDefaultView());
-		shadowPass->setDepthBufferView("depth");
+		shadowPass->setTransientImageView("depth");
 		//renderPass->SetImageView("shadow", ShadowMap, ShadowMap->get_view()->get_float_view());
 		renderPass->SetImageView("back", context->swapChain->getImage(context->getImageIdx()));
-		renderPass->setDepthBufferView("depth");
+		renderPass->setTransientImageView("depth");
 		renderPass->setClearValue("back", { 0,0,0,1 });
 		renderPass->setDepthStencilValue("depth", 1);
 		
