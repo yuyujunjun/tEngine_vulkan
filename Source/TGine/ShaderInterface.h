@@ -15,6 +15,7 @@ namespace tEngine {
 	class tShaderInterface {
 	public:
 		static std::shared_ptr<tShaderInterface> requestTexturedShader(const Device* device);
+		
 		friend class CommandBuffer;
 		tShaderInterface(const tShader* shader);
 		//只是缓存，仅有拷贝操作

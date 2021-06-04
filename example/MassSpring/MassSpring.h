@@ -96,8 +96,9 @@ namespace SpringSolver {
 		double max_edgeLength;
 		Eigen::Vector3d fluid;
 		double constant=1;
-		tEngine::MeshBuffer mesh;
-		tEngine::MeshBuffer collide;
+		tEngine::Mesh mesh;
+		//tEngine::MeshBuffer mesh;
+		//tEngine::MeshBuffer collide;
 		double time = 0;
 	private:
 	

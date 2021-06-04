@@ -1,60 +1,93 @@
 #include"MassSpring.h"
-int main() {
-	using namespace tEngine;
-	tEngine::ContextInit();
+#include"EngineContext.h"
+#include"GameObject.h"
+#include"Camera.h"
+#include"ShaderVariable.h"
+#include"GameObject.h"
+#include"TextureFormatLayout.h"
+#include"bufferHelper.h"
+#include<random>
+#include"Log.h"
+#include"GraphicsState.h"
+#include<glm/gtx/quaternion.hpp>
+#include"ComponentFactory.h"
+using namespace tEngine;
+void defaultRender(std::vector<GameObject>objs, const CameraComponent& cam) {
 	auto& context = tEngineContext::context;
-	auto& device = tEngineContext::context.device;
-	
-	auto shader = tShader::Create(device.get());// ("draw.vsh", "draw.fsh");
-	shader->SetShaderModule({ "draw.vsh","draw.fsh" }, { vk::ShaderStageFlagBits::eVertex,vk::ShaderStageFlagBits::eFragment });
-	auto clothMaterial = shader->getInterface();
-	auto sphereMaterial = shader->getInterface();
-	//clothMaterial->SetImage("_MainTex", tImage::requestDummyImage(device.getComponent()));
-//	sphereMaterial->SetImage("_MainTex", tImage::requestDummyImage(device.getComponent()));
-
-	auto renderPass = getSingleRenderpass(device.get(), context.swapChain->getFormat(),(vk::Format)context.swapChain->getDepth()->getFormat());
-
-	auto cameraBuffer = shader->requestBufferRange("CameraMatrix", 2);
-	auto transformBuffer = shader->requestBufferRange("ModelMatrix", 4);
-	Transform sphereTransform;
-	sphereTransform.position = { 0,0.4,-1.4 };
-	sphereTransform.scale = { 0.2,0.2,0.2 };
-	SpringSolver::MSpring spring;
-	spring.Start(device.get());
-	context.cameraManipulator.setLookat({ 0,0,1 }, { 0,0,0 }, { 0,1,0 });
-	context.Update([&](double deltaTime) {
-		spring.Update(deltaTime);
-		spring.mesh.uploadVertexBuffer(context.device.get(), nullptr);
-		//request new buffer range
-		cameraBuffer.NextRangenoLock();
-		clothMaterial->SetBuffer("CameraMatrix", cameraBuffer.buffer(), cameraBuffer.getOffset());
-		sphereMaterial->SetBuffer("CameraMatrix", cameraBuffer.buffer(), cameraBuffer.getOffset());
-		//request new buffer range
-		transformBuffer.NextRangenoLock();
-		clothMaterial->SetBuffer("ModelMatrix", transformBuffer.buffer(), transformBuffer.getOffset());
-		transformBuffer.NextRangenoLock();
-		sphereMaterial->SetBuffer("ModelMatrix", transformBuffer.buffer(), transformBuffer.getOffset());
-		//Update
-		uploadCameraMatrix(context.cameraManipulator.getMatrix(), Perspective(context.swapChain->getExtent()), clothMaterial.get());
-		uploadCameraMatrix(context.cameraManipulator.getMatrix(), Perspective(context.swapChain->getExtent()), sphereMaterial.get());
-		clothMaterial->SetValueOnBuffer(ShaderString(SV::_MATRIX_M), glm::mat4(1));
-		sphereMaterial->SetValueOnBuffer(ShaderString(SV::_MATRIX_M), sphereTransform.Matrix());
-
-		//FrameBuffer
-		setupFrameBufferBySwapchain(renderPass);
-		});
-	context.Record([&](double, CommandBufferHandle& cb) {
-		cb->beginRenderPass(renderPass, renderPass->requestFrameBuffer(), true);
-		cb->setViewport(renderPass->requestFrameBuffer()->getViewPort());
-		cb->setScissor(0, renderPass->requestFrameBuffer()->getRenderArea());
-		flushGraphicsShaderState(clothMaterial.get(), cb, renderPass.get(), 0);
-		DrawMesh(&spring.mesh, cb, 1);
-		flushGraphicsShaderState(sphereMaterial.get(), cb, renderPass.get(), 0);
-		DrawMesh(&spring.collide, cb, 1);
+	if (!context.hasInitialized()) {
+		ContextInit();
+	}
+	auto device = tEngineContext::context.device.get();
+	static auto renderPass = getSingleRenderpass(device, context.swapChain->getFormat());
+	renderPass->setClearValue("back", { 0,0,0,1 });
+	renderPass->setDepthStencilValue("depth", 1);
+	auto shader = tShaderInterface::requestTexturedShader(device);
+	auto camBuffer = shader->getShader()->requestBufferRange("CameraMatrix");
+	context.Record([&](double timeDelta, CommandBufferHandle& cb) {
+		camBuffer->NextRangenoLock();
+		shader->SetBuffer("CameraMatrix", camBuffer->buffer(), camBuffer->getOffset());
+		uploadCameraMatrix(cam.m_matrix, Perspective(context.swapChain->getExtent()), shader.get());
+		renderPass->SetImageView("back", context.swapChain->getImage(context.getImageIdx()));
+		renderPass->setTransientImageView("depth");
+		for (auto& r : objs) {
+			r->material->SetBuffer("CameraMatrix", camBuffer->buffer(), camBuffer->getOffset());
+			r->material->SetValue(ShaderString(SV::_MATRIX_M), r->transform.Matrix());
+			r->material->flushBuffer();
+		}
+		auto frameBuffer = renderPass->requestFrameBuffer();
+		cb->beginRenderPass(renderPass, frameBuffer, true);
+		cb->setViewport(frameBuffer->getViewPort());
+		cb->setScissor(0, frameBuffer->getRenderArea());
+		for (auto& r : objs) {
+			flushGraphicsShaderState(r->material->shader.get(), r->material->graphicsState, cb, renderPass.get(), 0);
+			DrawMesh(r->meshbuffer.get(), cb);
+		}
 		cb->endRenderPass();
 		});
-	ThreadContext* threadContext = new ThreadContext(&context);
-	context.Loop(threadContext);
-	delete threadContext;
+	context.Loop(context.AddThreadContext());
+}
+
+int main() {
+	ContextInit();
+	auto& context = tEngine::tEngineContext::context;
+	auto& device = context.device;
+
+	CameraComponent cam;
+	CameraSystem cam_sys;
+	cam_sys.setCamera(&cam);
+
+	
+	
+	
+	SpringSolver::MSpring spring;
+	spring.Start(device.get());
+	GameObject cloth = std::make_shared<GameObject_>();
+	GameObject sphere = std::make_shared<GameObject_>();
+	auto shadowShader = tShader::Create(device.get());
+	shadowShader->SetShaderModule({ "draw.vsh","draw.fsh" }, { vk::ShaderStageFlagBits::eVertex, vk::ShaderStageFlagBits::eFragment });
+	cloth->setMaterial(shadowShader->getInterface());
+	sphere->setMaterial(shadowShader->getInterface());
+	sphere->transform.position = { 0,0.4,-1.4 };
+	sphere->transform.scale = { 0.2,0.2,0.2 };
+	auto meshAsset = LoadMesh("sphere.obj");
+	sphere->setMesh(meshAsset->mesh);
+	cloth->setMesh(spring.mesh);
+
+
+	context.Update([&](double deltaTime) {
+		auto& io = ImGui::GetIO();
+		updateCameraBehavior(io, cam_sys);
+		spring.Update(deltaTime);
+		cloth->meshbuffer->setMeshUpload(spring.mesh,device.get());
+		ImGui::Begin("Fluid");
+		Eigen::Vector3f f = spring.fluid.cast<float>();
+		ImGui::InputFloat3("x", f.data());
+		spring.fluid = f.cast<double>();
+		ImGui::End();
+		//cloth->meshbuffer->uploadVertexBuffer(device.get(), nullptr);
+		
+		});
+
+	defaultRender({ sphere,cloth }, cam);
 
 }

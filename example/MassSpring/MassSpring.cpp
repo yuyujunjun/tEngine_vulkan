@@ -6,11 +6,11 @@ namespace SpringSolver {
 		fluid.setZero();
 		resolution[0] = resolution[1] = 45;
 		BuildMesh();
-		mesh.createVertexBuffer(device, nullptr, tEngine::BufferDomain::Host);
-		mesh.createIdxBuffer(device, nullptr);
+		//mesh.createVertexBuffer(device, nullptr, tEngine::BufferDomain::Host);
+		//mesh.createIdxBuffer(device, nullptr);
 	
 
-		tEngine::Transform transform;
+		//tEngine::Transform transform;
 		/*transform.scale = glm::vec3(0.2, 0.2, 0.2);
 		transform.position = glm::vec3(0, 0.4, -1.4);
 		for (auto& p:mesh.getMesh().vertices) {
@@ -18,14 +18,14 @@ namespace SpringSolver {
 			v=transform.Matrix()* v;
 			p.Position = glm::vec3(v.x,v.y,v.z);
 		}*/
-		auto meshAsset = LoadMesh("sphere.obj");
-		collide.setMeshUpload(meshAsset->mesh,device);
+		//auto meshAsset = LoadMesh("sphere.obj");
+		//collide.setMeshUpload(meshAsset->mesh,device);
 	
 		BuildSpring();
 		BuildMatrix();
 	}
 	void MSpring::BuildMesh() {
-		auto& mesh = this->mesh.getMesh();
+		//auto& mesh = this->mesh.getMesh();
 		double step_x = 1.0 / resolution[0];
 		double step_y = 1.0 / resolution[1];
 		auto Idx = [this](int i, int j) {
@@ -59,7 +59,7 @@ namespace SpringSolver {
 	}
 	void MSpring::BuildSpring() {
 		constraint.clear();
-		auto& mesh = this->mesh.getMesh();
+		//auto& mesh = this->mesh.getMesh();
 		p = Eigen::VectorXd(3 * mesh.vertices.size());
 		v = Eigen::VectorXd(p.size());
 		v.setZero();
@@ -168,8 +168,8 @@ namespace SpringSolver {
 	void MSpring::Update(float dt) {
 		auto noise = tEngine::SimplexNoise2D(glm::vec2(time,time+0.2)*0.02f);
 		time += dt;
-		constant = vk::su::clamp(noise,-.1f,.1f);
-		fluid = constant * Eigen::Vector3d(0.1,0.1,0.3);
+		constant = vk::su::clamp(noise, -.1f, .1f);
+	//	fluid = constant * Eigen::Vector3d(0.1, 0.1, 0.3);
 	//	fluid = fluid.normalized();
 	//	fluid = Eigen::Vector3d(tEngine::PerlinNoise3D());
 		//std::cout << x << std::endl;
@@ -225,7 +225,7 @@ namespace SpringSolver {
 	
 	
 	void MSpring::Setb() {
-		auto& mesh = this->mesh.getMesh();
+		//auto& mesh = this->mesh.getMesh();
 		//inertia y
 		y = p + h * v;
 		//force
@@ -246,7 +246,7 @@ namespace SpringSolver {
 
 	}
 	void MSpring::UpdateMesh() {
-		auto& mesh = this->mesh.getMesh();
+		//auto& mesh = this->mesh.getMesh();
 	//	auto& mesh = gb->meshFilter->mesh;
 		for (int i = 0; i < mesh.vertices.size(); i++) {
 			mesh.vertices[i].Position = glm::vec3(p[3 * i], p[3 * i + 1], p[3 * i + 2]);
@@ -256,7 +256,7 @@ namespace SpringSolver {
 	}
 	void MSpring::DampVelocity() {
 		//double m_damping_coefficient = 1e-2;
-		auto& mesh = this->mesh.getMesh();
+		//auto& mesh = this->mesh.getMesh();
 
 		// post-processing damping
 		Eigen::Vector3d pos_mc(0.0, 0.0, 0.0), vel_mc(0.0, 0.0, 0.0);
