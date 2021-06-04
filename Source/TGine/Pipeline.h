@@ -132,6 +132,12 @@ namespace tEngine {
 				info.setDynamicStates(dynamicStates);
 				return info;
 			}
+			bool isDynamic(vk::DynamicState state)const {
+				for (auto& s : dynamicStates) {
+					if (s == state)return true;
+				}
+				return false;
+			}
 
 		}dynamicState;
 
@@ -144,7 +150,8 @@ namespace tEngine {
 				&& vertexAttribute == info.vertexAttribute
 				&& topology == info.topology
 				&& tessellation == info.tessellation
-				&& viewport == info.viewport
+				&& (dynamicState.isDynamic(vk::DynamicState::eViewport)||viewport.viewPorts == info.viewport.viewPorts)
+				&& (dynamicState.isDynamic(vk::DynamicState::eScissor)||viewport.scissors==info.viewport.scissors)
 				&& rasterizationState == info.rasterizationState
 				&& multisampleState == info.multisampleState
 				&& depthStencilState == info.depthStencilState

@@ -31,6 +31,7 @@ namespace tEngine {
 		//createInfo.depthStencilState.depthCompareOp = vk::CompareOp::eAlways;
 		//dynamicState
 		createInfo.dynamicState.dynamicStates.emplace_back(vk::DynamicState::eViewport);
+		createInfo.dynamicState.dynamicStates.emplace_back(vk::DynamicState::eScissor);
 
 		//Layout
 		createInfo.layout = shader->getShader()->getPipelineLayout()->getVkHandle();

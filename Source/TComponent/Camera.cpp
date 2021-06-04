@@ -432,6 +432,7 @@ void CameraComponent::update()
     }
 }
 void tEngine::updateCameraBehavior(ImGuiIO& io,CameraSystem& cam) {
+    if (io.WantCaptureMouse)return;
     CameraSystem::MouseButton mouseButton =
         (io.MouseDown[0]) ? CameraSystem::MouseButton::Left:
         (io.MouseDown[2])? CameraSystem::MouseButton::Middle

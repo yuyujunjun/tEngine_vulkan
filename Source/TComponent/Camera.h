@@ -78,7 +78,7 @@ namespace tEngine {
         return glm::perspective(fieldOfview, _viewportAspectRatio, nearPlane, farPlane);
     }
   inline glm::mat4 Ortho(float left,float right ,float bottom,float top,float depth) {
-      auto mat= glm::ortho(left, right, bottom, top, 10.f, 500.f);
+      auto mat= glm::ortho(left, right, bottom, top, 1.f, 1000.f);
       return glm::ortho(left,right,bottom,top,-depth, depth);
   }
   class tShaderInterface;
