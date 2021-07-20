@@ -17,7 +17,10 @@
 namespace tEngine {
 	tEngineContext tEngineContext::context;
 	IMGUI IMGUI:: m_gui;
-	 std::vector<std::string> GetInstanceLayers(bool forceLayers)
+	//GpuBlockBuffer tEngineContext::cameraBufferBlock;
+
+
+	 std::vector<std::string> GetInstanceLayers(bool forceLayers=true)
 	{
 		std::vector<std::string> vulkanLayers;
 		//	std::vector<pvrvk::VulkanLayer> vulkanLayers;
@@ -61,7 +64,7 @@ namespace tEngine {
 		
 		return extensions;
 	}
-	 GLFWwindow* createWindow(vk::Extent2D extent, std::string name ) {
+	 GLFWwindow* createWindow(vk::Extent2D extent, std::string name="view" ) {
 		//window
 		glfwInit();
 		glfwSetErrorCallback([](int error, const char* msg) {
@@ -80,7 +83,7 @@ namespace tEngine {
 			throw std::runtime_error("Failed to create window!");
 		return  vk::SurfaceKHR(_surface);
 	}
-	 SwapChainHandle createSwapChain(Device* device, vk::SurfaceKHR surface, vk::Extent2D extent, vk::SwapchainKHR oldSwapchain ) {
+	 SwapChainHandle createSwapChain(Device* device, vk::SurfaceKHR surface, vk::Extent2D extent, vk::SwapchainKHR oldSwapchain = {}) {
 		return createSwapChain(device, surface, extent, vk::ImageUsageFlagBits::eColorAttachment |
 			vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst, oldSwapchain, device->getPhysicalDevice().graphicsQueuefamilyId, device->getPhysicalDevice().presentQueuefamilyId);
 	}
@@ -243,6 +246,9 @@ namespace tEngine {
 			tEngineContext::context.Set(context.instance, gWindow, surface, vk::Extent2D(width, height));
 			IMGUI::m_gui.Init(context);
 			
+
+		
+
 		}
 	}
 	void tEngineContext::coreRender(CommandBufferHandle* cb_list, SemaphoreHandle	acquireSemaphore

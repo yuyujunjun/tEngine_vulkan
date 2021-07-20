@@ -5,14 +5,14 @@
 #include"ShaderVariable.h"
 #include"GameObject.h"
 #include"TextureFormatLayout.h"
-#include"bufferHelper.h"
+#include"Material.h"
 #include<random>
 #include"Log.h"
 #include"GraphicsState.h"
 #include<glm/gtx/quaternion.hpp>
 #include"ComponentFactory.h"
 using namespace tEngine;
-void defaultRender(std::vector<GameObject>objs, const CameraComponent& cam) {
+void defaultRender(std::vector<GameObject>objs, const CameraTransform& cam) {
 	auto& context = tEngineContext::context;
 	if (!context.hasInitialized()) {
 		ContextInit();
@@ -24,9 +24,11 @@ void defaultRender(std::vector<GameObject>objs, const CameraComponent& cam) {
 	auto shader = tShaderInterface::requestTexturedShader(device);
 	auto camBuffer = shader->getShader()->requestBufferRange("CameraMatrix");
 	context.Record([&](double timeDelta, CommandBufferHandle& cb) {
+	
+
+		uploadCameraMatrix(cam.m_matrix, Perspective(context.swapChain->getExtent()), shader);
 		camBuffer->NextRangenoLock();
 		shader->SetBuffer("CameraMatrix", camBuffer->buffer(), camBuffer->getOffset());
-		uploadCameraMatrix(cam.m_matrix, Perspective(context.swapChain->getExtent()), shader.get());
 		renderPass->SetImageView("back", context.swapChain->getImage(context.getImageIdx()));
 		renderPass->setTransientImageView("depth");
 		for (auto& r : objs) {
@@ -39,7 +41,7 @@ void defaultRender(std::vector<GameObject>objs, const CameraComponent& cam) {
 		cb->setViewport(frameBuffer->getViewPort());
 		cb->setScissor(0, frameBuffer->getRenderArea());
 		for (auto& r : objs) {
-			flushGraphicsShaderState(r->material->shader.get(), r->material->graphicsState, cb, renderPass.get(), 0);
+			flushGraphicsShaderState(r->material->shader, r->material->graphicsState, cb, renderPass.get(), 0);
 			DrawMesh(r->meshbuffer.get(), cb);
 		}
 		cb->endRenderPass();
@@ -52,7 +54,7 @@ int main() {
 	auto& context = tEngine::tEngineContext::context;
 	auto& device = context.device;
 
-	CameraComponent cam;
+	CameraTransform cam;
 	CameraSystem cam_sys;
 	cam_sys.setCamera(&cam);
 

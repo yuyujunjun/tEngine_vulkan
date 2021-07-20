@@ -77,6 +77,9 @@ namespace tEngine {
 		const  BufferHandle& buffer() const {
 			return handle;
 		}
+		BufferHandle& buffer() {
+			return handle;
+		}
 		//request new buffer range
 		void NextRangenoLock() {
 			offset = offset + rangeSize * 2 <= handle->getSize() ? offset + rangeSize : initialOff;

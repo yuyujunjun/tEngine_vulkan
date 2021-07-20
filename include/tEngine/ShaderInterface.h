@@ -14,7 +14,7 @@ namespace tEngine {
 	using ResSetBinding = std::vector<BindingResourceInfo>;
 	class tShaderInterface {
 	public:
-		static std::shared_ptr<tShaderInterface> requestTexturedShader(const Device* device);
+		static tShader*  requestTexturedShader(const Device* device);
 		
 		friend class CommandBuffer;
 		tShaderInterface(const tShader* shader);

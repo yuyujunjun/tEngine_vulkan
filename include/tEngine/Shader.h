@@ -53,7 +53,7 @@ namespace tEngine {
 				return VK_PIPELINE_BIND_POINT_COMPUTE;
 			}
 		}
-		std::shared_ptr<tShaderInterface> getInterface();
+		
 		sValueMap getVarSetBinding(std::string name)const {
 			return valueToSetBinding.at(name);
 		}
@@ -75,6 +75,7 @@ namespace tEngine {
 		const BufferHandle& requestBuffer(std::string name, uint32_t rangeCount = 1)const;
 		std::vector<tDescSetsDataWithSetNumber> setInfos;
 	private:
+		tShaderInterface* getInterface();
 		BufferRangeManager* requestBufferRange(GpuBlockBuffer block, uint32_t rangeCount)const;
 		std::unordered_map<std::string, sValueMap> valueToSetBinding;//Value,set, binding
 		std::unordered_map<std::string, std::pair<uint8_t, uint16_t>> blockToSetBinding;//Resource Name,set,bind. Tell which set and binding each image or buffer belong to

@@ -7,18 +7,32 @@
 #include<glm/gtc/matrix_transform.hpp>
 #include"ShaderVariable.h"
 #include"imgui.h"
+#include"Component.h"
 namespace tEngine {
-    struct CameraComponent {
-        CameraComponent() { update(); }
+
+    enum class ProjectionType {
+        Ortho,
+        Perspective
+    };
+    
+    struct CameraTransform {
+        ProjectionType projection=ProjectionType::Perspective;
+        CameraTransform() { update(); }
         glm::vec3 m_cameraPosition = glm::vec3(5, 5, 5);
         glm::vec3 m_centerPosition = glm::vec3(0, 0, 0);
         glm::vec3 m_upVector = glm::vec3(0, 1, 0);
         float     m_roll = 0;                      // Rotation around the Z axis in RAD
         glm::mat4 m_matrix = glm::mat4(1);
+        glm::mat4 p_matrix = glm::mat4(1);
+        glm::u32vec2 m_windowSize = glm::u32vec2(1080, 960);
+        float nearPlane = 0.01;
+        float farPlane = 1000;
+        float fieldOfview = glm::radians(60.f);
+
         void update();
     };
-  
-    class CameraSystem
+
+    class CameraSystem:public System
     {
     public:
         enum class Action { None, Orbit, Dolly, Pan, LookAround };
@@ -28,6 +42,9 @@ namespace tEngine {
         using ModifierFlags = uint32_t;
 
     public:
+       // ImGuiIO io;
+        void ExecuteAllComponents(float dt) override;
+
         CameraSystem();
 
         glm::vec3 const& getCameraPosition() const;
@@ -48,7 +65,7 @@ namespace tEngine {
         void setSpeed(float speed);
         void setWindowSize(glm::ivec2 const& size);
         void wheel(int value);
-        void setCamera(CameraComponent* cam);
+        void setCamera(CameraTransform* cam);
     private:
         void dolly(glm::vec2 const& delta);
         void motion(glm::ivec2 const& position, Action action = Action::None);
@@ -56,10 +73,10 @@ namespace tEngine {
         void pan(glm::vec2 const& delta);
         double projectOntoTBSphere(const glm::vec2& p);
         void trackball(glm::ivec2 const& position);
-       // void update();
+        // void update();
 
     private:
-        CameraComponent* cam;
+        CameraTransform* cam;
 
 
         glm::u32vec2 m_windowSize = glm::u32vec2(1080, 960);
@@ -69,22 +86,30 @@ namespace tEngine {
 
         Mode m_mode = Mode::Examine;
 
-        
+
 
     };
-  
-  inline  glm::mat4 Perspective(vk::Extent2D extent,float nearPlane=0.01,float farPlane=1000,float fieldOfview=glm::radians(60.f)) {
+
+    inline  glm::mat4 Perspective(vk::Extent2D extent, float nearPlane = 0.01, float farPlane = 1000, float fieldOfview = glm::radians(60.f)) {
         float _viewportAspectRatio = float(extent.width) / extent.height;
         return glm::perspective(fieldOfview, _viewportAspectRatio, nearPlane, farPlane);
     }
-  inline glm::mat4 Ortho(float left,float right ,float bottom,float top,float depth) {
-      auto mat= glm::ortho(left, right, bottom, top, 1.f, 1000.f);
-      return glm::ortho(left,right,bottom,top,-depth, depth);
-  }
-  class tShaderInterface;
-  class tBuffer;
-  using BufferHandle = std::shared_ptr<tBuffer>;
+    inline glm::mat4 Ortho(float left, float right, float bottom, float top, float depth) {
+        auto mat = glm::ortho(left, right, bottom, top, 1.f, 1000.f);
+        return glm::ortho(left, right, bottom, top, -depth, depth);
+    }
+ 
+
+
+    class tShaderInterface;
+    class tBuffer;
+    using BufferHandle = std::shared_ptr<tBuffer>;
+    class BufferRangeManager;
+    class Device;
+    BufferRangeManager* requestCameraBufferRange(const Device* device);
+  
   void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material);
-  void updateCameraBehavior(ImGuiIO& io, CameraSystem& cam);
+  void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tBuffer* buffer, unsigned rangeOffset);
+ 
 }
 

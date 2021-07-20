@@ -30,17 +30,7 @@ namespace tEngine {
 	
 	
 	void ContextInit();
-
-	 std::vector<std::string> GetInstanceLayers(bool forceLayers = true);
-	 	std::vector<std::string> GetInstanceExtensions();
-	 GLFWwindow* createWindow(vk::Extent2D extent, std::string name = "View");
-	 vk::SurfaceKHR createSurface(vk::Instance instance, GLFWwindow* gWindow);
-	 SwapChainHandle createSwapChain(Device* device, vk::SurfaceKHR surface, vk::Extent2D extent, vk::SwapchainKHR oldSwapchain = {});
-	 void updateSwapChain(GLFWwindow* gWindow, VkSurfaceKHR surface, SwapChainHandle& swapChain, Device* device);
-	 vk::Instance createInstance();
-
-	 vk::Device createDevice(vk::Instance instance); 
-	 struct ThreadContext {
+	struct ThreadContext {
 		 ThreadContext(tEngineContext* context);
 		 tEngine::CommandPoolHandle cmdPool;
 		 std::vector<tEngine::CommandBufferHandle> cmdBuffers;
@@ -50,11 +40,19 @@ namespace tEngine {
 			 }
 		 }
 	 };
+
+	
+	
+
+
+
 	class tEngineContext {
 	public:
 		static tEngineContext context;
-		
-		tEngineContext() :hasInitialized_(false),gWindow(nullptr) {};
+		//static GpuBlockBuffer cameraBufferBlock;
+		tEngineContext() :hasInitialized_(false),gWindow(nullptr) {
+
+		};
 		void Set(vk::Instance instance,GLFWwindow* gWindow,vk::SurfaceKHR surface, vk::Extent2D extent);
 		
 		std::unique_ptr<Device> device;

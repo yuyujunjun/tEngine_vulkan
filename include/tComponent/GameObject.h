@@ -1,36 +1,84 @@
 #pragma once
-#include"MeshBuffer.h"
-#include"ShaderInterface.h"
-#include"EngineContext.h"
+#include<atomic>
+#include<typeinfo>
+#include<memory>
+#include<vector>
 #include"tTransform.h"
 #include"Component.h"
-#include"bufferHelper.h"
 namespace tEngine {
-
-	
+	class Component;
+	class GameObject_;
+	using GameObject = std::shared_ptr<GameObject_>;
 
 	class GameObject_ {
 	public:
-		GameObject_() = default;
-		GameObject_(const Mesh& mesh) {
-			if (meshbuffer == nullptr) {
-				meshbuffer = std::make_shared<MeshBuffer>();
-			}
-			meshbuffer->setMeshUpload(mesh,tEngineContext::context.device.get());
+		static GameObject Create() {
+			static std::atomic<uint32_t> id = 0;
+			uint32_t x=id.fetch_add(1);
+			return std::make_shared<GameObject_>(x);
+			
 		}
-		void setMesh(const Mesh& mesh) {
-			if (meshbuffer == nullptr) {
-				meshbuffer = std::make_shared<MeshBuffer>();
-			}
-			meshbuffer->setMeshUpload(mesh, tEngineContext::context.device.get());
+		GameObject_(uint32_t id) :id(id) {};
+		template<typename T,typename ...Args>
+		T* AddComponent(Args... args) {
+			components.emplace_back(new T(this,args...));
+			component_id.emplace_back(typeid(T).hash_code());
+			return static_cast<T*>(components.back());
 		}
-		void setMaterial(std::shared_ptr<tShaderInterface>& shader) {
-			material = std::make_shared<Material>(shader);
+		template<typename T>
+		void RemoveComponent() {
+			auto idx = typeid(T).hash_code();
+			for (unsigned i = component_id.size()-1; i >=0;--i) {
+				if (idx == component_id[i]) {
+					auto p = components[i];
+					components[i] = nullptr;
+					component_id.erase(component_id.begin() + i);
+					components.erase(component_id.begin() + i);
+					delete p;
+					
+					
+				}
+			}
+		}
+		template<typename T>
+		T* getComponent() {
+			auto idx = typeid(T).hash_code();
+			for (unsigned i = component_id.size() - 1; i >= 0; --i) {
+				if (idx == component_id[i]) {
+					return static_cast<T*>(components[i]);
+				}
+			}
+			return 0;
+		}
+		template<typename T>
+		const T* getComponent()const {
+			auto idx = typeid(T).hash_code();
+			for (unsigned i = component_id.size() - 1; i >= 0; --i) {
+				if (idx == component_id[i]) {
+					return static_cast<T*>(components[i]);
+				}
+			}
+			return 0;
+		}
+	
+		void clearComponents() {
+			for (auto& c : components) {
+				delete c;
+			}
+			components.clear();
 		}
 
+		~GameObject_() {
+			clearComponents();
+		}
+		uint32_t Identity()const { return id; }
 		Transform transform;
-		std::shared_ptr<MeshBuffer> meshbuffer;
-		std::shared_ptr<Material> material;
+		std::vector<Component*> components;
+		std::vector<size_t> component_id;
+	private:
+		uint32_t id;
 	};
-	using GameObject = std::shared_ptr<GameObject_>;
+	inline GameObject createGameObject() {
+		return GameObject_::Create();
+	}
 }

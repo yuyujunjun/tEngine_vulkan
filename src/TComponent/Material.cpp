@@ -1,4 +1,4 @@
-#include "bufferHelper.h"
+#include"Material.h"
 #include"Buffer.h"
 #include"ShaderInterface.h"
 #include"Shader.h"
@@ -62,7 +62,7 @@ namespace tEngine {
 	void Material::SetImage(std::string name, ImageHandle image, vk::ImageView vkView , StockSampler sampler) {
 		shader->SetImage(name, image, vkView, sampler);
 	}
-	Material::Material(std::shared_ptr<tShaderInterface> shader):shader(shader) {
+	Material::Material(tShader* shader):shader(new tShaderInterface(shader)) {
 		
 	}
 }

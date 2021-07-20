@@ -23,6 +23,7 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include"Shader.h"
 #include"ShaderInterface.h"
+#include"Buffer.h"
 using namespace tEngine;
 
 static const float MaxVerticalAngle = 85.0f; //must be less than 90 to avoid gimbal lock
@@ -94,9 +95,39 @@ glm::vec3 const& CameraSystem::getUpVector() const
 
 glm::u32vec2 const& CameraSystem::getWindowSize() const
 {
-    return m_windowSize;
+    return cam->m_windowSize;
 }
+void CameraSystem::ExecuteAllComponents(float dt) {
+    auto& io = ImGui::GetIO();
+    if (io.WantCaptureMouse)return;
+    CameraSystem::MouseButton mouseButton =
+        (io.MouseDown[0]) ? CameraSystem::MouseButton::Left :
+        (io.MouseDown[2]) ? CameraSystem::MouseButton::Middle
+        : (io.MouseDown[1]) ? CameraSystem::MouseButton::Right
+        : CameraSystem::MouseButton::None;
+    if (mouseButton != CameraSystem::MouseButton::None)
+    {
+        CameraSystem::ModifierFlags modifiers = 0;
 
+        if (io.KeyAlt)
+        {
+            modifiers |= static_cast<uint32_t>(CameraSystem::ModifierFlagBits::Alt);
+        }
+        if (io.KeyCtrl)
+        {
+            modifiers |= static_cast<uint32_t>(CameraSystem::ModifierFlagBits::Ctrl);
+        }
+        if (io.KeyShift)
+        {
+            modifiers |= static_cast<uint32_t>(CameraSystem::ModifierFlagBits::Shift);
+        }
+        this->mouseMove(
+            glm::ivec2(static_cast<int>(io.MousePos.x), static_cast<int>(io.MousePos.y)), mouseButton, modifiers);
+    }
+    this->setMousePosition(glm::ivec2(static_cast<int>(io.MousePos.x), static_cast<int>(io.MousePos.y)));
+
+    this->wheel(io.MouseWheel);
+}
 CameraSystem::Action
 CameraSystem::mouseMove(glm::ivec2 const& position, MouseButton mouseButton, ModifierFlags& modifiers)
 {
@@ -157,8 +188,9 @@ void CameraSystem::setRoll(float roll)
     cam->m_roll = roll;
     cam->update();
 }
-void CameraSystem::setCamera(CameraComponent* cam) {
+void CameraSystem::setCamera(CameraTransform* cam) {
     this->cam = cam;
+    setWindowSize(cam->m_windowSize);
     cam->update();
 
 }
@@ -420,7 +452,7 @@ void CameraSystem::trackball(glm::ivec2 const& position)
     }
 }
 
-void CameraComponent::update()
+void CameraTransform::update()
 {
     auto cam = this;
     cam->m_matrix = glm::lookAt(cam->m_cameraPosition, cam->m_centerPosition, cam->m_upVector);
@@ -430,43 +462,45 @@ void CameraComponent::update()
         glm::mat4 rot = glm::rotate(cam->m_roll, glm::vec3(0, 0, 1));
         cam->m_matrix = cam->m_matrix * rot;
     }
-}
-void tEngine::updateCameraBehavior(ImGuiIO& io,CameraSystem& cam) {
-    if (io.WantCaptureMouse)return;
-    CameraSystem::MouseButton mouseButton =
-        (io.MouseDown[0]) ? CameraSystem::MouseButton::Left:
-        (io.MouseDown[2])? CameraSystem::MouseButton::Middle
-        : (io.MouseDown[1]) ? CameraSystem::MouseButton::Right
-        : CameraSystem::MouseButton::None;
-    if (mouseButton != CameraSystem::MouseButton::None)
-    {
-        CameraSystem::ModifierFlags modifiers = 0;
-        
-        if (io.KeyAlt)
-        {
-            modifiers |= static_cast<uint32_t>(CameraSystem::ModifierFlagBits::Alt);
-        }
-        if (io.KeyCtrl)
-        {
-            modifiers |= static_cast<uint32_t>(CameraSystem::ModifierFlagBits::Ctrl);
-        }
-        if (io.KeyShift)
-        {
-            modifiers |= static_cast<uint32_t>(CameraSystem::ModifierFlagBits::Shift);
-        }
-        cam.mouseMove(
-            glm::ivec2(static_cast<int>(io.MousePos.x), static_cast<int>(io.MousePos.y)), mouseButton, modifiers);
+    if (cam->projection == ProjectionType::Perspective) {
+        float aspect = float(m_windowSize.x) / m_windowSize.y;
+        cam->p_matrix = glm::perspective(fieldOfview, aspect, nearPlane, farPlane);
     }
-    cam.setMousePosition(glm::ivec2(static_cast<int>(io.MousePos.x), static_cast<int>(io.MousePos.y)));
-    
-    cam.wheel(io.MouseWheel);
+    else {
+
+    }
 }
+
 namespace tEngine {
-  
-      void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material) {
-        material->SetValueOnBuffer(ShaderString(SV::_MATRIX_V), view);
-        material->SetValueOnBuffer(ShaderString(SV::_MATRIX_P), projection);
-        material->SetValueOnBuffer(ShaderString(SV::_MATRIX_VP), projection * view);
-        material->SetValueOnBuffer(ShaderString(SV::_INV_MATRIX_VP), glm::inverse(projection * view));
+    BufferRangeManager* requestCameraBufferRange(const Device* device) {
+        static std::shared_ptr<BufferRangeManager> camBufferRange;
+        if (camBufferRange == nullptr) {
+            GpuBlockBuffer cameraBufferBlock;
+            cameraBufferBlock.AddElement(ShaderString(SV::_MATRIX_V), sizeof(glm::mat4));
+            cameraBufferBlock.AddElement(ShaderString(SV::_MATRIX_P), sizeof(glm::mat4));
+            cameraBufferBlock.AddElement(ShaderString(SV::_MATRIX_VP), sizeof(glm::mat4));
+            cameraBufferBlock.AddElement(ShaderString(SV::_INV_MATRIX_VP), sizeof(glm::mat4));
+            camBufferRange= createBufferFromBlock(device, cameraBufferBlock, 30);
+        }
+        return camBufferRange.get();
     }
+      void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* shader) {
+        shader->SetValueOnBuffer(ShaderString(SV::_MATRIX_V), view);
+        shader->SetValueOnBuffer(ShaderString(SV::_MATRIX_P), projection);
+        shader->SetValueOnBuffer(ShaderString(SV::_MATRIX_VP), projection * view);
+        shader->SetValueOnBuffer(ShaderString(SV::_INV_MATRIX_VP), glm::inverse(projection * view));
+    }
+      void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tBuffer* buffer, unsigned rangeOffset) {
+          unsigned offset = 0;
+          buffer->setRange(&view, rangeOffset + offset, sizeof(view));
+          offset += sizeof(view);
+          buffer->setRange(&projection, rangeOffset + offset, sizeof(projection));
+          offset += sizeof(projection);
+          glm::mat4 vp = projection * view;
+          buffer->setRange(&vp, rangeOffset + offset, sizeof(vp));
+          offset += sizeof(vp);
+          glm::mat4 inv_vp = glm::inverse(vp);
+          buffer->setRange(&inv_vp, rangeOffset + offset, sizeof(inv_vp));
+
+      }
 }

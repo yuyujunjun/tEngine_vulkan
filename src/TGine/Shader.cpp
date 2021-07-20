@@ -157,21 +157,21 @@ namespace tEngine {
 
 		buffer->setRange(value, info.offset + rangeOffset, size);
 	}
-	std::shared_ptr<tShaderInterface> tShader::getInterface() {
+	tShaderInterface* tShader::getInterface() {
 
-		return std::make_shared<tShaderInterface>(this);
+		return new tShaderInterface(this);
 
 	}
 	tShaderInterface::tShaderInterface(const tShader* shader) : base_shader(shader) {
 		bindResources = getResourceBindingInfo(shader);
 	};
-	std::shared_ptr<tShaderInterface> tShaderInterface::requestTexturedShader(const Device* device) {
+	tShader*  tShaderInterface::requestTexturedShader(const Device* device) {
 		static tShader::SharedPtr shadowShader;
 		if (shadowShader == nullptr) {
 			shadowShader = tShader::Create(device);
 			shadowShader->SetShaderModule({ "draw.vsh","drawTexture.fsh" }, { vk::ShaderStageFlagBits::eVertex, vk::ShaderStageFlagBits::eFragment });
 		}
-		return shadowShader->getInterface();
+		return shadowShader.get();
 	}
 
 	const GpuBlockBuffer& tShader::getBlock(std::string name)const {
