@@ -1,13 +1,15 @@
 #pragma once
 #include"SimpleGeometry.h"
 #include"Buffer.h"
+#include"Component.h"
 namespace tEngine {
 	class CommandBuffer;
 	using CommandBufferHandle = std::shared_ptr <CommandBuffer>;
-	class MeshBuffer
+	class MeshBuffer:public Component
 	{
 	public:
 		MeshBuffer() {}
+		MeshBuffer(GameObject_* gameObject) :Component(gameObject) {}
 		void setMesh(const Mesh& mesh) {
 			this->mesh = mesh;
 		}
@@ -40,6 +42,7 @@ namespace tEngine {
 		Mesh& getMesh() {
 			return mesh;
 		}
+
 	private:
 		
 		Mesh mesh;
