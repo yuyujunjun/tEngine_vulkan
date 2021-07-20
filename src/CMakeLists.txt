@@ -7,7 +7,9 @@ set(SRC_FILES ${USER_SRC_PATH} )
 #Engine source
 file(GLOB USER_SRC_PATH ./TComponent/*)
 set(SRC_FILES ${USER_SRC_PATH} ${SRC_FILES})
-
+#Engine physics source
+file(GLOB USER_SRC_PATH ./TPhysics/*)
+set(SRC_FILES ${USER_SRC_PATH} ${SRC_FILES})
 
 
 # Imgui
@@ -21,7 +23,6 @@ message(${SRC_FILES})
 # set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
 # file(GLOB_RECURSE USER_SRC_PATH 3rdParty/assimp/code/*.h)
 # set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
-
 
 function(assign_source_group)
     foreach(_source IN ITEMS ${ARGN})
@@ -37,7 +38,7 @@ function(assign_source_group)
 endfunction(assign_source_group)
 assign_source_group(${SRC_FILES})
 
-
+assign_source_group(${INCLUDE_DIRECTORIES})
 
 add_library(Engine ${SRC_FILES})
 target_link_libraries(${PROJECT_NAME} PUBLIC glfw ${Vulkan_LIBRARIES})

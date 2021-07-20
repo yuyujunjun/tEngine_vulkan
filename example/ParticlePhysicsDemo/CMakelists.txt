@@ -1,0 +1,6 @@
+project(ParticleDemo)
+file(GLOB_RECURSE c_files  *.cpp *.c)
+
+add_executable(ParticleDemo ${c_files})
+
+target_link_libraries(ParticleDemo  Engine)

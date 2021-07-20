@@ -13,19 +13,27 @@ INCLUDE_DIRECTORIES(
     3rdParty/vulkan/include
     3rdParty/termcolor/
     3rdParty/vma/src
-    ${VULKAN_INCLUDE_DIRS}
+    ${VULKAN_INCLUDE_DIRS} 
     3rdParty/glfw/include
-    Source/TComponent
-    Source/TGine)
+    include
+    include/tEngine
+    include/tComponent
+    include/tPhysics)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
+
+
+
+
 
 
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT Tangine)
 add_definitions(-DVULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1)
 add_definitions(-DGLFW_INCLUDE_VULKAN)
 add_definitions(-DASSET_PATH=${CMAKE_CURRENT_SOURCE_DIR})
-add_subdirectory(Source)
+add_subdirectory(src)
 add_subdirectory(example/MassSpring)
 add_subdirectory(example/TexturedObj)
 add_subdirectory(example/PCSS)
+add_subdirectory(example/ParticlePhysicsDemo)
