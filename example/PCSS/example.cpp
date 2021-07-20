@@ -216,24 +216,5 @@ int main() {
 	auto threadContext = context->AddThreadContext();
 	context->Loop(threadContext);
 
-
-	
-
-
-	
-	
-	
-	
-	//shader.reset();
-	
-	//image.reset();
-	//CameraBuffer.removeBuffer();
-	//modelMatrix.removeBuffer();
-	//renderPass.reset();
-
-	//delete context;
-	//shaderInterface.reset();
-	//CreateImageViewWithImage();
-
 	return 0;
 }

@@ -1,18 +1,13 @@
-#include"MassSpring.h"
 #include"EngineContext.h"
-#include"GameObject.h"
 #include"Camera.h"
 #include"ShaderVariable.h"
 #include"GameObject.h"
-#include"TextureFormatLayout.h"
+#include"World.h"
+#include"renderer.h"
 #include"Material.h"
-#include<random>
-#include"Log.h"
-#include"GraphicsState.h"
-#include<glm/gtx/quaternion.hpp>
-#include"ComponentFactory.h"
+#include"MassSpring.h"
 using namespace tEngine;
-void defaultRender(std::vector<GameObject>objs, const CameraTransform& cam) {
+void defaultRender(tWorld* world, const CameraTransform& cam) {
 	auto& context = tEngineContext::context;
 	if (!context.hasInitialized()) {
 		ContextInit();
@@ -21,29 +16,17 @@ void defaultRender(std::vector<GameObject>objs, const CameraTransform& cam) {
 	static auto renderPass = getSingleRenderpass(device, context.swapChain->getFormat());
 	renderPass->setClearValue("back", { 0,0,0,1 });
 	renderPass->setDepthStencilValue("depth", 1);
-	auto shader = tShaderInterface::requestTexturedShader(device);
-	auto camBuffer = shader->getShader()->requestBufferRange("CameraMatrix");
 	context.Record([&](double timeDelta, CommandBufferHandle& cb) {
-	
-
-		uploadCameraMatrix(cam.m_matrix, Perspective(context.swapChain->getExtent()), shader);
-		camBuffer->NextRangenoLock();
-		shader->SetBuffer("CameraMatrix", camBuffer->buffer(), camBuffer->getOffset());
 		renderPass->SetImageView("back", context.swapChain->getImage(context.getImageIdx()));
 		renderPass->setTransientImageView("depth");
-		for (auto& r : objs) {
-			r->material->SetBuffer("CameraMatrix", camBuffer->buffer(), camBuffer->getOffset());
-			r->material->SetValue(ShaderString(SV::_MATRIX_M), r->transform.Matrix());
-			r->material->flushBuffer();
-		}
 		auto frameBuffer = renderPass->requestFrameBuffer();
 		cb->beginRenderPass(renderPass, frameBuffer, true);
 		cb->setViewport(frameBuffer->getViewPort());
 		cb->setScissor(0, frameBuffer->getRenderArea());
-		for (auto& r : objs) {
-			flushGraphicsShaderState(r->material->shader, r->material->graphicsState, cb, renderPass.get(), 0);
-			DrawMesh(r->meshbuffer.get(), cb);
-		}
+		RenderInfo info;
+		info.renderPass = renderPass.get();
+		info.subpass = 0;
+		world->renderWithCamera(cb, info, &cam);
 		cb->endRenderPass();
 		});
 	context.Loop(context.AddThreadContext());
@@ -55,32 +38,36 @@ int main() {
 	auto& device = context.device;
 
 	CameraTransform cam;
+	cam.m_windowSize= glm::uvec2(context.swapChain->getExtent().width, context.swapChain->getExtent().height);
 	CameraSystem cam_sys;
 	cam_sys.setCamera(&cam);
-
+	tWorld world(device.get());
 	
 	
 	
 	SpringSolver::MSpring spring;
 	spring.Start(device.get());
-	GameObject cloth = std::make_shared<GameObject_>();
-	GameObject sphere = std::make_shared<GameObject_>();
+	GameObject cloth = createGameObject();
+	GameObject sphere = createGameObject();
 	auto shadowShader = tShader::Create(device.get());
 	shadowShader->SetShaderModule({ "draw.vsh","draw.fsh" }, { vk::ShaderStageFlagBits::eVertex, vk::ShaderStageFlagBits::eFragment });
-	cloth->setMaterial(shadowShader->getInterface());
-	sphere->setMaterial(shadowShader->getInterface());
+	cloth->AddComponent<MeshRenderer>(std::make_shared<Material>(shadowShader.get()));
+	sphere->AddComponent<MeshRenderer>(std::make_shared<Material>(shadowShader.get()));
+	world.RegistryMeshRenderer(cloth);
+	world.RegistryMeshRenderer(sphere);
 	sphere->transform.position = { 0,0.4,-1.4 };
 	sphere->transform.scale = { 0.2,0.2,0.2 };
 	auto meshAsset = LoadMesh("sphere.obj");
-	sphere->setMesh(meshAsset->mesh);
-	cloth->setMesh(spring.mesh);
+	sphere->AddComponent<MeshBuffer>()->setMeshUpload(meshAsset->mesh,device.get());
+	cloth->AddComponent<MeshBuffer>()->setMeshUpload(spring.mesh, device.get());
+	world.AddSystem(&cam_sys);
 
 
 	context.Update([&](double deltaTime) {
 		auto& io = ImGui::GetIO();
-		updateCameraBehavior(io, cam_sys);
+		world.update(deltaTime);
 		spring.Update(deltaTime);
-		cloth->meshbuffer->setMeshUpload(spring.mesh,device.get());
+		cloth->getComponent<MeshBuffer>()->setMeshUpload(spring.mesh,device.get());
 		ImGui::Begin("Fluid");
 		Eigen::Vector3f f = spring.fluid.cast<float>();
 		ImGui::InputFloat3("x", f.data());
@@ -90,6 +77,6 @@ int main() {
 		
 		});
 
-	defaultRender({ sphere,cloth }, cam);
+	defaultRender(&world, cam);
 
 }
