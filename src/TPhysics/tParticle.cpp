@@ -24,8 +24,17 @@ namespace tPhysics {
 	void Particle::setPosition(const Vector3& v) {
 		this->position = v;
 	}
+	void Particle::setPosition(real x, real y, real z) {
+		this->position = Vector3(x, y, z);
+	}
+	void Particle::setDamping(real damping) {
+		this->damping = damping;
+	}
+	void Particle::setAcceleration(const Vector3& accleration) {
+		this->accleration = accleration;
+	}
 	bool Particle::hasFiniteMass() {
-		return inverseMass >= 0;
+		return inverseMass > 0;
 	}
 	void Particle::setMass(real mass) {
 		assert(mass != 0);

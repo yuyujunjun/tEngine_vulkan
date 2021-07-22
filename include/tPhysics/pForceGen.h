@@ -55,6 +55,9 @@ namespace tPhysics {
 		real restLength;
 	public:
 		void setAnchor(const Vector3& anchor);
+		void setSpringConstant(const real constant) { springConstant = constant; }
+		void setRestLength(const real length) { restLength = length; }
+		ParticleAnchoredSpring() = default;
 		ParticleAnchoredSpring(const Vector3& anchor, real springConstant, real restLength) :anchor(anchor), springConstant(springConstant), restLength(restLength) {}
 		virtual void updateForce(Particle* particle, real duration);
 	};
@@ -71,6 +74,9 @@ namespace tPhysics {
 		real restLength;
 	public:
 		void setAnchor(const Vector3& anchor);
+		void setSpringConstant(const real constant) { springConstant = constant; }
+		void setRestLength(const real length) { restLength = length; }
+		ParticleAnchoredBungee() {};
 		ParticleAnchoredBungee(const Vector3& anchor, real springConstant, real restLength) :anchor(anchor), springConstant(springConstant), restLength(restLength) {}
 		virtual void updateForce(Particle* particle, real duration);
 	};

@@ -16,7 +16,7 @@ void main() {
 		vec4 position=vec4(Position,1);
 		worldPosition=(_MATRIX_M*position).xyz;
 		gl_Position = _MATRIX_VP * vec4(worldPosition,1);
-		worldNormal = (_MATRIX_M*vec4(Normal,0)).xyz;
+		worldNormal = (_MATRIX_V*_MATRIX_M*vec4(Normal,0)).xyz;
 		
 		//normal=Normal;
 	//	gl_Position.y=-gl_Position.y;

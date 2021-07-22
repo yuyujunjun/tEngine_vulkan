@@ -267,6 +267,7 @@ namespace tEngine {
 		vk::PipelineStageFlags src_stage, vk::AccessFlags src_access,
 		bool need_top_level_barrier);
 	void generateMipmap(CommandBufferHandle const& cb, ImageHandle& image);
+	
 	template <typename Func>
 	void oneTimeSubmit(CommandBufferHandle & commandBuffer, vk::Queue const& queue, Func const& func)
 	{
@@ -275,6 +276,16 @@ namespace tEngine {
 		commandBuffer->end();
 		queue.submit(vk::SubmitInfo(0, nullptr, nullptr, 1, &commandBuffer->getVkHandle()), nullptr);
 		queue.waitIdle();
+	}
+	template<typename Func>
+	void oneTimeSubmit(CommandBufferHandle& commandBuffer, const Device* device, Func const& func) {
+		oneTimeSubmit(commandBuffer, device->requestQueue(commandBuffer->getQueueFamilyIdx()), func);
+	}
+	template<typename Func>
+	void oneTimeSubmit(const Device* device, Func const& func) {
+		auto commandBuffer = device->requestTransientCommandBuffer();
+		auto queue = device->requestQueue(commandBuffer->getQueueFamilyIdx());
+		oneTimeSubmit(commandBuffer, queue, func);
 	}
 	
 

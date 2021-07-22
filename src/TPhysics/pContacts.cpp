@@ -3,6 +3,7 @@
 namespace tPhysics {
 	void ParticleContact::resolve(real duration) {
 		resolveVelocity(duration);
+		resolveInterpenetration(duration);
 	}
 	real ParticleContact::calculateSepartingVelocity()const {
 		Vector3 relativeVelocity = particle[0]->getVelocity();
@@ -28,7 +29,7 @@ namespace tPhysics {
 
 		real totalInverseMass = particle[0]->getInverseMass();
 		if (particle[1])totalInverseMass += particle[1]->getInverseMass();
-		if (totalInverseMass < 0)return;
+		if (totalInverseMass <= 0)return;
 		real impulse = deltaVelocity / totalInverseMass;// p = mdv
 		Vector3 impulsePerIMass = impulse * contactNormal;
 		
@@ -43,9 +44,14 @@ namespace tPhysics {
 		if (particle[1])totalInverseMass += particle[1]->getInverseMass();
 		if (totalInverseMass <= 0)return;
 		Vector3 movePerIMass = contactNormal * penetration/totalInverseMass;
-		particle[0]->setPosition(particle[0]->getPosition()+movePerIMass*particle[0]->getInverseMass());
+		particleMovement[0] = movePerIMass * particle[0]->getInverseMass();
+		particle[0]->setPosition(particle[0]->getPosition()+ particleMovement[0]);
 		if (particle[1]) {
-			particle[1]->setPosition(particle[1]->getPosition() - movePerIMass * particle[1]->getInverseMass());
+			particleMovement[1] = -movePerIMass * particle[1]->getInverseMass();
+			particle[1]->setPosition(particle[1]->getPosition() + particleMovement[1]);
+		}
+		else {
+			particleMovement[1] = Vector3(0, 0, 0);
 		}
 
 	}
@@ -69,7 +75,51 @@ namespace tPhysics {
 			}
 			if (idx == numContacts)break;
 			particleContacts[idx].resolve(duration);
+	
+
+			// Update the interpenetrations for all particles
+			Vector3* move = particleContacts[idx].particleMovement;
+			for (unsigned i = 0; i < numContacts; i++)
+			{
+				if (particleContacts[i].particle[0] == particleContacts[idx].particle[0])
+				{
+					particleContacts[i].penetration -= dot(move[0] , particleContacts[i].contactNormal);
+				}
+				else if (particleContacts[i].particle[0] == particleContacts[idx].particle[1])
+				{
+					particleContacts[i].penetration -= dot( move[1] , particleContacts[i].contactNormal);
+				}
+				if (particleContacts[i].particle[1])
+				{
+					if (particleContacts[i].particle[1] == particleContacts[idx].particle[0])
+					{
+						particleContacts[i].penetration += dot(move[0] , particleContacts[i].contactNormal);
+					}
+					else if (particleContacts[i].particle[1] == particleContacts[idx].particle[1])
+					{
+						particleContacts[i].penetration += dot( move[1] , particleContacts[i].contactNormal);
+					}
+				}
+			}
 			iterationUsed++;
 		}
+	}
+	 unsigned PlaneContactGenerator::addContact(ParticleContact* contact, unsigned limit) const{
+
+
+		 unsigned maxLimit = limit;
+		 for (auto& p : particle) {
+			 if (limit <= 0)break;
+			 if (p->getPosition().y >= planeHeight)continue;
+			 Vector3 normal = Vector3(0, 1, 0);
+			 contact->contactNormal = Vector3(0, 1, 0);
+			 contact->particle[0] = p;
+			 contact->particle[1] = nullptr;
+			 contact->penetration =  planeHeight - p->getPosition().y;
+			 contact->restitution = 0.9;
+			 limit--;
+			 contact++;
+		 }
+		 return maxLimit - limit;
 	}
 }

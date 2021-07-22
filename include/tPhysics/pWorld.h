@@ -10,7 +10,7 @@ namespace tPhysics {
 		std::list<Particle*> pList;
 		ParticleForceRegistry registry;//force generator and particle
 		ContactGenerators contactGenerators;//contact generator
-		ParticleContact* contacts;//contact list
+		std::vector<ParticleContact> contacts;//contact list
 		unsigned maxContacts;
 		ParticleContactResolver resolver;
 
@@ -19,6 +19,8 @@ namespace tPhysics {
 		bool calculateIterations=true;
 		ParticleWorld(unsigned maxContacts, unsigned iterations = 0)  ;
 		~ParticleWorld();
+		void addParticle(Particle* particle);
+		void removeParticle(Particle* particle);
 		void startFrame();
 		unsigned generateContacts();
 		void integrate(real duration);

@@ -73,10 +73,15 @@ namespace tEngine {
 
 
 		void Update(const std::function<void(double)>& f) {
-			prepareStage = f;
+			update = f;
 		}
 		void Record(const std::function<void(double,CommandBufferHandle& cb)>& f) {
 			loopStage = f;
+		}
+		void FixedUpdate(const std::function<void(double)>& f,double fixedDuration) {
+			fixedUpdate = f;
+			this->fixedDuration = fixedDuration;
+			fixedTick = 0;
 		}
 		void Render(ThreadContext* threadContext);
 		void Loop(ThreadContext* threadContext);
@@ -86,8 +91,11 @@ namespace tEngine {
 	private:
 		clock_t time = 0;
 		uint32_t imageIdx = -1;
-		std::function<void(double)> prepareStage;
+		std::function<void(double)> update;
 		std::function<void(double, CommandBufferHandle& cb)> loopStage;
+		std::function<void(double)> fixedUpdate;
+		double fixedDuration = 1.0 / 120.f;
+		double fixedTick = 0;
 		void coreRender(CommandBufferHandle* cb, SemaphoreHandle	acquireSemaphore
 			, SemaphoreHandle presentSemaphore, FenceHandle fence);
 		std::vector<std::unique_ptr<ThreadContext>> threadContext;

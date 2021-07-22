@@ -2,22 +2,29 @@
 #include"tParticles.h"
 namespace tPhysics {
 	ParticleWorld::ParticleWorld(unsigned maxContacts, unsigned iterations):maxContacts(maxContacts),resolver(iterations) {
-		contacts = new ParticleContact[maxContacts];
+		contacts.resize(maxContacts);
 		calculateIterations = (iterations == 0);
 	}
 	ParticleWorld::~ParticleWorld() {
-		delete[] contacts;
+		
 	}
 	void ParticleWorld::startFrame() {
 		for (auto& particle : pList) {
 			particle->clearAccumulator();
 		}
 	}
+	void ParticleWorld::addParticle(Particle* particle) {
+		pList.push_back(particle);
+	}
+	void ParticleWorld::removeParticle(Particle* particle) {
+		pList.remove(particle);
+	}
 	unsigned ParticleWorld::generateContacts() {
 		unsigned limit = maxContacts;
-		ParticleContact* nextContact = contacts;
+		//ParticleContact* nextContact = contacts.data();
+		unsigned nextContact = 0;
 		for (const auto& generator : contactGenerators) {
-			unsigned used=generator->addContact(nextContact, limit);
+			unsigned used=generator->addContact(&contacts[nextContact], limit);
 			limit -= used;
 			nextContact += used;
 			if (limit <= 0)break;
@@ -35,7 +42,7 @@ namespace tPhysics {
 		unsigned usedContacts = generateContacts();
 		if (usedContacts) {
 			if (calculateIterations)resolver.setInterations(usedContacts * 2);
-			resolver.resolveContacts(contacts,usedContacts,duration);
+			resolver.resolveContacts(&contacts[0],usedContacts,duration);
 		}
 	}
 }

@@ -1,5 +1,6 @@
 #include "MeshBuffer.h"
 #include"CommandBufferBase.h"
+#include"Log.h"
 namespace tEngine {
 	void DrawMesh(MeshBuffer* mb, CommandBufferHandle& cb, uint32_t instanceCount ) {
 		cb->bindVertexBuffer(mb->getVBO(), 0, 0);
@@ -13,7 +14,10 @@ namespace tEngine {
 	}
 	void MeshBuffer::createVertexBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain ) {
 		assert(mesh.vertices.size() > 0);
-		if (VBO && VBO->getSize() > mesh.vertices.size() * sizeof(Vertex)) { return; }
+		if (VBO && VBO->getSize() >= mesh.vertices.size() * sizeof(Vertex)) { 
+			LOG(tEngine::LogLevel::Warning, "No need to create Vertex buffer, no operations. Call uploadVertexBuffer to upload data.");
+			return;
+		}
 		BufferCreateInfo info;
 		info.domain = domain;
 		info.size = mesh.vertices.size() * sizeof(Vertex);
@@ -22,7 +26,10 @@ namespace tEngine {
 	}
 	void MeshBuffer::createIdxBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain ) {
 		if (mesh.indices.size() == 0)return;
-		if (IBO && IBO->getSize() >= mesh.indices.size() * sizeof(uint32_t)) { return; }
+		if (IBO && IBO->getSize() >= mesh.indices.size() * sizeof(uint32_t)) { 
+			LOG(tEngine::LogLevel::Warning, "No need to create Index buffer, no operations. Call uploadIdxBuffer to upload data.");
+			return;
+		}
 		BufferCreateInfo info;
 		info.domain = domain;
 		info.size = mesh.indices.size() * sizeof(uint32_t);

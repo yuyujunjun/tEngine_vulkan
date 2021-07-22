@@ -252,7 +252,7 @@ namespace tEngine {
 		}
 	}
 	void tEngineContext::coreRender(CommandBufferHandle* cb_list, SemaphoreHandle	acquireSemaphore
-	, SemaphoreHandle presentSemaphore, FenceHandle fence) {
+		, SemaphoreHandle presentSemaphore, FenceHandle fence) {
 		glfwPollEvents();
 		double deltaTime = time == 0 ? 0 : (static_cast<double>(clock()) - time) / 1e3;
 		time = clock();
@@ -273,19 +273,23 @@ namespace tEngine {
 		io.DisplaySize = ImVec2((float)w, (float)h);
 		if (w > 0 && h > 0)
 			io.DisplayFramebufferScale = ImVec2((float)1, (float)1);
-		
-		
+
+
 		auto& uiPass = IMGUI::m_gui.uiPass;
 		uiPass->SetImageView("back", swapChain->getImage(imageIdx));
 		//uiPass->SetImageView("depth", swapChain->getDepth());
 		//uiPass->setClearValue("back", { 0,0,0,1 });
 		//uiPass->setDepthStencilValue("depth", 1);
-		
+
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
-		prepareStage(deltaTime);
-	
+		update(deltaTime);
+		fixedTick += deltaTime;
+		while (fixedTick > fixedDuration) {
+			fixedUpdate(fixedDuration);
+			fixedTick -= fixedDuration;
+		}
 
 		//
 		//auto& cb = threadContext->cmdBuffers[imageIdx];

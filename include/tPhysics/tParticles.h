@@ -11,6 +11,9 @@ namespace tPhysics {
 		void addForce(const Vector3& force);
 		void setVelocity(const Vector3& v);
 		void setPosition(const Vector3& v);
+		void setPosition(real x, real y, real z);
+		void setDamping(real damping);
+		void setAcceleration(const Vector3& accleration);
 		bool hasFiniteMass();
 		real getMass()const;
 		real getInverseMass()const;

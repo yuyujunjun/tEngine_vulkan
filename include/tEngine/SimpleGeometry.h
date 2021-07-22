@@ -136,7 +136,7 @@ namespace tEngine {
 			std::vector<uint32_t>indices;
 			for (int i = 0; i < 36; ++i) {
 				Vertex temp;
-				temp.Position = length / 2 * glm::vec3(skyboxVertices[3 * i], skyboxVertices[3 * i + 1], skyboxVertices[3 * i + 2]);
+				temp.Position = length / 2 * glm::vec3(skyboxVertices[3 * i + 2], skyboxVertices[3 * i + 1], skyboxVertices[3 * i]);
 				indices.push_back(i);
 				vertices.push_back(temp);
 			}
