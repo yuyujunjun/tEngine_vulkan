@@ -1,5 +1,6 @@
 #include"pWorld.h"
 #include"tParticles.h"
+#include"RigidBody.h"
 namespace tPhysics {
 	ParticleWorld::ParticleWorld(unsigned maxContacts, unsigned iterations):maxContacts(maxContacts),resolver(iterations) {
 		contacts.resize(maxContacts);
@@ -43,6 +44,31 @@ namespace tPhysics {
 		if (usedContacts) {
 			if (calculateIterations)resolver.setInterations(usedContacts * 2);
 			resolver.resolveContacts(&contacts[0],usedContacts,duration);
+		}
+	}
+	void PhysicsWorld::startFrame() {
+		for (auto body : rigidBodys) {
+			body->clearAccumulator();
+			body->calculateDerivedData();
+		}
+	}
+	void PhysicsWorld::registerForce(ForceGenerator* force, RigidBody* rigidBody) {
+		forceRegistration.emplace_back(rigidBody, force);
+	}
+	void PhysicsWorld::unregisterForce(ForceGenerator* force, RigidBody* rigidBody) {
+		for (int i = forceRegistration.size() - 1; i >= 0; --i) {
+			if (forceRegistration[i].fg == force && forceRegistration[i].body == rigidBody) {
+				forceRegistration.erase(forceRegistration.begin()+i);
+				break;
+			}
+		}
+	}
+	void PhysicsWorld::runPhysics(real duration) {
+		for (auto& fg : forceRegistration) {
+			fg.fg->updateForce(fg.body, duration);
+		}
+		for (auto& body : rigidBodys) {
+			body->integrate(duration);
 		}
 	}
 }

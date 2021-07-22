@@ -100,7 +100,7 @@ namespace tEngine {
             {
                 particleArray[i].setMass(BASE_MASS);
                 particleArray[i].setVelocity({ 0, 0, 0 });
-                particleArray[i].setDamping(0.97f);
+                particleArray[i].setDamping(0.9f);
            //     particleArray[i].setAcceleration(GRAVITY);
                 particleArray[i].clearAccumulator();
             }

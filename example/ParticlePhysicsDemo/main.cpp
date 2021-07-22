@@ -60,8 +60,8 @@ int main() {
 	shader->SetShaderModule({ "draw.vsh","draw.fsh" }, { vk::ShaderStageFlagBits::eVertex,vk::ShaderStageFlagBits::eFragment });
 	obj->AddComponent<MeshRenderer>(std::make_shared<Material>(shader.get()));
 	plane->AddComponent<MeshRenderer>(obj->getComponent<MeshRenderer>()->material);
-	plane->transform.rotation = Vector3(-90,0,0);
-	plane->transform.scale = Vector3(10,10,10);
+	plane->transform.setOrientation ( Vector3(-90,0,0));
+	plane->transform.setScale( Vector3(10,10,10));
 	world.RegistryMeshRenderer(plane);
 	world.RegistryMeshRenderer(obj);
 	

@@ -24,14 +24,14 @@ namespace tEngine {
 		uploadCameraMatrix(cam->m_matrix, cam->p_matrix, bufferRange->buffer().get(), bufferRange->getOffset());
 		for (auto& renderer : renderers) {
 			renderer->material->SetBuffer("CameraMatrix", bufferRange->buffer(), bufferRange->getOffset());
-			renderer->material->SetValue(ShaderString(SV::_MATRIX_M), renderer->gameObject->transform.Matrix());
+			renderer->material->SetValue(ShaderString(SV::_MATRIX_M), renderer->gameObject->transform.updateMtx());
 			renderer->material->flushBuffer();
 			renderer->Draw(cb, renderInfo);
 		}
 	}
 	void RenderWithMaterial(CommandBufferHandle& cb, const RenderInfo& renderInfo, std::vector<Renderer*>& gobjs, Material* mat) {
 		for (auto& renderer : gobjs) {
-			mat->SetValue(ShaderString(SV::_MATRIX_M), renderer->gameObject->transform.Matrix());
+			mat->SetValue(ShaderString(SV::_MATRIX_M), renderer->gameObject->transform.updateMtx());
 			mat->flushBuffer();
 			renderer->DrawWithMaterial(cb, renderInfo, mat);
 		}

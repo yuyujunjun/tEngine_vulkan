@@ -9,7 +9,7 @@ namespace tPhysics {
 		Vector3 resultingAcc = accleration + forceAccum * inverseMass;
 
 		velocity += resultingAcc * duration;
-		velocity *= damping;
+		velocity *= pow(damping,duration);
 		clearAccumulator();
 	}
 	void Particle::clearAccumulator() {

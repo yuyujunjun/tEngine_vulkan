@@ -4,6 +4,7 @@
 //#include"tParticles.h"
 namespace tPhysics {
 	class Particle;
+	class RigidBody;
 	class ParticleForceGenerator {
 	public:
 		virtual void updateForce(Particle* particle, real duration) = 0;
@@ -79,5 +80,44 @@ namespace tPhysics {
 		ParticleAnchoredBungee() {};
 		ParticleAnchoredBungee(const Vector3& anchor, real springConstant, real restLength) :anchor(anchor), springConstant(springConstant), restLength(restLength) {}
 		virtual void updateForce(Particle* particle, real duration);
+	};
+	class ForceGenerator {
+	public:
+		virtual void updateForce(RigidBody* body, real duration) = 0;
+	};
+	struct ForceRegistration {
+		ForceRegistration() :body(0), fg(0) {}
+		ForceRegistration(RigidBody* p, ForceGenerator* f) :body(p), fg(f) {}
+		RigidBody* body;
+		ForceGenerator* fg;
+	};
+	class Gravity :public ForceGenerator {
+		Vector3 gravity;
+	public:
+		Gravity(const Vector3& gravity) :gravity(gravity) {}
+		void updateForce(RigidBody* body, real duration)override;
+	};
+	class Spring :public ForceGenerator {
+		/*if connectedBody is nullptr then the spring will be connected to a fixed point in space*/
+		RigidBody* connectedBody;
+		/** The point of connection of the spring, in local coordinates. */
+		Vector3 anchor;
+		Vector3 connectedAnchor;
+		real springConstant;
+		real restLength;
+	public:
+		bool autoConfigureConnectedAnchor=true;
+		void updateForce(RigidBody* body, real duration)override;
+	};
+	class Areo :public ForceGenerator {
+		Mat3 tensor;
+		Vector3 position;
+	public:
+		const Vector3 windSpeed;
+		Areo(const Mat3& tensor, const Vector3& position, const Vector3& windSpeed) :tensor(tensor), position(position), windSpeed(windSpeed) {}
+		void updateForce(RigidBody* body, real duration)override;
+	};
+	class AreoControl :public Areo {
+
 	};
 }

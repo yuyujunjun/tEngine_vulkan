@@ -1,5 +1,6 @@
 #include"pForceGen.h"
 #include"tParticles.h"
+#include"RigidBody.h"
 namespace tPhysics {
 	void ParticleForceRegistry::add(Particle* particle, ParticleForceGenerator* fg) {
 		registry.emplace_back(ParticleForceRegistration(particle,fg));
@@ -72,4 +73,25 @@ namespace tPhysics {
 		force *= -magnitude;
 		particle->addForce(force);
 	} 
+	void Gravity::updateForce(RigidBody* body, real duration) {
+		if (!body->hasFiniteMass())return;
+		body->addForce(gravity * body->getMass());
+	}
+	void Spring::updateForce(RigidBody* body, real duration) {
+		Vector3 pos0 = body->getTransform().getMtx() * Vector4(anchor,1);
+		Vector3 pos1 = connectedBody ? connectedBody->getTransform().getMtx() * Vector4(connectedAnchor, 1) : connectedAnchor;
+		Vector3 force = pos0 - pos1;
+		real magnitude = glm::length(force);
+		magnitude =abs( magnitude - restLength);
+		magnitude *= springConstant;
+		force = glm::normalize(force);
+		force *= -magnitude;
+		body->addForceAtPoint(force, pos0);
+		if (autoConfigureConnectedAnchor && connectedBody) {
+			connectedBody->addForceAtPoint(-force, pos1);
+		}
+	}
+	void Areo::updateForce(RigidBody* body, real duration) {
+
+	}
 }

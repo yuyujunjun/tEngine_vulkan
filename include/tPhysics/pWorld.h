@@ -28,4 +28,17 @@ namespace tPhysics {
 		ContactGenerators& getContactGenerators() { return contactGenerators; }
 		ParticleForceRegistry& getForceRegistry() { return registry; }
 	};
+	class PhysicsWorld {
+		std::list<RigidBody*> rigidBodys;
+		std::vector<ForceRegistration> forceRegistration;
+	public:
+		PhysicsWorld() = default;
+		void addRigidBody(RigidBody* body) { rigidBodys.emplace_back(body); }
+		void removeRigidBody(RigidBody* body) { rigidBodys.remove(body); }
+		void startFrame();
+		void registerForce(ForceGenerator* force, RigidBody* rigidBody);
+		void unregisterForce(ForceGenerator* force, RigidBody* rigidBody);
+		void runPhysics(real duration);
+	
+	};
 }
