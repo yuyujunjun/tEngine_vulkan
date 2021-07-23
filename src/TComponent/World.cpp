@@ -5,20 +5,32 @@
 #include"Camera.h"
 #include"Buffer.h"
 #include"CommandBufferBase.h"
-
+using namespace tPhysics;
 namespace tEngine {
-	void tWorld::RegistryMeshRenderer(const GameObject& obj) {
-		renderers.emplace_back(obj->getComponent<MeshRenderer>());
+	
+	void tWorld::AddGameObject(GameObject& obj) {
+		Renderer* renderer = nullptr;
+		renderer = obj->getComponent<MeshRenderer>();
+		if (renderer != 0) {
+			renderWorld.RegistryMeshRenderer(renderer);
+		}
+		RigidBody* body = obj->getComponent<RigidBody>();
+		if (body) {
+			rigidBodyWorld.addRigidBody(body);
+		}
 	}
-	void tWorld::RemoveMeshRenderer(const GameObject& obj) {
+	void RenderWorld::RegistryMeshRenderer(const Renderer* obj) {
+		renderers.emplace_back(obj);
+	}
+	void RenderWorld::RemoveMeshRenderer(const Renderer* obj) {
 		for (auto it = renderers.begin(); it != renderers.end(); ++it) {
-			if ((*it)->gameObject->Identity()==obj->Identity()) {
+			if ((*it)->gameObject->Identity()==obj->gameObject->Identity()) {
 				renderers.erase(it);
 			}
 		}
 	}
 	
-	void tWorld::renderWithCamera(CommandBufferHandle& cb, const RenderInfo& renderInfo,const  CameraTransform* cam) {
+	void RenderWorld::renderWithCamera(CommandBufferHandle& cb, const RenderInfo& renderInfo,const  CameraTransform* cam) {
 		auto bufferRange=requestCameraBufferRange(device);
 		bufferRange->NextRangenoLock();
 		uploadCameraMatrix(cam->m_matrix, cam->p_matrix, bufferRange->buffer().get(), bufferRange->getOffset());

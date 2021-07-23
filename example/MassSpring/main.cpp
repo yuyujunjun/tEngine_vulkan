@@ -7,7 +7,7 @@
 #include"Material.h"
 #include"MassSpring.h"
 using namespace tEngine;
-void defaultRender(tWorld* world, const CameraTransform& cam) {
+void defaultRender(RenderWorld* world, const CameraTransform& cam) {
 	auto& context = tEngineContext::context;
 	if (!context.hasInitialized()) {
 		ContextInit();
@@ -41,7 +41,7 @@ int main() {
 	cam.m_windowSize= glm::uvec2(context.swapChain->getExtent().width, context.swapChain->getExtent().height);
 	CameraSystem cam_sys;
 	cam_sys.setCamera(&cam);
-	tWorld world(device.get());
+	RenderWorld world(device.get());
 	
 	
 	
@@ -55,8 +55,8 @@ int main() {
 	sphere->AddComponent<MeshRenderer>(std::make_shared<Material>(shadowShader.get()));
 	world.RegistryMeshRenderer(cloth);
 	world.RegistryMeshRenderer(sphere);
-	sphere->transform.position = { 0,0.4,-1.4 };
-	sphere->transform.scale = { 0.2,0.2,0.2 };
+	sphere->transform.setPosition( { 0,0.4,-1.4 });
+	sphere->transform.setScale( { 0.2,0.2,0.2 });
 	auto meshAsset = LoadMesh("sphere.obj");
 	sphere->AddComponent<MeshBuffer>()->setMeshUpload(meshAsset->mesh,device.get());
 	cloth->AddComponent<MeshBuffer>()->setMeshUpload(spring.mesh, device.get());

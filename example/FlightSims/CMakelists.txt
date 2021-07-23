@@ -1,0 +1,6 @@
+project(FlightSims)
+file(GLOB_RECURSE c_files  *.cpp *.c)
+
+add_executable(FlightSims ${c_files})
+
+target_link_libraries(FlightSims Engine)

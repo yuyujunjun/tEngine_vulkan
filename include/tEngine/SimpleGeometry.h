@@ -33,6 +33,17 @@ namespace tEngine {
 		size_t IndexBufferSize() {
 			return indices.size() * sizeof(uint32_t);
 		}
+		Geo& AddGeo(const Geo* geo) {
+			uint32_t idxBegin = vertices.size();
+			uint32_t currentIdxSize = indices.size();
+			vertices.insert(vertices.end(),geo->vertices.begin(),geo->vertices.end());
+			indices.insert(indices.end(), geo->indices.begin(), geo->indices.end());
+			for (uint32_t i = currentIdxSize; i < indices.size(); ++i) {
+				indices[i] += idxBegin;
+			}
+			return *this;
+		}
+
 	};
 	struct Line :public Geo {
 		Line(std::vector<Vertex> _vertices) {

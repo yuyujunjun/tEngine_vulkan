@@ -1,6 +1,7 @@
 #include"RigidBody.h"
 #include"physicsCore.h"
 #include"tTransform.h"
+#include"GameObject.h"
 namespace tPhysics {
 	void RigidBody::integrate(const real duration) {
 		if (!isAwake)return;
@@ -10,8 +11,8 @@ namespace tPhysics {
 		angularVelocity += angularAccleration * duration;
 		velocity *= std::pow(linearDamping,duration);
 		angularVelocity *= std::pow(angularDamping,duration);
-		transform.setPosition(transform.getPosition()+velocity*duration);
-		transform.rotate(angularVelocity, duration);
+		gameObject->transform.setPosition(gameObject->transform.getPosition()+velocity*duration);
+		gameObject->transform.rotate(angularVelocity, duration);
 		
 		calculateDerivedData();
 		clearAccumulator();
@@ -25,14 +26,14 @@ namespace tPhysics {
 
 	}
 	void RigidBody::calculateDerivedData() {
-		transform.updateMtx();
+		gameObject->transform.updateMtx();
 		transformInertiaTensor();
 	}
 	void RigidBody::setInertiaTensor(const Mat3& inertiaTensor) {
 		inverseInertiaTensor = glm::inverse(inertiaTensor);
 	}
 	void RigidBody::transformInertiaTensor() {
-		auto rotationMat = transform.getOrientationMat();
+		auto rotationMat = gameObject->transform.getOrientationMat();
 		inverseInertiaTensorWorld = glm::transpose(rotationMat) * inverseInertiaTensor * rotationMat;
 	}
 	void RigidBody::clearAccumulator() {
@@ -44,13 +45,13 @@ namespace tPhysics {
 		isAwake = true;
 	}
 	void RigidBody::addForceAtLocalPoint(const Vector3& force, const Vector3& point) {
-		Vector4 point_in_world = transform.getMtx() * Vector4(point,1);
+		Vector4 point_in_world = gameObject->transform.getMtx() * Vector4(point,1);
 		addForceAtPoint(force, point_in_world);
 		isAwake = true;
 	}
 	void RigidBody::addForceAtPoint(const Vector3& force, const Vector3& point) {
 		addForce(force);
-		addTorque( glm::cross(point - transform.getPosition(),force));
+		addTorque( glm::cross(point - gameObject->transform.getPosition(),force));
 		isAwake = true;
 	}
 	void RigidBody::addTorque(const Vector3& torque) {
@@ -59,6 +60,9 @@ namespace tPhysics {
 	}
 	void RigidBody::setVelocity(const Vector3& v) {
 		this->velocity = v;
+	}
+	void RigidBody::setAngularVelocity(const Vector3& v) {
+		this->angularVelocity = v;
 	}
 	void RigidBody::setLinearDamping(real damping) {
 		this->linearDamping = damping;
@@ -74,7 +78,7 @@ namespace tPhysics {
 	void RigidBody::setAwake(const bool awake) {
 		isAwake = awake;
 		if (awake) {
-			
+			motion = sleepEpsilon * 2.0f;
 		}
 		else {
 			velocity.x = velocity.y = velocity.z = 0;
@@ -90,6 +94,9 @@ namespace tPhysics {
 		mass = mass;
 		inverseMass = 1.0 / mass;
 	}
+	const tEngine::Transform& RigidBody::getTransform() const {
+		return  gameObject->transform;
+		; }
 	void RigidBody::setInverseMass(real inverse_mass) {
 		inverseMass = inverse_mass;
 	}
@@ -101,7 +108,7 @@ namespace tPhysics {
 		return velocity;
 	}
 	const Vector3& RigidBody::getPosition()const {
-		return transform.getPosition();//position;
+		return gameObject->transform.getPosition();//position;
 	}
 	const Vector3& RigidBody::getAcceleration()const {
 		return accleration;

@@ -18,7 +18,7 @@ using namespace tPhysics;
 
 
 
-void defaultRender(tWorld* world, const CameraTransform& cam) {
+void defaultRender(RenderWorld* world, const CameraTransform& cam) {
 	auto& context = tEngineContext::context;
 	if (!context.hasInitialized()) {
 		ContextInit();
@@ -48,7 +48,7 @@ int main() {
 
 	auto& context = tEngine::tEngineContext::context;
 	auto& device = context.device;
-	tWorld world(device.get());
+	RenderWorld world(device.get());
 	GameObject obj = GameObject_::Create();
 	GameObject plane = GameObject_::Create();
 	plane->AddComponent<MeshBuffer>()->setMeshUpload(Mesh::UnitSquare(),device.get());

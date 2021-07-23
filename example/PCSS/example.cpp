@@ -30,7 +30,7 @@ int main() {
 	cam.setCamera(c);
 	auto context = &tEngineContext::context;
 	auto& device = context->device;
-	tWorld world(device.get());
+	RenderWorld world(device.get());
 	world.AddSystem(&cam);
 	auto shadowPass = getCollectShadowPass(device.get(), vk::Format::eR32Sfloat);
 	auto shadowMapCreateInfo = ImageCreateInfo::render_target(1024, 1024, (VkFormat)vk::Format::eR32Sfloat);
@@ -79,22 +79,22 @@ int main() {
 	character->AddComponent<MeshBuffer>()->setMeshUpload(meshAsset->mesh,device.get());
 	plane->AddComponent<MeshBuffer>()->setMeshUpload(Mesh::UnitSquare(), device.get());
 	
-	plane->transform.rotation = glm::vec3(-90,0,0);
-	plane->transform.scale = glm::vec3(10, 10, 10);
+	plane->transform.setOrientation( glm::vec3(-90,0,0));
+	plane->transform.setScale( glm::vec3(10, 10, 10));
 	{
 		auto box = Mesh::UnitBox();
 		Transform transform;
-		transform.scale = glm::vec3(0.1, 0.1, 0.2);
+		transform.setScale( glm::vec3(0.1, 0.1, 0.2));
 		FlipFace(box);
 		for (auto& b : box.vertices) {
-			b.Position = transform.Matrix() * glm::vec4(b.Position.x, b.Position.y, b.Position.z, 1);
+			b.Position = transform.updateMtx() * glm::vec4(b.Position.x, b.Position.y, b.Position.z, 1);
 		}
 		Light->AddComponent<MeshBuffer>()->setMeshUpload(box,device.get());
 	}
 	//Light->transform.scale = glm::vec3(.1,.1,.1);
-	Light->transform.position = glm::vec3(1, 2, 2);
-	Light->transform.rotation = glm::vec3(-120,0,0);
-	Light->transform.scale = glm::vec3(1, 1, 1);
+	Light->transform.setPosition( glm::vec3(1, 2, 2));
+	Light->transform.setOrientation( glm::vec3(-120,0,0));
+	Light->transform.setScale( glm::vec3(1, 1, 1));
 	float area = 1;
 	
 	float lightIntensity = .2;
@@ -119,10 +119,10 @@ int main() {
 		obj.material->SetImage("_ShadowMap", ShadowMap, ShadowMap->get_view()->get_float_view(), tEngine::StockSampler::LinearShadow);
 		obj.material->SetValue("uKd", uKd);
 		obj.material->SetValue("uKs", uKs);
-		obj.material->SetValue("lightPosArea", glm::vec4(Light->transform.position,area));
+		obj.material->SetValue("lightPosArea", glm::vec4(Light->transform.getPosition(),area));
 		obj.material->SetValue<float>("lightIntensity", lightIntensity);
 		obj.material->SetValue("cameraPos", cam.getCameraPosition());
-		obj.material->SetValue("world_to_shadow", Ortho(lightArea.x, lightArea.y, lightArea.z, lightArea.w, 40)* glm::lookAt(Light->transform.position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
+		obj.material->SetValue("world_to_shadow", Ortho(lightArea.x, lightArea.y, lightArea.z, lightArea.w, 40)* glm::lookAt(Light->transform.getPosition(), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
 		obj.material->SetValue("halfblockSize", 8);
 		obj.material->SetValue("maxKernelSize",8);
 		obj.material->SetValue("depthMapSize",glm::vec2(ShadowMap->get_width(),ShadowMap->get_height()) );
@@ -149,10 +149,12 @@ int main() {
 		
 		ImGui::ShowDemoWindow();
 		ImGui::Begin("test");
-		ImGui::DragFloat3("lightPos",&Light->transform.position[0],0.1,-10,10);
+		ImGui::DragFloat3("lightPos",&Light->transform.getPosition()[0],0.1,-10,10);
 		ImGui::DragFloat("lightArea", &area, 0.1, 0.01, 30);
-		ImGui::DragFloat3("lightRotation", &Light->transform.rotation[0],1,-360,360);
-		ImGui::InputFloat3("lightScale", &Light->transform.scale[0]);
+		glm::vec3 eulerAngle = Light->transform.getEulerAngle();
+		ImGui::DragFloat3("lightRotation", &eulerAngle[0],1,-360,360);
+		Light->transform.setOrientation(eulerAngle);
+		ImGui::InputFloat3("lightScale", &Light->transform.getScale()[0]);
 		ImGui::InputFloat4("area", &lightArea[0]);
 		ImGui::DragFloat3("uKd",&uKd[0],.01,0,3);
 		ImGui::DragFloat3("uKs",&uKs[0],.01,0,15);
@@ -172,7 +174,7 @@ int main() {
 			//Update shadowmap
 			auto cameraBufferRange=requestCameraBufferRange(device.get());
 			cameraBufferRange->NextRangenoLock();
-			auto view = (glm::lookAt(Light->transform.position, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
+			auto view = (glm::lookAt(Light->transform.getPosition(), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
 			auto projection = Ortho(lightArea.x, lightArea.y, lightArea.z, lightArea.w, 40);
 			uploadCameraMatrix(view, projection, cameraBufferRange->buffer().get(), cameraBufferRange->getOffset());
 			shadowMateial->SetBuffer("CameraMatrix", cameraBufferRange->buffer(), cameraBufferRange->getOffset());

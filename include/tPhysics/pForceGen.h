@@ -109,15 +109,24 @@ namespace tPhysics {
 		bool autoConfigureConnectedAnchor=true;
 		void updateForce(RigidBody* body, real duration)override;
 	};
-	class Areo :public ForceGenerator {
+	class Aero :public ForceGenerator {
+	protected:
 		Mat3 tensor;
 		Vector3 position;
 	public:
-		const Vector3 windSpeed;
-		Areo(const Mat3& tensor, const Vector3& position, const Vector3& windSpeed) :tensor(tensor), position(position), windSpeed(windSpeed) {}
+		Vector3& windSpeed;
+		Aero(const Mat3& tensor, const Vector3& position,  Vector3& windSpeed) :tensor(tensor), position(position), windSpeed(windSpeed) {}
 		void updateForce(RigidBody* body, real duration)override;
+		void updateForceFromTensor(RigidBody* body, real duration, const Mat3& tensor);
 	};
-	class AreoControl :public Areo {
-
+	class AeroControl :public Aero {
+		Mat3 maxTensor;
+		Mat3 minTensor;
+		real controlSetting;//current tensor should be interpolated by maxTensor and minTensor
+		Mat3 getTensor();
+	public:
+		AeroControl(const Mat3& base, const Mat3& min, const Mat3& max,  Vector3& position,  Vector3& windSpeed) :Aero(base, position, windSpeed), maxTensor(max), minTensor(min) {};
+		void setControl(real value) { controlSetting = value; }
+		void updateForce(RigidBody* body, real duration)override;
 	};
 }

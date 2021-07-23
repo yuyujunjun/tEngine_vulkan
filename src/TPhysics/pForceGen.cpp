@@ -91,7 +91,42 @@ namespace tPhysics {
 			connectedBody->addForceAtPoint(-force, pos1);
 		}
 	}
-	void Areo::updateForce(RigidBody* body, real duration) {
+	void Aero::updateForce(RigidBody* body, real duration) {
+		Aero::updateForceFromTensor(body, duration, tensor);
+	}
+	
+	void Aero::updateForceFromTensor(RigidBody* body, real duration, const Mat3& tensor) {
+		// Calculate total velocity (windspeed and body's velocity).
+		Vector3 velocity = body->getVelocity();
+		velocity += windSpeed;
 
+		// Calculate the velocity in body coordinates
+		Vector3 bodyVel = body->getTransform().transformInverseDirection(velocity);// *Vector4(velocity, 0);
+
+		// Calculate the force in body coordinates
+		Vector3 bodyForce = tensor*(bodyVel);
+		// Calculate the force in world coordinates
+		Vector3 force = body->getTransform().transformDirection(bodyForce);
+
+		// Apply the force
+		body->addForceAtLocalPoint(force, position);
+	}
+	void AeroControl::updateForce(RigidBody* body, real duration) {
+		Mat3 tensor = getTensor();
+		Aero::updateForceFromTensor(body, duration, tensor);
+	}
+	Mat3 AeroControl::getTensor() {
+		if (controlSetting <= -1.0f) return minTensor;
+		else if (controlSetting >= 1.0f) return maxTensor;
+		else if (controlSetting < 0)
+		{
+			real prop = controlSetting + 1;
+			return minTensor * (1 - prop) + tensor * prop;// , controlSetting + 1.0f);
+		}
+		else if (controlSetting > 0)
+		{
+			return tensor*(1-controlSetting)+ maxTensor* controlSetting;
+		}
+		else return tensor;
 	}
 }

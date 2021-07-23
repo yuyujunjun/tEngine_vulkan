@@ -8,7 +8,7 @@
 using namespace tEngine;
 
 
-void defaultRender(tWorld* world, const CameraTransform& cam) {
+void defaultRender(RenderWorld* world, const CameraTransform& cam) {
 	auto& context = tEngineContext::context;
 	if (!context.hasInitialized()) {
 		ContextInit();
@@ -37,7 +37,7 @@ int main() {
 
 	auto& context = tEngine::tEngineContext::context;
 	auto& device = context.device; 
-	tWorld world(context.device.get());
+	RenderWorld world(context.device.get());
 	auto meshAsset = tEngine::LoadMesh("Obj/Marry.obj");
 	GameObject character = GameObject_::Create();
 	auto renderer = character->AddComponent<MeshRenderer>(std::make_shared<Material>(tShaderInterface::requestTexturedShader(device.get())));
@@ -47,7 +47,7 @@ int main() {
 	auto image = createImage(device.get(),
 		ImageCreateInfo::immutable_2d_image(imageAsset->width, imageAsset->height, VK_FORMAT_R8G8B8A8_UNORM), imageAsset, nullptr);
 	renderer->material->SetImage("_MainTex", image);
-	renderer->material->SetValue(ShaderString(SV::_MATRIX_M), character->transform.Matrix());
+	renderer->material->SetValue(ShaderString(SV::_MATRIX_M), character->transform.updateMtx());
 	world.RegistryMeshRenderer(character);
 
 	CameraTransform cam;

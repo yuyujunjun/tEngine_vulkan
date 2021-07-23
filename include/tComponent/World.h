@@ -3,7 +3,8 @@
 #include<vector>
 #include"Component.h"
 #include"renderer.h"
-
+#include"RenderWorld.h"
+#include"tPhysics/pWorld.h"
 namespace tEngine {
 	class System;
 	struct RenderInfo;
@@ -17,31 +18,28 @@ namespace tEngine {
 	using CommandBufferHandle = std::shared_ptr <CommandBuffer>;
 
 	class Component;
+
+
 	class tWorld {
+		RenderWorld renderWorld;
+		tPhysics::PhysicsWorld rigidBodyWorld;
 		std::vector<GameObject> gameObjects;
 		std::vector<System*> systems;
-		std::vector<Renderer*> renderers;
-	//	RenderEngine renderEngine;
-		const Device* device;
 	public:
-		tWorld(const Device* device) :device(device) {};
+
+		tWorld(Device* device) :renderWorld(device) {};// = default;
+		void AddGameObject(GameObject& gameObj);
 		void AddSystem(System* sys) {
 			systems.push_back(sys);
 		}
-		void RegistryMeshRenderer(const GameObject& obj);
-		void RemoveMeshRenderer(const GameObject& obj);
 		void update(float dt) {
 			for (auto& sys : systems) {
 				sys->ExecuteAllComponents(dt);
 			}
-			
+			rigidBodyWorld.startFrame();
+			rigidBodyWorld.runPhysics(dt);
 		}
-		std::vector<Renderer*>& getRenderers() { return renderers; }
-		void renderWithCamera(CommandBufferHandle& cb, const RenderInfo& renderInfo,const CameraTransform* cam);
-	protected:
-		
-
+		//void render(CommandBufferHandle cb,const RenderInfo& info){}
+		tPhysics::PhysicsWorld& getPhysicsWorld() { return rigidBodyWorld; }
 	};
-	void RenderWithMaterial(CommandBufferHandle& cb, const RenderInfo& renderInfo, std::vector<Renderer*>& gobjs, Material* mat);
-	
 }

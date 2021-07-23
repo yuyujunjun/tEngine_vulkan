@@ -14,7 +14,7 @@ namespace tEngine {
 	}
 	void MeshBuffer::createVertexBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain ) {
 		assert(mesh.vertices.size() > 0);
-		if (VBO && VBO->getSize() >= mesh.vertices.size() * sizeof(Vertex)) { 
+		if (VBO && VBO->getSize() >= mesh.vertices.size() * sizeof(Vertex)&&VBO->getCreateInfo().domain==domain) { 
 			LOG(tEngine::LogLevel::Warning, "No need to create Vertex buffer, no operations. Call uploadVertexBuffer to upload data.");
 			return;
 		}
@@ -26,7 +26,7 @@ namespace tEngine {
 	}
 	void MeshBuffer::createIdxBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain ) {
 		if (mesh.indices.size() == 0)return;
-		if (IBO && IBO->getSize() >= mesh.indices.size() * sizeof(uint32_t)) { 
+		if (IBO && IBO->getSize() >= mesh.indices.size() * sizeof(uint32_t) && IBO->getCreateInfo().domain == domain) {
 			LOG(tEngine::LogLevel::Warning, "No need to create Index buffer, no operations. Call uploadIdxBuffer to upload data.");
 			return;
 		}
