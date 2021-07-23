@@ -7,9 +7,28 @@
 #include<glm/gtc/matrix_transform.hpp>
 #include"ShaderVariable.h"
 #include"imgui.h"
+#include"GameObject.h"
 #include"Component.h"
 namespace tEngine {
+    class tRenderPass;
+    using RenderPassHandle = std::shared_ptr<tRenderPass>;
+    class Material;
+    struct RenderInfo;
+    class CommandBuffer;
+    using CommandBufferHandle = std::shared_ptr<CommandBuffer>;
+    class Renderer;
 
+    class tShaderInterface;
+    class tBuffer;
+    using BufferHandle = std::shared_ptr<tBuffer>;
+    class BufferRangeManager;
+    class Device;
+    class tSwapChain;
+    using SwapChainHandle = std::shared_ptr<tSwapChain>;
+    class tImage;
+    using ImageHandle = std::shared_ptr<tImage>;
+    class GameObject_;
+    using GameObject = std::shared_ptr<GameObject_>;
     enum class ProjectionType {
         Ortho,
         Perspective
@@ -28,10 +47,39 @@ namespace tEngine {
         float nearPlane = 0.01;
         float farPlane = 1000;
         float fieldOfview = glm::radians(60.f);
-
+        glm::vec2 halfSize = glm::vec2(100);
         void update();
     };
-
+    class Camera:public Component {
+     
+        ImageHandle renderTexture=nullptr;
+        vk::ImageView renderImageView = {};
+        RenderPassHandle renderPass;
+        
+        glm::vec2 viewPortRatio;
+        glm::vec2 scissorRatio;
+       
+    public:
+        static GameObject Create() {
+            GameObject obj = GameObject_::Create();
+            obj->AddComponent<Camera>();
+            return obj;
+        }
+        CameraTransform transform;
+        const ImageHandle& getRenderTexture()const { return renderTexture; }
+        const vk::ImageView& getImageView()const { return renderImageView; }
+        const ImageHandle& getImage()const { return renderTexture; }
+        Camera(GameObject_* gameObject) :Component(gameObject),renderTexture(nullptr), renderImageView(vk::ImageView()),viewPortRatio(1,1),scissorRatio(1,1) {}
+     //   Camera(ImageHandle& renderTexture, const vk::ImageView& imageView) :renderTexture(renderTexture), renderImageView(imageView), viewPortRatio(1, 1), scissorRatio(1, 1) {}
+        const glm::mat4& ViewMatrix()const { return transform.m_matrix; }
+        const glm::mat4& ProjectionMatrix()const { return transform.p_matrix; }
+        
+        RenderPassHandle& getRenderPass() { return renderPass; }
+        void setRenderTexture(const ImageHandle& image, const vk::ImageView& imageView) { renderTexture = image; renderImageView = imageView; }
+        const glm::vec2& getViewPortRatio() { return viewPortRatio; }
+        const glm::vec2& getScissorRatio() { return scissorRatio; }
+       
+    };
     class CameraSystem:public System
     {
     public:
@@ -101,11 +149,6 @@ namespace tEngine {
  
 
 
-    class tShaderInterface;
-    class tBuffer;
-    using BufferHandle = std::shared_ptr<tBuffer>;
-    class BufferRangeManager;
-    class Device;
     BufferRangeManager* requestCameraBufferRange(const Device* device);
   
   void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material);

@@ -24,6 +24,11 @@
 #include"Shader.h"
 #include"ShaderInterface.h"
 #include"Buffer.h"
+#include"renderer.h"
+#include"Material.h"
+#include"GameObject.h"
+#include"FrameBuffer.h"
+#include"renderHelper.h"
 using namespace tEngine;
 
 static const float MaxVerticalAngle = 85.0f; //must be less than 90 to avoid gimbal lock
@@ -47,6 +52,8 @@ inline float sign(float s)
 {
     return (s < 0.f) ? -1.f : 1.f;
 }
+
+
 
 CameraSystem::CameraSystem()
 {
@@ -467,7 +474,7 @@ void CameraTransform::update()
         cam->p_matrix = glm::perspective(fieldOfview, aspect, nearPlane, farPlane);
     }
     else {
-
+        cam->p_matrix = glm::ortho(-halfSize.x,halfSize.x,-halfSize.y,halfSize.y,nearPlane,farPlane);
     }
 }
 

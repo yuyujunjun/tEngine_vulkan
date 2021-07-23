@@ -72,7 +72,7 @@ namespace tEngine {
 		
 		const uint32_t allocatedFrameBufferCount = 8;
 		using SharedPtr = std::shared_ptr<tRenderPass>;
-		tRenderPass(Device* device) :device(device) {
+		tRenderPass(const Device* device) :device(device) {
 
 		}
 		~tRenderPass();

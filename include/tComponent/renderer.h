@@ -16,9 +16,9 @@ namespace tEngine {
 	struct RenderInfo {
 		tRenderPass* renderPass=0;
 		unsigned subpass = 0;
-		glm::mat4 viewMtx;
-		glm::mat4 perspectiveMtx;
-		glm::mat4 vpMtx;
+		//glm::mat4 viewMtx;
+		//glm::mat4 perspectiveMtx;
+		//glm::mat4 vpMtx;
 	};
 	class Renderer:public Component {
 	public:

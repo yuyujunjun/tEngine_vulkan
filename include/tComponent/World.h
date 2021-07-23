@@ -16,7 +16,7 @@ namespace tEngine {
 	using GameObject = std::shared_ptr<GameObject_>;
 	struct CameraTransform;
 	using CommandBufferHandle = std::shared_ptr <CommandBuffer>;
-
+	class Camera;
 	class Component;
 
 
@@ -41,5 +41,6 @@ namespace tEngine {
 		}
 		//void render(CommandBufferHandle cb,const RenderInfo& info){}
 		tPhysics::PhysicsWorld& getPhysicsWorld() { return rigidBodyWorld; }
+		RenderWorld& getRenderWorld() { return renderWorld; }
 	};
 }

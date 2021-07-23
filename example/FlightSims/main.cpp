@@ -21,27 +21,16 @@ void TransformGeo(const Transform& transform, Geo* geo) {
 
 
 
-void defaultRender(tWorld* world, const CameraTransform& cam) {
+void defaultRender(tWorld* world) {
 	auto& context = tEngineContext::context;
 	if (!context.hasInitialized()) {
 		ContextInit();
 	}
 	auto device = tEngineContext::context.device.get();
-	static auto renderPass = getSingleRenderpass(device, context.swapChain->getFormat());
-	renderPass->setClearValue("back", { 0,0,0,1 });
-	renderPass->setDepthStencilValue("depth", 1);
+	
+	
 	context.Record([&](double timeDelta, CommandBufferHandle& cb) {
-		renderPass->SetImageView("back", context.swapChain->getImage(context.getImageIdx()));
-		renderPass->setTransientImageView("depth");
-		auto frameBuffer = renderPass->requestFrameBuffer();
-		cb->beginRenderPass(renderPass, frameBuffer, true);
-		cb->setViewport(frameBuffer->getViewPort());
-		cb->setScissor(0, frameBuffer->getRenderArea());
-		RenderInfo info;
-		info.renderPass = renderPass.get();
-		info.subpass = 0;
-		world->renderWithCamera(cb, info, &cam);
-		cb->endRenderPass();
+		world->getRenderWorld().Render(cb, context.swapChain, context.getImageIdx());
 		});
 	context.Loop(context.AddThreadContext());
 }
@@ -101,8 +90,7 @@ int main() {
 	plane->transform.setScale(Vector3(10, 10, 10));
 	plane->transform.setPosition(0, -10, 0);
 	plane->transform.setParent(&aircraft->transform);
-	world.AddGameObject(aircraft);
-	world.AddGameObject(plane);
+	
 
 
 
@@ -114,13 +102,16 @@ int main() {
 	phy_world.registerForce(&sims.right_wing, body);
 	phy_world.registerForce(&sims.rudder, body);
 	phy_world.registerForce(&sims.tail, body);
-	CameraTransform cam;
-	cam.m_windowSize = glm::uvec2(context.swapChain->getExtent().width,context.swapChain->getExtent().height);
-	cam.update();
-	CameraSystem cam_sys;
-	cam_sys.setCamera(&cam);
-	world.AddSystem(&cam_sys);
+	GameObject camera = Camera::Create();
 	
+	camera->getComponent<Camera>()->transform.m_windowSize = glm::uvec2(context.swapChain->getExtent().width,context.swapChain->getExtent().height);
+	camera->getComponent<Camera>()->transform.update();
+	CameraSystem cam_sys;
+	cam_sys.setCamera(&camera->getComponent<Camera>()->transform);
+	world.AddSystem(&cam_sys);
+	world.AddGameObject(aircraft);
+	world.AddGameObject(plane);
+	world.AddGameObject(camera);
 
 	float pos[2] = {0,0};
 	bool rope = false;
@@ -152,7 +143,7 @@ int main() {
 		phy_world.runPhysics(timeDelta);
 		//LOG(LogLevel::Information,aircraft->transform.getEulerAngle().x, aircraft->transform.getEulerAngle().y, aircraft->transform.getEulerAngle().z);
 		},1.0/120.0);
-	defaultRender(&world,cam);
+	defaultRender(&world);
 	aircraft.reset();
 	
 	return 0;

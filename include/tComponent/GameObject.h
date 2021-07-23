@@ -43,7 +43,7 @@ namespace tEngine {
 		template<typename T>
 		T* getComponent() {
 			auto idx = typeid(T).hash_code();
-			for (unsigned i = component_id.size() - 1; i >= 0; --i) {
+			for (int i = component_id.size() - 1; i >= 0; --i) {
 				if (idx == component_id[i]) {
 					return static_cast<T*>(components[i]);
 				}

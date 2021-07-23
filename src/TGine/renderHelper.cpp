@@ -112,8 +112,17 @@ namespace tEngine {
 
 
 	}
-	RenderPassHandle getSingleRenderpass(Device* device, vk::Format format) {
-		auto& handle = std::make_shared<tRenderPass>(device);
+	RenderPassHandle ForwardRenderPass::requestRenderPass(const Device* device,vk::Format format) {
+		uniqueAttribute att;
+		att.format = format;
+		auto renderPass = forwardRenderPassPool.request(att);
+		if (renderPass == nullptr) {
+			renderPass = forwardRenderPassPool.allocate(att,device);
+			getForwardRenderPass(format,device, renderPass);
+		}
+		return renderPass;
+	}
+	void getForwardRenderPass(vk::Format format,const Device* device, RenderPassHandle& handle) {
 		//	pass.addColorOutput("debug", (vk::ImageLayout)VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 		handle->SetAttachmentDescription("back", StartColorDescription(format));
 		//	Handle->SetAttachmentDescription("debug", StartColorDescription(vk::Format::eR8G8B8A8Srgb));
@@ -123,9 +132,14 @@ namespace tEngine {
 		pass.setDepth("depth", vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
 		handle->SetDependencies(SingleDependencies());
-		handle->setClearValue("back", {0,0,0,0});
-		handle->setDepthStencilValue("depth",1,0);
+		handle->setClearValue("back", { 0,0,0,0 });
+		handle->setDepthStencilValue("depth", 1, 0);
 		handle->setupRenderPass();
+		
+	}
+	RenderPassHandle getSingleRenderpass(Device* device, vk::Format format) {
+		auto& handle = std::make_shared<tRenderPass>(device);
+		getForwardRenderPass(format,device, handle);
 		return handle;
 	}
 	RenderPassHandle getUIRenderpass(Device* device, vk::Format format) {
