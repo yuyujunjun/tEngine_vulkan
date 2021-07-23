@@ -18,22 +18,6 @@ void TransformGeo(const Transform& transform, Geo* geo) {
 }
 
 
-
-
-
-void defaultRender(tWorld* world) {
-	auto& context = tEngineContext::context;
-	if (!context.hasInitialized()) {
-		ContextInit();
-	}
-	auto device = tEngineContext::context.device.get();
-	
-	
-	context.Record([&](double timeDelta, CommandBufferHandle& cb) {
-		world->getRenderWorld().Render(cb, context.swapChain, context.getImageIdx());
-		});
-	context.Loop(context.AddThreadContext());
-}
 int main() {
 	ContextInit();
 	//ParticleWorld pWorld(100);
@@ -135,15 +119,16 @@ int main() {
 			aircraft->transform.setOrientation({ 0,0,0 });
 
 		}
-		
-	
 	});
 	context.FixedUpdate([&](double timeDelta) {
 		phy_world.startFrame();
 		phy_world.runPhysics(timeDelta);
 		//LOG(LogLevel::Information,aircraft->transform.getEulerAngle().x, aircraft->transform.getEulerAngle().y, aircraft->transform.getEulerAngle().z);
 		},1.0/120.0);
-	defaultRender(&world);
+	context.Record([&](double timeDelta, CommandBufferHandle& cb) {
+		world.getRenderWorld().Render(cb, context.swapChain, context.getImageIdx());
+		});
+	context.Loop(context.AddThreadContext());
 	aircraft.reset();
 	
 	return 0;

@@ -11,20 +11,17 @@
 #include"RigidBody.h"
 using namespace tPhysics;
 namespace tEngine {
-	
+
 	void tWorld::AddGameObject(GameObject& obj) {
-		Renderer* renderer = nullptr;
-		renderer =static_cast<Renderer*>( obj->getComponent<MeshRenderer>());
-		if (renderer != 0) {
-			renderWorld.RegistryMeshRenderer(renderer);
+		if (obj->hasComponent<MeshRenderer>()) {
+			renderWorld.RegistryMeshRenderer(obj->getComponent<MeshRenderer>());
 		}
-		RigidBody* body = obj->getComponent<RigidBody>();
-		if (body) {
-			rigidBodyWorld.addRigidBody(body);
+	
+		if (obj->hasComponent<RigidBody>()) {
+			rigidBodyWorld.addRigidBody(obj->getComponent<RigidBody>());
 		}
-		Camera* cam = obj->getComponent<Camera>();
-		if (cam) {
-			renderWorld.AddCamera(cam);
+		if (obj->hasComponent<Camera>()) {
+			renderWorld.AddCamera(obj->getComponent<Camera>());
 		}
 	}
 	void RenderWorld::AddCamera(Camera* cam) { 
@@ -67,7 +64,9 @@ namespace tEngine {
 		
 	}
 	void RenderWorld::Render(CommandBufferHandle& cb, const SwapChainHandle& swapChain, uint32_t idx) {
-		updateMainCameraRT(swapChain, idx, *mainCamera);
+		if (mainCamera) {
+			updateMainCameraRT(swapChain, idx, *mainCamera);
+		}
 		for (auto cam : cameras) {
 			PrepareRenderPass(*cam);
 		}

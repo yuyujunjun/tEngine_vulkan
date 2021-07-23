@@ -3,6 +3,8 @@
 #include<typeinfo>
 #include<memory>
 #include<vector>
+#include<unordered_map>
+//#include<atomic>
 #include"tTransform.h"
 #include"Component.h"
 namespace tEngine {
@@ -22,7 +24,15 @@ namespace tEngine {
 		template<typename T,typename ...Args>
 		T* AddComponent(Args... args) {
 			components.emplace_back(new T(this,args...));
-			component_id.emplace_back(typeid(T).hash_code());
+			auto h_id = typeid(T).hash_code();
+			component_id.emplace_back(h_id);
+			//componentExist[typeid(T).hash_code()].
+			if (componentExist.count(h_id) == 0) {
+				componentExist.insert({ h_id,0 });
+			}
+			else {
+				componentExist[h_id] += 1;
+			}
 			return static_cast<T*>(components.back());
 		}
 		template<typename T>
@@ -34,8 +44,9 @@ namespace tEngine {
 					components[i] = nullptr;
 					component_id.erase(component_id.begin() + i);
 					components.erase(component_id.begin() + i);
+					componentExist[idx]-=1;
+					if (componentExist[idx] == 0)componentExist.erase(idx);
 					delete p;
-					
 					
 				}
 			}
@@ -60,12 +71,17 @@ namespace tEngine {
 			}
 			return 0;
 		}
-	
+		template<typename T>
+		bool hasComponent()const {
+			return componentExist.count(typeid(T).hash_code()) != 0;
+		}
 		void clearComponents() {
 			for (auto& c : components) {
 				delete c;
 			}
 			components.clear();
+			component_id.clear();
+			componentExist.clear();
 		}
 
 		~GameObject_() {
@@ -75,6 +91,7 @@ namespace tEngine {
 		Transform transform;
 		std::vector<Component*> components;
 		std::vector<size_t> component_id;
+		std::unordered_map<size_t,unsigned> componentExist;
 	private:
 		uint32_t id;
 	};

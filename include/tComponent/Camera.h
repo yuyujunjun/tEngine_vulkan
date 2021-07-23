@@ -69,6 +69,7 @@ namespace tEngine {
         const ImageHandle& getRenderTexture()const { return renderTexture; }
         const vk::ImageView& getImageView()const { return renderImageView; }
         const ImageHandle& getImage()const { return renderTexture; }
+        Camera() :renderTexture(nullptr), renderImageView(vk::ImageView()), viewPortRatio(1, 1), scissorRatio(1, 1) {}
         Camera(GameObject_* gameObject) :Component(gameObject),renderTexture(nullptr), renderImageView(vk::ImageView()),viewPortRatio(1,1),scissorRatio(1,1) {}
      //   Camera(ImageHandle& renderTexture, const vk::ImageView& imageView) :renderTexture(renderTexture), renderImageView(imageView), viewPortRatio(1, 1), scissorRatio(1, 1) {}
         const glm::mat4& ViewMatrix()const { return transform.m_matrix; }

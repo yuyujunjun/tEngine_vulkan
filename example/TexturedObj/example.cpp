@@ -6,59 +6,32 @@
 #include"renderer.h"
 #include"Material.h"
 using namespace tEngine;
-
-
-void defaultRender(RenderWorld* world, const CameraTransform& cam) {
-	auto& context = tEngineContext::context;
-	if (!context.hasInitialized()) {
-		ContextInit();
-	}
-	auto device = tEngineContext::context.device.get();
-	static auto renderPass = getSingleRenderpass(device, context.swapChain->getFormat());
-	renderPass->setClearValue("back", { 0,0,0,1 });
-	renderPass->setDepthStencilValue("depth", 1);
-	context.Record([&](double timeDelta, CommandBufferHandle& cb) {
-		renderPass->SetImageView("back", context.swapChain->getImage(context.getImageIdx()));
-		renderPass->setTransientImageView("depth");
-		auto frameBuffer = renderPass->requestFrameBuffer();
-		cb->beginRenderPass(renderPass, frameBuffer, true);
-		cb->setViewport(frameBuffer->getViewPort());
-		cb->setScissor(0, frameBuffer->getRenderArea());
-		RenderInfo info;
-		info.renderPass = renderPass.get();
-		info.subpass = 0;
-		world->renderWithCamera(cb, info, &cam);
-		cb->endRenderPass();
-		});
-	context.Loop(context.AddThreadContext());
-}
 int main() {
 	ContextInit();
-
 	auto& context = tEngine::tEngineContext::context;
 	auto& device = context.device; 
-	RenderWorld world(context.device.get());
+	tWorld world(device.get());
 	auto meshAsset = tEngine::LoadMesh("Obj/Marry.obj");
-	GameObject character = GameObject_::Create();
-	auto renderer = character->AddComponent<MeshRenderer>(std::make_shared<Material>(tShaderInterface::requestTexturedShader(device.get())));
-//	renderer->setMaterial(std::make_shared<Material>(tShaderInterface::requestTexturedShader(device.get())));
-	character->AddComponent<MeshBuffer>()->setMeshUpload(meshAsset->mesh,device.get());
 	auto imageAsset = tEngine::LoadImage("Obj/MC003_Kozakura_Mari.png");
 	auto image = createImage(device.get(),
 		ImageCreateInfo::immutable_2d_image(imageAsset->width, imageAsset->height, VK_FORMAT_R8G8B8A8_UNORM), imageAsset, nullptr);
-	renderer->material->SetImage("_MainTex", image);
-	renderer->material->SetValue(ShaderString(SV::_MATRIX_M), character->transform.updateMtx());
-	world.RegistryMeshRenderer(character);
-
-	CameraTransform cam;
-	cam.m_windowSize = glm::uvec2(context.swapChain->getExtent().width, context.swapChain->getExtent().height);
-	cam.update();
+	GameObject character = GameObject_::Create();
+	character->AddComponent<MeshRenderer>(std::make_shared<Material>(tShaderInterface::requestTexturedShader(device.get())))->material->SetImage("_MainTex", image);;
+	character->AddComponent<MeshBuffer>()->setMeshUpload(meshAsset->mesh,device.get());
+	auto camera = Camera::Create();
+	camera->getComponent<Camera>()->transform.m_windowSize = glm::uvec2(context.swapChain->getExtent().width, context.swapChain->getExtent().height);
+	camera->getComponent<Camera>()->transform.update();
+	world.AddGameObject(camera);
+	world.AddGameObject(character);
 	CameraSystem cam_sys;
-	cam_sys.setCamera(&cam);
+	cam_sys.setCamera(&camera->getComponent<Camera>()->transform);
 	context.Update([&](double timeDelta) {
 		auto& io = ImGui::GetIO();
 		cam_sys.ExecuteAllComponents(timeDelta);
 		});
-	defaultRender(&world, cam);
+	context.Record([&](double timeDelta, CommandBufferHandle& cb) {
+		world.getRenderWorld().Render(cb, context.swapChain, context.getImageIdx());
+		});
+	context.Loop(context.AddThreadContext());
 	return 0;
 }

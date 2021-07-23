@@ -284,13 +284,16 @@ namespace tEngine {
 		ImGui_ImplVulkan_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
-		update(deltaTime);
-		fixedTick += deltaTime;
-		while (fixedTick > fixedDuration) {
-			fixedUpdate(fixedDuration);
-			fixedTick -= fixedDuration;
+		if (update) {
+			update(deltaTime);
 		}
-
+		if (fixedUpdate) {
+			fixedTick += deltaTime;
+			while (fixedTick > fixedDuration) {
+				fixedUpdate(fixedDuration);
+				fixedTick -= fixedDuration;
+			}
+		}
 		//
 		//auto& cb = threadContext->cmdBuffers[imageIdx];
 		auto result = device->waitForFences(fence->getVkHandle(), true, -1);

@@ -28,6 +28,7 @@ namespace tEngine {
 	public:
 
 		tWorld(Device* device) :renderWorld(device) {};// = default;
+	
 		void AddGameObject(GameObject& gameObj);
 		void AddSystem(System* sys) {
 			systems.push_back(sys);
