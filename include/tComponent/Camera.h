@@ -9,9 +9,13 @@
 #include"imgui.h"
 #include"GameObject.h"
 #include"Component.h"
+#include"RenderLayers.h"
+#include <tComponent\RenderLayers.h>
 namespace tEngine {
     class tRenderPass;
     using RenderPassHandle = std::shared_ptr<tRenderPass>;
+    class tFrameBuffer;
+    using FrameBufferHandle = std::shared_ptr<tFrameBuffer>;
     class Material;
     struct RenderInfo;
     class CommandBuffer;
@@ -51,15 +55,30 @@ namespace tEngine {
         void update();
     };
     class Camera:public Component {
-     
+        friend class RenderWorld;
         ImageHandle renderTexture=nullptr;
         vk::ImageView renderImageView = {};
         RenderPassHandle renderPass;
-        
+        RenderLayer layer;
         glm::vec2 viewPortRatio;
         glm::vec2 scissorRatio;
-       
+        std::function<void(CommandBufferHandle,const BufferRangeManager* cameraBuffer,const RenderInfo& renderInfo, const FrameBufferHandle& frameBuffer)> beforeRender;
+        std::function<void(CommandBufferHandle, const BufferRangeManager* cameraBuffer,const RenderInfo& renderInfo, const FrameBufferHandle& frameBuffer)> afterRender;
     public:
+        /// <summary>
+        /// execute operations after beginRenderPass
+        /// </summary>
+        /// <param name="beforeRender"></param>
+        void setBeforeRender(std::function<void(CommandBufferHandle, const BufferRangeManager* cameraBuffer,const RenderInfo& renderInfo, const FrameBufferHandle& frameBuffer)> beforeRender) {
+            this->beforeRender = beforeRender;
+        }
+        /// <summary>
+        /// execute some operations before endRenderPass, useful for rendering some other objects with other configuration
+        /// </summary>
+        /// <param name="afterRender"></param>
+        void setAfterRender(std::function<void(CommandBufferHandle, const BufferRangeManager* cameraBuffer,const RenderInfo& renderInfo, const FrameBufferHandle& frameBuffer)> afterRender) {
+            this->afterRender = afterRender;
+        }
         static GameObject Create() {
             GameObject obj = GameObject_::Create();
             obj->AddComponent<Camera>();
@@ -69,8 +88,8 @@ namespace tEngine {
         const ImageHandle& getRenderTexture()const { return renderTexture; }
         const vk::ImageView& getImageView()const { return renderImageView; }
         const ImageHandle& getImage()const { return renderTexture; }
-        Camera() :renderTexture(nullptr), renderImageView(vk::ImageView()), viewPortRatio(1, 1), scissorRatio(1, 1) {}
-        Camera(GameObject_* gameObject) :Component(gameObject),renderTexture(nullptr), renderImageView(vk::ImageView()),viewPortRatio(1,1),scissorRatio(1,1) {}
+        Camera() :renderTexture(nullptr), renderImageView(vk::ImageView()), viewPortRatio(1, 1), scissorRatio(1, 1),layer(RenderLayer::Everything) {}
+        Camera(GameObject_* gameObject) :Component(gameObject),renderTexture(nullptr), renderImageView(vk::ImageView()),viewPortRatio(1,1),scissorRatio(1,1), layer(RenderLayer::Everything) {}
      //   Camera(ImageHandle& renderTexture, const vk::ImageView& imageView) :renderTexture(renderTexture), renderImageView(imageView), viewPortRatio(1, 1), scissorRatio(1, 1) {}
         const glm::mat4& ViewMatrix()const { return transform.m_matrix; }
         const glm::mat4& ProjectionMatrix()const { return transform.p_matrix; }
@@ -79,7 +98,13 @@ namespace tEngine {
         void setRenderTexture(const ImageHandle& image, const vk::ImageView& imageView) { renderTexture = image; renderImageView = imageView; }
         const glm::vec2& getViewPortRatio() { return viewPortRatio; }
         const glm::vec2& getScissorRatio() { return scissorRatio; }
-       
+        void setLayer(RenderLayer layer) {
+            this->layer = layer;
+        }
+        const uint8_t getLayer()const {
+            return static_cast<uint8_t>(this->layer);
+        }
+      
     };
     class CameraSystem:public System
     {

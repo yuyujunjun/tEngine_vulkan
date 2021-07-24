@@ -19,36 +19,18 @@ using namespace tPhysics;
 
 
 void defaultRender(RenderWorld* world, const CameraTransform& cam) {
-	auto& context = tEngineContext::context;
-	if (!context.hasInitialized()) {
-		ContextInit();
-	}
-	auto device = tEngineContext::context.device.get();
-	static auto renderPass = getSingleRenderpass(device, context.swapChain->getFormat());
-	renderPass->setClearValue("back", { 0,0,0,1 });
-	renderPass->setDepthStencilValue("depth", 1);
-	context.Record([&](double timeDelta, CommandBufferHandle& cb) {
-		renderPass->SetImageView("back", context.swapChain->getImage(context.getImageIdx()));
-		renderPass->setTransientImageView("depth");
-		auto frameBuffer = renderPass->requestFrameBuffer();
-		cb->beginRenderPass(renderPass, frameBuffer, true);
-		cb->setViewport(frameBuffer->getViewPort());
-		cb->setScissor(0, frameBuffer->getRenderArea());
-		RenderInfo info;
-		info.renderPass = renderPass.get();
-		info.subpass = 0;
-		world->renderWithCamera(cb, info, &cam);
-		cb->endRenderPass();
-		});
-	context.Loop(context.AddThreadContext());
+	
+
 }
 int main() {
 	ContextInit();
-	ParticleWorld pWorld(100);
-
 	auto& context = tEngine::tEngineContext::context;
 	auto& device = context.device;
-	RenderWorld world(device.get());
+	tWorld world(device.get());
+	ParticleWorld pWorld(100);
+	auto cameraObj=Camera::Create();
+	auto cam = cameraObj->getComponent<Camera>();
+	cam->transform.m_windowSize = glm::uvec2(context.swapChain->getExtent().width, context.swapChain->getExtent().height);
 	GameObject obj = GameObject_::Create();
 	GameObject plane = GameObject_::Create();
 	plane->AddComponent<MeshBuffer>()->setMeshUpload(Mesh::UnitSquare(),device.get());
@@ -62,14 +44,12 @@ int main() {
 	plane->AddComponent<MeshRenderer>(obj->getComponent<MeshRenderer>()->material);
 	plane->transform.setOrientation ( Vector3(-90,0,0));
 	plane->transform.setScale( Vector3(10,10,10));
-	world.RegistryMeshRenderer(plane);
-	world.RegistryMeshRenderer(obj);
+	world.AddGameObject(plane);
+	world.AddGameObject(obj);
+	world.AddGameObject(cameraObj);
 	
-	CameraTransform cam;
-	cam.m_windowSize = glm::uvec2(context.swapChain->getExtent().width,context.swapChain->getExtent().height);
-	cam.update();
 	CameraSystem cam_sys;
-	cam_sys.setCamera(&cam);
+	cam_sys.setCamera(&cam->transform);
 	world.AddSystem(&cam_sys);
 	
 
@@ -103,7 +83,11 @@ int main() {
 	
 		
 		},1.0/120.0);
-	defaultRender(&world,cam);
+	context.Record([&](double timeDelta, CommandBufferHandle& cb) {
+		world.getRenderWorld().Render(cb, context.swapChain, context.getImageIdx());
+		});
+	context.Loop(context.AddThreadContext());
+
 	obj.reset();
 	
 	return 0;

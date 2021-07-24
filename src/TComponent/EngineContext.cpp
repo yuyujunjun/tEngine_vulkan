@@ -275,8 +275,7 @@ namespace tEngine {
 			io.DisplayFramebufferScale = ImVec2((float)1, (float)1);
 
 
-		auto& uiPass = IMGUI::m_gui.uiPass;
-		uiPass->SetImageView("back", swapChain->getImage(imageIdx));
+		
 		//uiPass->SetImageView("depth", swapChain->getDepth());
 		//uiPass->setClearValue("back", { 0,0,0,1 });
 		//uiPass->setDepthStencilValue("depth", 1);
@@ -303,8 +302,8 @@ namespace tEngine {
 		cb->begin(vk::CommandBufferUsageFlags());
 		loopStage(deltaTime, cb);
 
-		
-
+		auto& uiPass = IMGUI::m_gui.uiPass;
+		uiPass->SetImageView("back", swapChain->getImage(imageIdx));
 		cb->beginRenderPass(IMGUI::m_gui.uiPass, IMGUI::m_gui.uiPass->requestFrameBuffer(), true);
 		ImGui::Render();
 		ImDrawData* draw_data = ImGui::GetDrawData();

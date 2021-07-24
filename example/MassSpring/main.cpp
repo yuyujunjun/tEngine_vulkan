@@ -7,41 +7,21 @@
 #include"Material.h"
 #include"MassSpring.h"
 using namespace tEngine;
-void defaultRender(RenderWorld* world, const CameraTransform& cam) {
-	auto& context = tEngineContext::context;
-	if (!context.hasInitialized()) {
-		ContextInit();
-	}
-	auto device = tEngineContext::context.device.get();
-	static auto renderPass = getSingleRenderpass(device, context.swapChain->getFormat());
-	renderPass->setClearValue("back", { 0,0,0,1 });
-	renderPass->setDepthStencilValue("depth", 1);
-	context.Record([&](double timeDelta, CommandBufferHandle& cb) {
-		renderPass->SetImageView("back", context.swapChain->getImage(context.getImageIdx()));
-		renderPass->setTransientImageView("depth");
-		auto frameBuffer = renderPass->requestFrameBuffer();
-		cb->beginRenderPass(renderPass, frameBuffer, true);
-		cb->setViewport(frameBuffer->getViewPort());
-		cb->setScissor(0, frameBuffer->getRenderArea());
-		RenderInfo info;
-		info.renderPass = renderPass.get();
-		info.subpass = 0;
-		world->renderWithCamera(cb, info, &cam);
-		cb->endRenderPass();
-		});
-	context.Loop(context.AddThreadContext());
-}
+
 
 int main() {
 	ContextInit();
 	auto& context = tEngine::tEngineContext::context;
 	auto& device = context.device;
-
-	CameraTransform cam;
-	cam.m_windowSize= glm::uvec2(context.swapChain->getExtent().width, context.swapChain->getExtent().height);
+	tWorld world(device.get());
+	auto camera = Camera::Create();
+	camera->getComponent<Camera>()->transform.m_windowSize = glm::uvec2(context.swapChain->getExtent().width, context.swapChain->getExtent().height);
+	camera->getComponent<Camera>()->transform.update();
+	world.AddGameObject(camera);
+	
 	CameraSystem cam_sys;
-	cam_sys.setCamera(&cam);
-	RenderWorld world(device.get());
+	cam_sys.setCamera(&camera->getComponent<Camera>()->transform);
+	//RenderWorld world(device.get());
 	
 	
 	
@@ -53,13 +33,19 @@ int main() {
 	shadowShader->SetShaderModule({ "draw.vsh","draw.fsh" }, { vk::ShaderStageFlagBits::eVertex, vk::ShaderStageFlagBits::eFragment });
 	cloth->AddComponent<MeshRenderer>(std::make_shared<Material>(shadowShader.get()));
 	sphere->AddComponent<MeshRenderer>(std::make_shared<Material>(shadowShader.get()));
-	world.RegistryMeshRenderer(cloth);
-	world.RegistryMeshRenderer(sphere);
+	world.AddGameObject(cloth);
+	world.AddGameObject(sphere);
 	sphere->transform.setPosition( { 0,0.4,-1.4 });
 	sphere->transform.setScale( { 0.2,0.2,0.2 });
 	auto meshAsset = LoadMesh("sphere.obj");
 	sphere->AddComponent<MeshBuffer>()->setMeshUpload(meshAsset->mesh,device.get());
-	cloth->AddComponent<MeshBuffer>()->setMeshUpload(spring.mesh, device.get());
+	cloth->AddComponent<MeshBuffer>()->setMesh(spring.mesh);
+	oneTimeSubmit(device.get(), [&](const CommandBufferHandle& cb) {
+		cloth->getComponent<MeshBuffer>()->createVertexBuffer(device.get(),cb,BufferDomain::Host );
+		cloth->getComponent<MeshBuffer>()->createIdxBuffer(device.get(),cb,BufferDomain::Device );
+		
+		});
+	
 	world.AddSystem(&cam_sys);
 
 
@@ -67,7 +53,8 @@ int main() {
 		auto& io = ImGui::GetIO();
 		world.update(deltaTime);
 		spring.Update(deltaTime);
-		cloth->getComponent<MeshBuffer>()->setMeshUpload(spring.mesh,device.get());
+		cloth->getComponent<MeshBuffer>()->setMesh(spring.mesh);
+		cloth->getComponent<MeshBuffer>()->uploadVertexBuffer(device.get(),nullptr);
 		ImGui::Begin("Fluid");
 		Eigen::Vector3f f = spring.fluid.cast<float>();
 		ImGui::InputFloat3("x", f.data());
@@ -77,6 +64,9 @@ int main() {
 		
 		});
 
-	defaultRender(&world, cam);
+	context.Record([&](double timeDelta, CommandBufferHandle& cb) {
+		world.getRenderWorld().Render(cb, context.swapChain, context.getImageIdx());
+		});
+	context.Loop(context.AddThreadContext());
 
 }

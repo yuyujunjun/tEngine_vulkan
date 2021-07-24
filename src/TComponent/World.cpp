@@ -57,13 +57,15 @@ namespace tEngine {
 	}
 
 	void RenderWorld::PrepareRenderPass( Camera& camera) {
-		auto renderPass = forwardRenderPass.requestRenderPass(device, camera.getRenderTexture()->getFormat());
+		vk::ImageLayout finalLayout = camera.getRenderTexture()->is_swapchain_image() ? vk::ImageLayout::ePresentSrcKHR: vk::ImageLayout::eShaderReadOnlyOptimal;
+		auto renderPass = forwardRenderPass.requestRenderPass(device, camera.getRenderTexture()->getFormat(), finalLayout);
 		renderPass->setClearValue("back", { 0,0,0,1 });
 		renderPass->setDepthStencilValue("depth", 1);
 		camera.getRenderPass() = renderPass;
 		
 	}
 	void RenderWorld::Render(CommandBufferHandle& cb, const SwapChainHandle& swapChain, uint32_t idx) {
+		assert(cameras.size() > 0 && "Require at least a camera to transfer swapchain image to present layout");
 		if (mainCamera) {
 			updateMainCameraRT(swapChain, idx, *mainCamera);
 		}
@@ -72,6 +74,7 @@ namespace tEngine {
 		}
 		for (auto cam : cameras) {
 			auto frameBuffer=PrepareFrameBuffer(*cam);
+			auto cameraBuffer=UpdateCameraBuffer(device, cam);
 			cb->beginRenderPass(cam->getRenderPass(), frameBuffer, true);
 			auto viewPort = frameBuffer->getViewPort();
 			viewPort.width *= cam->getViewPortRatio().x;
@@ -79,37 +82,62 @@ namespace tEngine {
 			auto scissor = frameBuffer->getRenderArea();
 			scissor.extent.width *= cam->getScissorRatio().x;
 			scissor.extent.height *= cam->getScissorRatio().y;
-			cb->setViewport(viewPort);
-			cb->setScissor(0,scissor);
 			RenderInfo info;
 			info.renderPass = cam->getRenderPass().get();
 			info.subpass = 0;
-			RenderWithCamera(cb, info, renderers, cam);
+			info.layer = cam->getLayer();
+			info.isRender = nullptr;
+			if (cam->beforeRender) {
+				cam->beforeRender(cb, cameraBuffer,info,frameBuffer);
+			}
+			cb->setViewport(viewPort);
+			cb->setScissor(0,scissor);
+	
+			RenderWithCamera(cb, info, cameraBuffer);
+			if (cam->afterRender) {
+				cam->afterRender(cb, cameraBuffer,info,frameBuffer);
+			}
 			cb->endRenderPass();
 		}
 	}
-	void RenderWorld::RenderWithMaterial(CommandBufferHandle& cb, const RenderInfo& renderInfo, std::vector<Renderer*>& gobjs, Material* mat, Camera* cam) {
+	bool NeedRender(Renderer* renderer, const RenderInfo& renderInfo) {
+		bool isRender = true;
+		isRender &= (renderer->getLayer() & renderInfo.layer)!=0;
+		if (renderInfo.isRender) {
+			isRender &= renderInfo.isRender(renderer);
+		}
+		return isRender;
+	}
+	BufferRangeManager* UpdateCameraBuffer(const Device* device,const Camera* camera) {
+		return UpdateCameraBuffer(device, camera->transform.m_matrix, camera->transform.p_matrix);
+	}
+	
+	BufferRangeManager* UpdateCameraBuffer(const Device* device, const glm::mat4& view, const glm::mat4& projection) {
 		auto camera_buffer = requestCameraBufferRange(device);
 		camera_buffer->NextRangenoLock();
-		uploadCameraMatrix(cam->transform.m_matrix, cam->transform.p_matrix, camera_buffer->buffer().get(), camera_buffer->getOffset());
-		for (auto& renderer : gobjs) {
-			mat->SetBuffer("CameraMatrix", camera_buffer->buffer(), camera_buffer->getOffset());
-			mat->SetValue(ShaderString(SV::_MATRIX_M), renderer->gameObject->transform.updateMtx());
-			mat->flushBuffer();
-			renderer->DrawWithMaterial(cb, renderInfo, mat);
+		uploadCameraMatrix(view, projection, camera_buffer->buffer().get(), camera_buffer->getOffset());
+		return camera_buffer;
+	}
+	void RenderWorld::RenderWithMaterial(CommandBufferHandle& cb, const RenderInfo& renderInfo,  Material* mat, BufferRangeManager* camera_buffer) {
+		
+		for (auto& renderer : renderers) {
+			if(NeedRender(renderer,renderInfo)){
+				mat->SetBuffer("CameraMatrix", camera_buffer->buffer(), camera_buffer->getOffset());
+				
+				renderer->DrawWithMaterial(cb, renderInfo, mat);
+			}
+	
+				
 		}
 	}
-	void RenderWorld::RenderWithCamera(CommandBufferHandle& cb, const RenderInfo& renderInfo, std::vector<Renderer*>& renderers,Camera* camera) {
-		
+	void RenderWorld::RenderWithCamera(CommandBufferHandle& cb, const RenderInfo& renderInfo, BufferRangeManager* bufferRange) {
 
-		auto bufferRange = requestCameraBufferRange(device);
-		bufferRange->NextRangenoLock();
-		uploadCameraMatrix(camera->ViewMatrix(), camera->ProjectionMatrix(), bufferRange->buffer().get(), bufferRange->getOffset());
 		for (auto& renderer : renderers) {
-			renderer->material->SetBuffer("CameraMatrix", bufferRange->buffer(), bufferRange->getOffset());
-			renderer->material->SetValue(ShaderString(SV::_MATRIX_M), renderer->gameObject->transform.updateMtx());
-			renderer->material->flushBuffer();
-			renderer->Draw(cb, renderInfo);
+			if (NeedRender(renderer, renderInfo)) {
+				renderer->material->SetBuffer("CameraMatrix", bufferRange->buffer(), bufferRange->getOffset());
+				renderer->material->flushBuffer();
+				renderer->Draw(cb, renderInfo);
+			}
 		}
 	}
 	

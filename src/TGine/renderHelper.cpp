@@ -112,19 +112,22 @@ namespace tEngine {
 
 
 	}
-	RenderPassHandle ForwardRenderPass::requestRenderPass(const Device* device,vk::Format format) {
+	RenderPassHandle ForwardRenderPass::requestRenderPass(const Device* device,vk::Format format,vk::ImageLayout finalLayout) {
 		uniqueAttribute att;
 		att.format = format;
+		att.finalLayout = finalLayout;
 		auto renderPass = forwardRenderPassPool.request(att);
 		if (renderPass == nullptr) {
 			renderPass = forwardRenderPassPool.allocate(att,device);
-			getForwardRenderPass(format,device, renderPass);
+			getForwardRenderPass(att,device, renderPass);
 		}
 		return renderPass;
 	}
-	void getForwardRenderPass(vk::Format format,const Device* device, RenderPassHandle& handle) {
+	void getForwardRenderPass(const ForwardRenderPass::uniqueAttribute& att, const Device* device, RenderPassHandle& handle) {
 		//	pass.addColorOutput("debug", (vk::ImageLayout)VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-		handle->SetAttachmentDescription("back", StartColorDescription(format));
+		auto desc = StartColorDescription(att.format);
+		desc.setFinalLayout(att.finalLayout);
+		handle->SetAttachmentDescription("back", desc);
 		//	Handle->SetAttachmentDescription("debug", StartColorDescription(vk::Format::eR8G8B8A8Srgb));
 		handle->SetAttachmentDescription("depth", StartDepthDescription((vk::Format)default_depth_format(device->getPhysicalDevice().physicalDevice)));
 		auto& pass = handle->getPass("Single");
@@ -139,7 +142,10 @@ namespace tEngine {
 	}
 	RenderPassHandle getSingleRenderpass(Device* device, vk::Format format) {
 		auto& handle = std::make_shared<tRenderPass>(device);
-		getForwardRenderPass(format,device, handle);
+		ForwardRenderPass::uniqueAttribute att;
+		att.format = format;
+		att.finalLayout = vk::ImageLayout::ePresentSrcKHR;
+		getForwardRenderPass(att,device, handle);
 		return handle;
 	}
 	RenderPassHandle getUIRenderpass(Device* device, vk::Format format) {
@@ -162,10 +168,10 @@ namespace tEngine {
 		auto& handle = std::make_shared<tRenderPass>(device);
 		auto desc=StartColorDescription(format);
 		desc.setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
-		handle->SetAttachmentDescription("shadowMap", desc);
+		handle->SetAttachmentDescription("back", desc);
 		handle->SetAttachmentDescription("depth", StartDepthDescription((vk::Format)default_depth_format(device->getPhysicalDevice().physicalDevice)));
 		auto& pass = handle->getPass("CollectShadow");
-		pass.addColorOutput("shadowMap", vk::ImageLayout::eColorAttachmentOptimal);
+		pass.addColorOutput("back", vk::ImageLayout::eColorAttachmentOptimal);
 		pass.setDepth("depth", vk::ImageLayout::eDepthStencilAttachmentOptimal);
 		handle->SetDependencies(SingleDependencies());
 		//Handle->setClearValue("shadowMap", { 0,0,0,0 });
