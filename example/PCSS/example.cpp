@@ -78,10 +78,10 @@ int main() {
 	plane->getComponent<MeshRenderer>()->material->SetImage("_MainTex", tImage::requestWhiteImage(device.get()));
 	plane->transform.setOrientation(glm::vec3(-90, 0, 0));
 	plane->transform.setScale(glm::vec3(10, 10, 10));
-	Light->transform.setPosition(glm::vec3(1, 2, 2));
+	Light->transform.setPosition(glm::vec3(0, 6, 10));
 	Light->transform.setOrientation(glm::vec3(-120, 0, 0));
 	Light->transform.setScale(glm::vec3(1, 1, 1));
-	float area = 1;
+	float area = 5;
 	float lightIntensity = .2;
 	glm::vec3 uKd = glm::vec3(0.2, 0.2, 0.2);
 	glm::vec3 uKs = glm::vec3(0.2, 0.2, 0.2);
@@ -89,7 +89,7 @@ int main() {
 	plane->AddComponent<MeshBuffer>()->setMeshUpload(Mesh::UnitSquare(), device.get());
 	Light->AddComponent<MeshBuffer>()->setMeshUpload(box, device.get());
 	debugQuat->AddComponent<MeshBuffer>()->setMeshUpload(Mesh::UnitSquare(), device.get());
-	auto lightArea = glm::vec4(-15, 15, -15, 15);
+	auto lightArea = glm::vec4(-10, 10, -5, 5);
 	world.AddGameObject(cameraObj);
 	world.AddGameObject(character);
 	world.AddGameObject(plane);
@@ -101,7 +101,7 @@ int main() {
 		obj.material->SetValue("lightPosArea", glm::vec4(Light->transform.getPosition(),area));
 		obj.material->SetValue<float>("lightIntensity", lightIntensity);
 		obj.material->SetValue("cameraPos", cam->transform.m_cameraPosition);
-		obj.material->SetValue("world_to_shadow", Ortho(lightArea.x, lightArea.y, lightArea.z, lightArea.w, 40)* glm::lookAt(Light->transform.getPosition(), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
+		obj.material->SetValue("world_to_shadow", Ortho(lightArea.x, lightArea.y, lightArea.z, lightArea.w, 50)* glm::lookAt(Light->transform.getPosition(), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
 		obj.material->SetValue("halfblockSize", 8);
 		obj.material->SetValue("maxKernelSize",8);
 		obj.material->SetValue("depthMapSize",glm::vec2(ShadowMap->get_width(),ShadowMap->get_height()) );
@@ -151,7 +151,7 @@ int main() {
 			cb->setViewport(depthFB->getViewPort());
 			cb->setScissor(0, depthFB->getRenderArea());
 			auto view = (glm::lookAt(Light->transform.getPosition(), glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)));
-			auto projection = Ortho(lightArea.x, lightArea.y, lightArea.z, lightArea.w, 40);
+			auto projection = Ortho(lightArea.x, lightArea.y, lightArea.z, lightArea.w, 50);
 			RenderInfo renderInfo;
 			renderInfo.renderPass = shadowPass.get();
 			renderInfo.subpass = 0;

@@ -21,6 +21,12 @@ layout(set = 0,binding = 2)uniform globalVar{
     vec2 depthMapSize;int maxKernelSize;
 
 };
+float unpack_depth(const in vec4 rgba_depth)
+{
+    const vec4 bit_shift = vec4(1.0/(256.0*256.0*256.0), 1.0/(256.0*256.0), 1.0/256.0, 1.0);
+    float depth = dot(rgba_depth, bit_shift);
+    return depth;
+}
 float CmpTexture(vec2 uv,float v){
     return texture(_ShadowMap,uv).r<v?0.f:1.f;
 }
@@ -62,7 +68,7 @@ vec2 avgOccdepth(vec2 uv,float depth){
     return vec2(occAvg,float(count));
 }
 float pcss(vec2 uv,float depth){
-  //  return texture(_ShadowMap,uv).r;
+  //  return float(depth<unpack_depth(texture(_ShadowMap,uv)));
     vec2 occDepth=avgOccdepth(uv,depth);
     if(occDepth.y==0)return 1;
     float occAvg=occDepth.x;
@@ -75,6 +81,7 @@ float pcss(vec2 uv,float depth){
      
     return calculateShadowFactor(uv,depth,kernelSize);
 }
+
 void main() {
 //   outColor = vec4(texture(_MainTex,uv));
     vec3 color=pow(texture(_MainTex,uv).xyz,vec3(2.2));
@@ -102,6 +109,7 @@ void main() {
     float shadowFactor = pcss(uv_shadow,light_z);
     vec3 lighten=(diffuse+specular)*shadowFactor;
     outColor=  vec4(pow(ambient+lighten,vec3(1.0/2.2)),1.0);
+  //  outColor=vec4(position_in_light.z);
   //  outColor= vec4(shadowFactor);
 //    outColor=vec4(nearest_depth);
 // outColor=vec4(uv_shadow,0,1);

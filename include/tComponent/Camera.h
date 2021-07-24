@@ -11,6 +11,7 @@
 #include"Component.h"
 #include"RenderLayers.h"
 #include <tComponent\RenderLayers.h>
+
 namespace tEngine {
     class tRenderPass;
     using RenderPassHandle = std::shared_ptr<tRenderPass>;
@@ -170,7 +171,7 @@ namespace tEngine {
     }
     inline glm::mat4 Ortho(float left, float right, float bottom, float top, float depth) {
         auto mat = glm::ortho(left, right, bottom, top, 1.f, 1000.f);
-        return glm::ortho(left, right, bottom, top, -depth, depth);
+        return glm::ortho(left, right, bottom, top, 0.1f, depth);
     }
  
 
