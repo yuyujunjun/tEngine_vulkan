@@ -73,4 +73,5 @@ namespace tEngine {
 		void DrawWithMaterial(CommandBufferHandle& cb, const RenderInfo& renderInfo, Material* material)const override;
 
 	};
+	
 }

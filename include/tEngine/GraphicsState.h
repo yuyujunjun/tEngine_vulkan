@@ -14,6 +14,6 @@ namespace tEngine {
 			//related to geometry gradient
 			float depthBiasClamp;
 		}depthBias;
-		
+		vk::PrimitiveTopology topology = vk::PrimitiveTopology::eTriangleList;
 	};
 }

@@ -15,7 +15,7 @@ namespace tEngine {
 	class tShaderInterface {
 	public:
 		static tShader*  requestTexturedShader(const Device* device);
-		
+		static tShader* requestVertexColorShader(const Device* device);
 		friend class CommandBuffer;
 		tShaderInterface(const tShader* shader);
 		//只是缓存，仅有拷贝操作

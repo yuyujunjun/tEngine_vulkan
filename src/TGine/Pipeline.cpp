@@ -58,7 +58,7 @@ namespace tEngine {
 		//createInfo.tessellation
 		//Topology
 		//createInfo.topology.primitiveRestartEnable = false;
-		createInfo.topology.topolygy = vk::PrimitiveTopology::eTriangleList;
+		createInfo.topology.topolygy = state.topology;
 
 
 		//VertexAttribute

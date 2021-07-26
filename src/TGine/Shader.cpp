@@ -173,7 +173,14 @@ namespace tEngine {
 		}
 		return shadowShader.get();
 	}
-
+	tShader* tShaderInterface::requestVertexColorShader(const Device* device) {
+		static tShader::SharedPtr shadowShader;
+		if (shadowShader == nullptr) {
+			shadowShader = tShader::Create(device);
+			shadowShader->SetShaderModule({ "draw.vsh","drawVertexColor.fsh" }, { vk::ShaderStageFlagBits::eVertex, vk::ShaderStageFlagBits::eFragment });
+		}
+		return shadowShader.get();
+	}
 	const GpuBlockBuffer& tShader::getBlock(std::string name)const {
 		auto s_b = blockToSetBinding.at(name);
 		return setInfos[s_b.first].blockBuffers.at(s_b.second);

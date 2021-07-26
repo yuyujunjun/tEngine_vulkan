@@ -1,0 +1,6 @@
+project(AABB)
+file(GLOB_RECURSE c_files  *.cpp *.c)
+
+add_executable(AABB ${c_files})
+
+target_link_libraries(AABB  Engine)

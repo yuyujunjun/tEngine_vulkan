@@ -42,7 +42,7 @@ namespace tEngine {
     struct CameraTransform {
         ProjectionType projection=ProjectionType::Perspective;
         CameraTransform() { update(); }
-        glm::vec3 m_cameraPosition = glm::vec3(5, 5, 5);
+        glm::vec3 m_cameraPosition = glm::vec3(0, 5, 5);
         glm::vec3 m_centerPosition = glm::vec3(0, 0, 0);
         glm::vec3 m_upVector = glm::vec3(0, 1, 0);
         float     m_roll = 0;                      // Rotation around the Z axis in RAD

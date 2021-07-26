@@ -94,6 +94,9 @@ namespace tEngine {
 			 }
 			 return worldMatrix;
 		}
+		inline glm::mat3 getMat3()const {
+			return glm::mat3(worldMatrix[0], worldMatrix[1], worldMatrix[2]);
+		}
 		inline glm::vec3 transformDirection(const glm::vec3& d)const {
 			return glm::vec3(
 			worldMatrix[0][0]*d[0]+worldMatrix[1][0]*d[1]+worldMatrix[2][0]*d[2],
@@ -102,11 +105,28 @@ namespace tEngine {
 			);
 		}
 		inline glm::vec3 transformInverseDirection(const glm::vec3& d)const {
-			return glm::vec3(
+
+			glm::vec3 scaledDir = glm::vec3(
 				worldMatrix[0][0] * d[0] + worldMatrix[0][1] * d[1] + worldMatrix[0][2] * d[2],
 				worldMatrix[1][0] * d[0] + worldMatrix[1][1] * d[1] + worldMatrix[1][2] * d[2],
 				worldMatrix[2][0] * d[0] + worldMatrix[2][1] * d[1] + worldMatrix[2][2] * d[2]
 			);
+			glm::vec3 scale2 = scale * scale;
+			return scaledDir * glm::vec3(1./ scale2.x,1./ scale2.y,1./ scale2.z);
+		}
+		/// <summary>
+		/// obtain direction in local space, scale factor has no effect
+		/// </summary>
+		/// <param name="d"></param>
+		/// <returns></returns>
+		inline glm::vec3 rotationInverseDirection(const glm::vec3& d)const {
+			glm::vec3 scaledDir = glm::vec3(
+				worldMatrix[0][0] * d[0] + worldMatrix[0][1] * d[1] + worldMatrix[0][2] * d[2],
+				worldMatrix[1][0] * d[0] + worldMatrix[1][1] * d[1] + worldMatrix[1][2] * d[2],
+				worldMatrix[2][0] * d[0] + worldMatrix[2][1] * d[1] + worldMatrix[2][2] * d[2]
+			);
+			glm::vec3 scale2 = scale;
+			return scaledDir * glm::vec3(1. / scale2.x, 1. / scale2.y, 1. / scale2.z);
 		}
 	};
 

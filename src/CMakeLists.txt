@@ -18,6 +18,9 @@ set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
 # Imgui for vulkan
 file(GLOB USER_SRC_PATH ../3rdParty/imgui/impl/*.cpp)
 set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
+# libccd 
+file(GLOB USER_SRC_PATH ../3rdParty/libccd/*.c)
+set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
 message(${SRC_FILES})
 # file(GLOB_RECURSE USER_SRC_PATH 3rdParty/assimp/code/*.*)
 # set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})

@@ -13,16 +13,21 @@ namespace tEngine {
 		void setMesh(const Mesh& mesh) {
 			this->mesh = mesh;
 		}
-		void setMeshUpload(const Mesh& mesh,Device* device) {
-			setMesh(mesh);
-			createBuffers(device,nullptr);
-		}
+		void setMeshUpload(const Mesh& mesh, Device* device);
 		void createBuffers(Device* device, CommandBufferHandle cb, BufferDomain domain = BufferDomain::Device) {
 			createVertexBuffer(device,cb,domain);
 			createIdxBuffer(device,cb,domain);
 		}
-		void createVertexBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain = BufferDomain::Device);
-		void createIdxBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain = BufferDomain::Device);
+		/// <summary>
+		/// return 1 if create buffer and upload successful, return 0 if no operations made
+		/// </summary>
+		/// <param name="device"></param>
+		/// <param name="cb"></param>
+		/// <param name="domain"></param>
+		/// <returns></returns>
+		int createVertexBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain = BufferDomain::Device);
+		int createIdxBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain = BufferDomain::Device);
+		void createDynamicBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain = BufferDomain::Host);
 		void uploadVertexBuffer(Device* device, CommandBufferHandle cb) {
 			updateBufferUsingStageBuffer(device, VBO, cb, mesh.vertices.data(), mesh.vertices.size() * sizeof(Vertex));
 			

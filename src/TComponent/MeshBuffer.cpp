@@ -2,6 +2,26 @@
 #include"CommandBufferBase.h"
 #include"Log.h"
 namespace tEngine {
+	void MeshBuffer::setMeshUpload(const Mesh& mesh, Device* device) {
+		if (mesh.vertices.size() == 0)return;
+		setMesh(mesh);
+		auto createUpload = [&](CommandBufferHandle cb) {
+			if (!createVertexBuffer(device, cb)) {
+				uploadVertexBuffer(device, cb);
+			}
+			if (!createIdxBuffer(device, cb)) {
+				uploadIdxBuffer(device, cb);
+			}
+		};
+		//if commandbuffer is not requirement.
+		if (VBO && IBO && VBO->getCreateInfo().domain == IBO->getCreateInfo().domain && IBO->getCreateInfo().domain == BufferDomain::Host) {
+			createUpload(nullptr);
+		}
+		else {
+			oneTimeSubmit(device, createUpload);
+		}
+
+	}
 	void DrawMesh(MeshBuffer* mb, CommandBufferHandle& cb, uint32_t instanceCount ) {
 		cb->bindVertexBuffer(mb->getVBO(), 0, 0);
 		if (mb->getIBO() != nullptr) {
@@ -12,28 +32,31 @@ namespace tEngine {
 			cb->draw(0, mb->getMesh().vertices.size(), 0, instanceCount);
 		}
 	}
-	void MeshBuffer::createVertexBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain ) {
+	int MeshBuffer::createVertexBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain ) {
 		assert(mesh.vertices.size() > 0);
 		if (VBO && VBO->getSize() >= mesh.vertices.size() * sizeof(Vertex)&&VBO->getCreateInfo().domain==domain) { 
-			LOG(tEngine::LogLevel::Warning, "No need to create Vertex buffer, no operations. Call uploadVertexBuffer to upload data.");
-			return;
+			//LOGD(tEngine::LogLevel::Warning, "No need to create Vertex buffer, no operations. Call uploadVertexBuffer to upload data.");
+			return 0;
 		}
 		BufferCreateInfo info;
 		info.domain = domain;
 		info.size = mesh.vertices.size() * sizeof(Vertex);
 		info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		VBO = createBuffer(device, info, mesh.vertices.data(), cb);
+		return 1;
 	}
-	void MeshBuffer::createIdxBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain ) {
-		if (mesh.indices.size() == 0)return;
+	int MeshBuffer::createIdxBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain ) {
+		if (mesh.indices.size() == 0)return 0;
 		if (IBO && IBO->getSize() >= mesh.indices.size() * sizeof(uint32_t) && IBO->getCreateInfo().domain == domain) {
-			LOG(tEngine::LogLevel::Warning, "No need to create Index buffer, no operations. Call uploadIdxBuffer to upload data.");
-			return;
+			//LOG(tEngine::LogLevel::Warning, "No need to create Index buffer, no operations. Call uploadIdxBuffer to upload data.");
+			return 0;
 		}
 		BufferCreateInfo info;
 		info.domain = domain;
 		info.size = mesh.indices.size() * sizeof(uint32_t);
 		info.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT | VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 		IBO = createBuffer(device, info, mesh.indices.data(), cb);
+		return 1;
 	}
+	
 }

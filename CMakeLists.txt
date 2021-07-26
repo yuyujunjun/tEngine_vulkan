@@ -15,6 +15,7 @@ INCLUDE_DIRECTORIES(
     3rdParty/vma/src
     ${VULKAN_INCLUDE_DIRS} 
     3rdParty/glfw/include
+    3rdParty/libccd
     include
     include/tEngine
     include/tComponent
@@ -39,3 +40,4 @@ add_subdirectory(example/TexturedObj)
 add_subdirectory(example/PCSS)
 add_subdirectory(example/ParticlePhysicsDemo)
 add_subdirectory(example/FlightSims)
+add_subdirectory(example/AABB)

@@ -699,5 +699,13 @@ namespace tEngine {
 			cb->pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, vk::DependencyFlagBits::eByRegion, barrier);
 		}
 	}
+	void oneTimeSubmit(CommandBufferHandle& commandBuffer, const Device* device, std::function<void(CommandBufferHandle&)> const& func) {
+		oneTimeSubmit(commandBuffer, device->requestQueue(commandBuffer->getQueueFamilyIdx()), func);
+	}
 
+	void oneTimeSubmit(const Device* device, std::function<void(CommandBufferHandle&)> const& func) {
+		auto commandBuffer = device->requestTransientCommandBuffer();
+		auto queue = device->requestQueue(commandBuffer->getQueueFamilyIdx());
+		oneTimeSubmit(commandBuffer, queue, func);
+	}
 }

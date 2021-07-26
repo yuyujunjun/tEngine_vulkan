@@ -21,6 +21,7 @@ namespace tEngine {
 			return v.Position == Position && v.TexCoords == TexCoords && v.Color == Color ;
 		}
 	};
+	
 	struct Geo {
 		
 		Geo(std::vector<Vertex> _vertices,std::vector<uint32_t> _indices) :vertices(_vertices), indices(_indices) {}
@@ -43,6 +44,20 @@ namespace tEngine {
 			}
 			return *this;
 		}
+		void AppendLine(const Vertex& a,const Vertex& b) {
+			indices.push_back(vertices.size());
+			vertices.push_back(a);
+			indices.push_back(vertices.size());
+			vertices.push_back(b);
+		}
+		void AppendTriangle(const Vertex& a, const Vertex& b, const Vertex& c) {
+			indices.push_back(vertices.size());
+			vertices.push_back(a);
+			indices.push_back(vertices.size());
+			vertices.push_back(b);
+			indices.push_back(vertices.size());
+			vertices.push_back(c);
+		}
 
 	};
 	struct Line :public Geo {
@@ -53,12 +68,7 @@ namespace tEngine {
 			}
 		}
 		Line(std::vector<Vertex> _vertices, std::vector<uint32_t> _indices) :Geo(_vertices, _indices) {}
-		void Append(Vertex a, Vertex b) {
-			indices.push_back(vertices.size());
-			vertices.push_back(a);
-			indices.push_back(vertices.size());
-			vertices.push_back(b);
-		}
+		
 	};
 	struct Mesh:public Geo {
 		
