@@ -1,10 +1,11 @@
 #include"collide.h"
 #include"GameObject.h"
 #include"tTransform.h"
+#include"SimpleGeometry.h"
 namespace tPhysics {
 	void SphereCollider::UpdateDerivedData() {
 		this->coarseAABB.CLEAR();
-		auto worldCenter = center + gameObject->transform.getPosition();
+		worldCenter = center + gameObject->transform.getPosition();
 		Mat4 M = gameObject->transform.getMat3();M[3][3] = 1;
 		Mat4 S = Mat4(scale*scale);S[3][3] = -1;
 		M = M * S * glm::transpose(M);
@@ -14,14 +15,14 @@ namespace tPhysics {
 		this->coarseAABB.SET(worldCenter, Vector3(x,y,z));
 
 	}
-	void SphereSupport(const void* obj_, const ccd_vec3_t* dir_, ccd_vec3_t* vec) {
+	Vector3 SphereSupport(const void* obj_, const Vector3& direction) {
 		SphereCollider* obj = (SphereCollider*)obj_;
-		auto dir=obj->gameObject->transform.rotationInverseDirection(Vector3(dir_->v[0], dir_->v[1], dir_->v[2]));
-		//dir = glm::normalize(dir);
+		auto dir=obj->gameObject->transform.rotationInverseDirection(direction);
+		dir *= obj->scale;
 		dir += obj->center;
 		auto pos = obj->gameObject->transform.transformDirection(dir);
 		pos += obj->gameObject->transform.getPosition();
-		ccdVec3Set(vec, pos.x, pos.y, pos.z);
+		return pos;
 	}
 	void BoxCollider::UpdateDerivedData() {
 		this->coarseAABB.CLEAR();
@@ -29,15 +30,49 @@ namespace tPhysics {
 		glm::vec3 worldExtent=absMat(gameObject->transform.getMat3())*halfSize;
 		this->coarseAABB.SET(worldCenter , worldExtent);
 	}
-	void BoxSupport(const void* obj_, const ccd_vec3_t* dir_, ccd_vec3_t* vec) {
+	Vector3 BoxSupport(const void* obj_, const Vector3& direction) {
 		BoxCollider* obj = (BoxCollider*)obj_;
-		Vector3 dir(dir_->v[0],dir_->v[1],dir_->v[2]);
-		dir = obj->gameObject->transform.rotationInverseDirection(dir);
+		
+		auto dir = obj->gameObject->transform.rotationInverseDirection(direction);
 		Vector3 localPoint(sign(dir.x)*obj->halfSize.x,
 			sign(dir.y)*obj->halfSize.y,
 			sign(dir.z)*obj->halfSize.z);
+		localPoint += obj->center;
 		localPoint = obj->gameObject->transform.transformDirection(localPoint);
 		localPoint = obj->worldCenter + localPoint;
-		ccdVec3Set(vec, localPoint.x, localPoint.y, localPoint.z);
+		return localPoint;
 	}
+	void MeshCollider::setMesh(const tEngine::Mesh& mesh) {
+		vertices.resize(mesh.vertices.size());
+		worldVertices.resize(mesh.vertices.size());
+		for (int i = 0; i < mesh.vertices.size();++i) {
+			vertices[i] = mesh.vertices[i].Position;
+		}
+	}
+	void MeshCollider::UpdateDerivedData() {
+		worldCenter = gameObject->transform.getPosition();
+		const Mat3& transform = gameObject->transform.getMat3();
+		const Vector3& position = gameObject->transform.getPosition();
+		Vector3 maxPoint(MINREAL);
+		Vector3 minPoint(MAXREAL);
+		for (int i = 0; i < vertices.size(); ++i) {
+			worldVertices[i] = transform * vertices[i] + position;
+			maxPoint = glm::max(worldVertices[i], maxPoint);
+			minPoint = glm::min(worldVertices[i], minPoint);
+		}
+		coarseAABB.SET((maxPoint+minPoint)/2.f,(maxPoint-minPoint)/2.f);
+	}
+	Vector3 MeshCollider::SupportPoint(const Vector3& direction)const {
+		real max = MINREAL;
+		Vector3 result(0, 0, 0);
+		for (int i = 0; i < worldVertices.size(); ++i) {
+			auto dotv = glm::dot(direction, worldVertices[i]);
+			if (max < dotv) {
+				max = dotv;
+				result = worldVertices[i];
+			}
+		}
+		return result;
+	}
+
 }

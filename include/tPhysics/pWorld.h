@@ -39,6 +39,6 @@ namespace tPhysics {
 		void registerForce(ForceGenerator* force, RigidBody* rigidBody);
 		void unregisterForce(ForceGenerator* force, RigidBody* rigidBody);
 		void runPhysics(real duration);
-	
+		
 	};
 }
