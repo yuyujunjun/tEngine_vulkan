@@ -5,6 +5,7 @@
 #include<list>
 namespace tPhysics {
 	class Particle;
+
 	class ParticleWorld {
 		using ContactGenerators = std::vector<ParticleContactGenerator*>;
 		std::list<Particle*> pList;
@@ -28,6 +29,7 @@ namespace tPhysics {
 		ContactGenerators& getContactGenerators() { return contactGenerators; }
 		ParticleForceRegistry& getForceRegistry() { return registry; }
 	};
+	class Collider;
 	class PhysicsWorld {
 		std::list<RigidBody*> rigidBodys;
 		std::vector<ForceRegistration> forceRegistration;
@@ -40,5 +42,18 @@ namespace tPhysics {
 		void unregisterForce(ForceGenerator* force, RigidBody* rigidBody);
 		void runPhysics(real duration);
 		
+	};
+	/// <summary>
+	/// First detect contact using AABB
+	/// </summary>
+	struct PotentialContact {
+		Collider* obj1;
+		Collider* obj2;
+	};
+	class ContactWorld {
+		std::list<Collider*> colliders;
+		std::list<PotentialContact> broadContacts;
+		
+
 	};
 }

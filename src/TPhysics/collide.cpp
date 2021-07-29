@@ -16,8 +16,9 @@ namespace tPhysics {
 
 	}
 	Vector3 SphereSupport(const void* obj_, const Vector3& direction) {
+		auto normalizedDir = glm::normalize(direction);
 		SphereCollider* obj = (SphereCollider*)obj_;
-		auto dir=obj->gameObject->transform.rotationInverseDirection(direction);
+		auto dir=obj->gameObject->transform.rotationInverseDirection(normalizedDir);
 		dir *= obj->scale;
 		dir += obj->center;
 		auto pos = obj->gameObject->transform.transformDirection(dir);
@@ -63,10 +64,11 @@ namespace tPhysics {
 		coarseAABB.SET((maxPoint+minPoint)/2.f,(maxPoint-minPoint)/2.f);
 	}
 	Vector3 MeshCollider::SupportPoint(const Vector3& direction)const {
+		Vector3 normalied_dir =glm::normalize( direction);
 		real max = MINREAL;
 		Vector3 result(0, 0, 0);
 		for (int i = 0; i < worldVertices.size(); ++i) {
-			auto dotv = glm::dot(direction, worldVertices[i]);
+			auto dotv = glm::dot(normalied_dir, worldVertices[i]);
 			if (max < dotv) {
 				max = dotv;
 				result = worldVertices[i];

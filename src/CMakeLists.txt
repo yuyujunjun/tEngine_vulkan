@@ -19,7 +19,7 @@ set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
 file(GLOB USER_SRC_PATH ../3rdParty/imgui/impl/*.cpp)
 set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
 # libccd 
-file(GLOB USER_SRC_PATH ../3rdParty/libccd/*.c)
+file(GLOB USER_SRC_PATH ../3rdParty/libccd/*.cpp)
 set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
 message(${SRC_FILES})
 # file(GLOB_RECURSE USER_SRC_PATH 3rdParty/assimp/code/*.*)

@@ -1,5 +1,6 @@
 #pragma once
 #include<iostream>
+#include<sstream>
 namespace tEngine {
 	enum class LogLevel
 	{

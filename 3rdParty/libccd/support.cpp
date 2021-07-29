@@ -17,18 +17,18 @@
 
 #include "support.h"
 
-void __ccdSupport(const void *obj1, const void *obj2,
-                  const ccd_vec3_t *_dir, const ccd_t *ccd,
-                  ccd_support_t *supp)
-{
-    ccd_vec3_t dir;
-
-    ccdVec3Copy(&dir, _dir);
-
-    ccd->support1(obj1, &dir, &supp->v1);
-
-    ccdVec3Scale(&dir, -CCD_ONE);
-    ccd->support2(obj2, &dir, &supp->v2);
-
-    ccdVec3Sub2(&supp->v, &supp->v1, &supp->v2);
-}
+//void __ccdSupport(const void *obj1, const void *obj2,
+//                  const ccd_vec3_t *_dir, const ccd_t *ccd,
+//                  ccd_support_t *supp)
+//{
+//    ccd_vec3_t dir;
+//
+//    ccdVec3Copy(&dir, _dir);
+//
+//    ccd->support1(obj1, &dir, &supp->v1);
+//
+//    ccdVec3Scale(&dir, -CCD_ONE);
+//    ccd->support2(obj2, &dir, &supp->v2);
+//
+//    ccdVec3Sub2(&supp->v, &supp->v1, &supp->v2);
+//}

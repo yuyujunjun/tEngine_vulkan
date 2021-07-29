@@ -52,9 +52,9 @@ typedef void (*ccd_center_fn)(const void *obj1, ccd_vec3_t *center);
 struct _ccd_t {
     ccd_first_dir_fn first_dir; //!< Returns initial direction where first
                                 //!< support point will be searched
-    ccd_support_fn support1; //!< Function that returns support point of
+   // ccd_support_fn support1; //!< Function that returns support point of
                              //!< first object
-    ccd_support_fn support2; //!< Function that returns support point of
+   // ccd_support_fn support2; //!< Function that returns support point of
                              //!< second object
 
     ccd_center_fn center1; //!< Function that returns geometric center of
@@ -72,14 +72,12 @@ typedef struct _ccd_t ccd_t;
 /**
  * Default first direction.
  */
-CCD_EXPORT void ccdFirstDirDefault(const void *o1, const void *o2,
+ void ccdFirstDirDefault(const void *o1, const void *o2,
                                     ccd_vec3_t *dir);
 
 #define CCD_INIT(ccd) \
     do { \
         (ccd)->first_dir = ccdFirstDirDefault; \
-        (ccd)->support1 = NULL; \
-        (ccd)->support2 = NULL; \
         (ccd)->center1  = NULL; \
         (ccd)->center2  = NULL; \
         \
@@ -93,7 +91,7 @@ CCD_EXPORT void ccdFirstDirDefault(const void *o1, const void *o2,
 /**
  * Returns true if two given objects interest.
  */
-CCD_EXPORT int ccdGJKIntersect(const void *obj1, const void *obj2,
+ int ccdGJKIntersect(const void *obj1, const void *obj2,
                                 const ccd_t *ccd);
 
 /**
@@ -104,7 +102,7 @@ CCD_EXPORT int ccdGJKIntersect(const void *obj1, const void *obj2,
  * vector. If obj1 and obj2 don't intersect -1 is returned.
  * If memory allocation fails -2 is returned.
  */
-CCD_EXPORT int ccdGJKSeparate(const void *obj1, const void *obj2,
+ int ccdGJKSeparate(const void *obj1, const void *obj2,
                                const ccd_t *ccd, ccd_vec3_t *sep);
 
 /**
@@ -121,14 +119,14 @@ CCD_EXPORT int ccdGJKSeparate(const void *obj1, const void *obj2,
  * If obj1 and obj2 don't intersect -1 is returned.
  * If memory allocation fails -2 is returned.
  */
-CCD_EXPORT int ccdGJKPenetration(const void *obj1, const void *obj2,
+ int ccdGJKPenetration(const void *obj1, const void *obj2,
                                   const ccd_t *ccd, ccd_real_t *depth,
                                   ccd_vec3_t *dir, ccd_vec3_t *pos);
 
 /**
  * Returns true if two given objects intersect - MPR algorithm is used.
  */
-CCD_EXPORT int ccdMPRIntersect(const void *obj1, const void *obj2,
+ int ccdMPRIntersect(const void *obj1, const void *obj2,
                                 const ccd_t *ccd);
 
 /**
@@ -143,7 +141,7 @@ CCD_EXPORT int ccdMPRIntersect(const void *obj1, const void *obj2,
  *
  * Returns 0 if obj1 and obj2 intersect, otherwise -1 is returned.
  */
-CCD_EXPORT int ccdMPRPenetration(const void *obj1, const void *obj2,
+ int ccdMPRPenetration(const void *obj1, const void *obj2,
                                   const ccd_t *ccd, ccd_real_t *depth,
                                   ccd_vec3_t *dir, ccd_vec3_t *pos);
 

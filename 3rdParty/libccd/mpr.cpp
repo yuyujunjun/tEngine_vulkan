@@ -181,7 +181,7 @@ static int discoverPortal(const void *obj1, const void *obj2,
     ccdVec3Copy(&dir, &ccdSimplexPoint(portal, 0)->v);
     ccdVec3Scale(&dir, CCD_REAL(-1.));
     ccdVec3Normalize(&dir);
-    __ccdSupport(obj1, obj2, &dir, ccd, ccdSimplexPointW(portal, 1));
+    __tccdSupport(obj1, obj2, &dir, ccdSimplexPointW(portal, 1));
     ccdSimplexSetSize(portal, 2);
 
     // test if origin isn't outside of v1
@@ -204,7 +204,7 @@ static int discoverPortal(const void *obj1, const void *obj2,
     }
 
     ccdVec3Normalize(&dir);
-    __ccdSupport(obj1, obj2, &dir, ccd, ccdSimplexPointW(portal, 2));
+    __tccdSupport(obj1, obj2, &dir,  ccdSimplexPointW(portal, 2));
     dot = ccdVec3Dot(&ccdSimplexPoint(portal, 2)->v, &dir);
     if (ccdIsZero(dot) || dot < CCD_ZERO)
         return -1;
@@ -227,7 +227,7 @@ static int discoverPortal(const void *obj1, const void *obj2,
     }
 
     while (ccdSimplexSize(portal) < 4){
-        __ccdSupport(obj1, obj2, &dir, ccd, ccdSimplexPointW(portal, 3));
+        __tccdSupport(obj1, obj2, &dir, ccdSimplexPointW(portal, 3));
         dot = ccdVec3Dot(&ccdSimplexPoint(portal, 3)->v, &dir);
         if (ccdIsZero(dot) || dot < CCD_ZERO)
             return -1;
@@ -287,7 +287,7 @@ static int refinePortal(const void *obj1, const void *obj2,
             return 0;
 
         // get next support point
-        __ccdSupport(obj1, obj2, &dir, ccd, &v4);
+        __tccdSupport(obj1, obj2, &dir,  &v4);
 
         // test if v4 can expand portal to contain origin and if portal
         // expanding doesn't reach given tolerance
@@ -317,7 +317,7 @@ static void findPenetr(const void *obj1, const void *obj2, const ccd_t *ccd,
     while (1){
         // compute portal direction and obtain next support point
         portalDir(portal, &dir);
-        __ccdSupport(obj1, obj2, &dir, ccd, &v4);
+        __tccdSupport(obj1, obj2, &dir, &v4);
 
         // reached tolerance -> find penetration info
         if (portalReachTolerance(portal, &v4, &dir, ccd)

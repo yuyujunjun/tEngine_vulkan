@@ -219,7 +219,7 @@ static int __ccdGJK(const void *obj1, const void *obj2,
     // get first direction
     ccd->first_dir(obj1, obj2, &dir);
     // get first support point
-    __ccdSupport(obj1, obj2, &dir, ccd, &last);
+    __tccdSupport(obj1, obj2, &dir,  &last);
     // and add this point to simplex as last one
     ccdSimplexAdd(simplex, &last);
 
@@ -230,7 +230,7 @@ static int __ccdGJK(const void *obj1, const void *obj2,
     // start iterations
     for (iterations = 0UL; iterations < ccd->max_iterations; ++iterations) {
         // obtain support point
-        __ccdSupport(obj1, obj2, &dir, ccd, &last);
+        __tccdSupport(obj1, obj2, &dir,  &last);
 
         // check if farthest point in Minkowski difference in direction dir
         // isn't somewhere before origin (the test on negative dot product)
@@ -652,12 +652,12 @@ static int simplexToPolytope3(const void *obj1, const void *obj2,
     ccdVec3Sub2(&ab, &b->v, &a->v);
     ccdVec3Sub2(&ac, &c->v, &a->v);
     ccdVec3Cross(&dir, &ab, &ac);
-    __ccdSupport(obj1, obj2, &dir, ccd, &d);
+    __tccdSupport(obj1, obj2, &dir, &d);
     dist = ccdVec3PointTriDist2(&d.v, &a->v, &b->v, &c->v, NULL);
 
     // and second one take in opposite direction
     ccdVec3Scale(&dir, -CCD_ONE);
-    __ccdSupport(obj1, obj2, &dir, ccd, &d2);
+    __tccdSupport(obj1, obj2, &dir,  &d2);
     dist2 = ccdVec3PointTriDist2(&d2.v, &a->v, &b->v, &c->v, NULL);
 
     // check if face isn't already on edge of minkowski sum and thus we
@@ -735,7 +735,7 @@ static int simplexToPolytope2(const void *obj1, const void *obj2,
     // get first support point (any)
     found = 0;
     for (i = 0; i < ccd_points_on_sphere_len; i++){
-        __ccdSupport(obj1, obj2, &ccd_points_on_sphere[i], ccd, &supp[0]);
+        __tccdSupport(obj1, obj2, &ccd_points_on_sphere[i], &supp[0]);
         if (!ccdVec3Eq(&a->v, &supp[0].v) && !ccdVec3Eq(&b->v, &supp[0].v)){
             found = 1;
             break;
@@ -747,7 +747,7 @@ static int simplexToPolytope2(const void *obj1, const void *obj2,
     // get second support point in opposite direction than supp[0]
     ccdVec3Copy(&dir, &supp[0].v);
     ccdVec3Scale(&dir, -CCD_ONE);
-    __ccdSupport(obj1, obj2, &dir, ccd, &supp[1]);
+    __tccdSupport(obj1, obj2, &dir, &supp[1]);
     if (ccdVec3Eq(&a->v, &supp[1].v) || ccdVec3Eq(&b->v, &supp[1].v))
         goto simplexToPolytope2_touching_contact;
 
@@ -755,13 +755,13 @@ static int simplexToPolytope2(const void *obj1, const void *obj2,
     ccdVec3Sub2(&ab, &supp[0].v, &a->v);
     ccdVec3Sub2(&ac, &supp[1].v, &a->v);
     ccdVec3Cross(&dir, &ab, &ac);
-    __ccdSupport(obj1, obj2, &dir, ccd, &supp[2]);
+    __tccdSupport(obj1, obj2, &dir,  &supp[2]);
     if (ccdVec3Eq(&a->v, &supp[2].v) || ccdVec3Eq(&b->v, &supp[2].v))
         goto simplexToPolytope2_touching_contact;
 
     // and last one will be in opposite direction
     ccdVec3Scale(&dir, -CCD_ONE);
-    __ccdSupport(obj1, obj2, &dir, ccd, &supp[3]);
+    __tccdSupport(obj1, obj2, &dir,  &supp[3]);
     if (ccdVec3Eq(&a->v, &supp[3].v) || ccdVec3Eq(&b->v, &supp[3].v))
         goto simplexToPolytope2_touching_contact;
 
@@ -965,7 +965,7 @@ static int nextSupport(const void *obj1, const void *obj2, const ccd_t *ccd,
     if (ccdIsZero(el->dist))
         return -1;
 
-    __ccdSupport(obj1, obj2, &el->witness, ccd, out);
+    __tccdSupport(obj1, obj2, &el->witness,out);
 
     // Compute dist of support point along element witness point direction
     // so we can determine whether we expanded a polytope surrounding the

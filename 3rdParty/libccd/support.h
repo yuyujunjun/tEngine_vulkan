@@ -18,11 +18,14 @@
 #ifndef __CCD_SUPPORT_H__
 #define __CCD_SUPPORT_H__
 
+
+
 #include <ccd/ccd.h>
 
 #ifdef __cplusplus
-extern "C" {
+
 #endif /* __cplusplus */
+
 
 struct _ccd_support_t {
     ccd_vec3_t v;  //!< Support point in minkowski sum
@@ -37,11 +40,12 @@ _ccd_inline void ccdSupportCopy(ccd_support_t *, const ccd_support_t *s);
  * Computes support point of obj1 and obj2 in direction dir.
  * Support point is returned via supp.
  */
-CCD_EXPORT void __ccdSupport(const void *obj1, const void *obj2,
-                  const ccd_vec3_t *dir, const ccd_t *ccd,
-                  ccd_support_t *supp);
+//  void __ccdSupport(const void *obj1, const void *obj2,
+//                  const ccd_vec3_t *dir, const ccd_t *ccd,
+//                  ccd_support_t *supp);
 
-
+void __tccdSupport(const void* obj1, const void* obj2,
+    const ccd_vec3_t* dir, ccd_support_t* supp);
 /**** INLINES ****/
 _ccd_inline void ccdSupportCopy(ccd_support_t *d, const ccd_support_t *s)
 {
@@ -49,7 +53,7 @@ _ccd_inline void ccdSupportCopy(ccd_support_t *d, const ccd_support_t *s)
 }
 
 #ifdef __cplusplus
-} /* extern "C" */
+/* extern "C" */
 #endif /* __cplusplus */
 
 #endif /* __CCD_SUPPORT_H__ */

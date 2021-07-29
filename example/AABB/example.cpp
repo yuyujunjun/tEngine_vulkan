@@ -6,7 +6,7 @@
 #include"renderer.h"
 #include"Material.h"
 #include"collide.h"
-#include"ccd.h"
+#include"tCCD.h"
 using namespace tEngine;
 using namespace tPhysics;
 Mesh lines;
@@ -117,11 +117,11 @@ int main() {
 		auto halfSizes = aabb->getHalfSize();
 		fill(lines, aabb->getCenter(), aabb->getHalfSize());
 		visAABB->getComponent<MeshBuffer>()->setMeshUpload(lines, device.get());
-		if (GJK(box->getComponent<BoxCollider>(), character->getComponent<MeshCollider>(), 100) == 0) { LOG(LogLevel::Information, "collide box character"); }
-		if (GJK(box->getComponent<BoxCollider>(), sphere->getComponent<SphereCollider>(), 100) == 0) {
+		if (GJKIntersect(box->getComponent<BoxCollider>(), character->getComponent<MeshCollider>()) ) { LOG(LogLevel::Information, "collide box character"); }
+		if (GJKIntersect(box->getComponent<BoxCollider>(), sphere->getComponent<SphereCollider>())) {
 			LOG(LogLevel::Information, "collide box sphere");
 		}
-		if (GJK(character->getComponent<MeshCollider>(), sphere->getComponent<SphereCollider>(), 100) == 0) {
+		if (GJKIntersect(character->getComponent<MeshCollider>(), sphere->getComponent<SphereCollider>())) {
 			LOG(LogLevel::Information, "collide character sphere");
 		}
 		//visAABB->getComponent<MeshBuffer>
