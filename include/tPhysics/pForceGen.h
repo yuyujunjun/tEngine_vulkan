@@ -1,8 +1,8 @@
 #pragma once
 #include<vector>
-#include"tPhysics/physicsCore.h"
+#include"tPhysics/numerical.h"
 //#include"tParticles.h"
-namespace tPhysics {
+namespace tEngine {
 	class Particle;
 	class RigidBody;
 	class ParticleForceGenerator {

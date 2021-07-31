@@ -1,7 +1,7 @@
 #pragma once
-#include"physicsCore.h"
+#include"numerical.h"
 #include"pContacts.h"
-namespace tPhysics {
+namespace tEngine {
 	class Particle;
 	class ParticleContact;
 	class ParticleLink:public ParticleContactGenerator {

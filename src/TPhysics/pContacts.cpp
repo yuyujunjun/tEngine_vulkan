@@ -1,6 +1,6 @@
 #include"tParticles.h"
 #include"pContacts.h"
-namespace tPhysics {
+namespace tEngine {
 	void ParticleContact::resolve(real duration) {
 		resolveVelocity(duration);
 		resolveInterpenetration(duration);
@@ -105,8 +105,6 @@ namespace tPhysics {
 		}
 	}
 	 unsigned PlaneContactGenerator::addContact(ParticleContact* contact, unsigned limit) const{
-
-
 		 unsigned maxLimit = limit;
 		 for (auto& p : particle) {
 			 if (limit <= 0)break;

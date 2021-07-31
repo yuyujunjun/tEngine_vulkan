@@ -1,13 +1,16 @@
 #include"RigidBody.h"
-#include"physicsCore.h"
+#include"numerical.h"
 #include"tTransform.h"
 #include"GameObject.h"
-namespace tPhysics {
+namespace tEngine {
 	void RigidBody::integrate(const real duration) {
 		if (!isAwake)return;
+		
 		Vector3 angularAccleration = inverseInertiaTensorWorld * torqueAccum;
-		accleration += forceAccum * inverseMass;
-		velocity += accleration * duration;
+		accumInducedByForce = accleration;
+		accumInducedByForce += forceAccum * inverseMass;
+		
+		velocity += accumInducedByForce * duration;
 		angularVelocity += angularAccleration * duration;
 		velocity *= std::pow(linearDamping,duration);
 		angularVelocity *= std::pow(angularDamping,duration);
@@ -32,9 +35,12 @@ namespace tPhysics {
 	void RigidBody::setInertiaTensor(const Mat3& inertiaTensor) {
 		inverseInertiaTensor = glm::inverse(inertiaTensor);
 	}
+	//BMB^{-1}, so inverseworld=BM^{-1}B^{-1}
 	void RigidBody::transformInertiaTensor() {
-		auto rotationMat = gameObject->transform.getOrientationMat();
-		inverseInertiaTensorWorld = glm::transpose(rotationMat) * inverseInertiaTensor * rotationMat;
+		inverseInertiaTensorWorld = gameObject->transform.getMat3()* inverseInertiaTensor * gameObject->transform.getInverseMat3();
+	}
+	Mat3 RigidBody::getInverseInertiaTensorWorld()const {
+		return inverseInertiaTensorWorld;
 	}
 	void RigidBody::clearAccumulator() {
 		forceAccum.x = forceAccum.y = forceAccum.z = 0;
@@ -57,6 +63,12 @@ namespace tPhysics {
 	void RigidBody::addTorque(const Vector3& torque) {
 		torqueAccum += torque;
 		isAwake = true;
+	}
+	void RigidBody::addVelocity(const Vector3& v) {
+		velocity += v;
+	}
+	void RigidBody::addAngularVelocity(const Vector3& v) {
+		angularVelocity += v;
 	}
 	void RigidBody::setVelocity(const Vector3& v) {
 		this->velocity = v;
@@ -107,13 +119,18 @@ namespace tPhysics {
 	const Vector3& RigidBody::getVelocity()const {
 		return velocity;
 	}
+	const Vector3& RigidBody::getAngularVelocity()const {
+		return angularVelocity;
+	}
 	const Vector3& RigidBody::getPosition()const {
 		return gameObject->transform.getPosition();//position;
 	}
 	const Vector3& RigidBody::getAcceleration()const {
 		return accleration;
 	}
-
+	const Vector3& RigidBody::getCurrentAcceleration()const {
+		return accumInducedByForce;
+	}
 	real RigidBody::getInverseMass()const {
 		return inverseMass;
 	}

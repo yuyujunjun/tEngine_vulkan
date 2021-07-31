@@ -2,7 +2,7 @@
 #include"GameObject.h"
 #include"tTransform.h"
 #include"SimpleGeometry.h"
-namespace tPhysics {
+namespace tEngine {
 	void SphereCollider::UpdateDerivedData() {
 		this->coarseAABB.CLEAR();
 		worldCenter = center + gameObject->transform.getPosition();

@@ -22,7 +22,7 @@ namespace tEngine {
 
 	class tWorld {
 		RenderWorld renderWorld;
-		tPhysics::PhysicsWorld rigidBodyWorld;
+		PhysicsWorld rigidBodyWorld;
 		std::vector<GameObject> gameObjects;
 		std::vector<System*> systems;
 	public:
@@ -41,7 +41,7 @@ namespace tEngine {
 			rigidBodyWorld.runPhysics(dt);
 		}
 		//void render(CommandBufferHandle cb,const RenderInfo& info){}
-		tPhysics::PhysicsWorld& getPhysicsWorld() { return rigidBodyWorld; }
+		PhysicsWorld& getPhysicsWorld() { return rigidBodyWorld; }
 		RenderWorld& getRenderWorld() { return renderWorld; }
 	};
 }

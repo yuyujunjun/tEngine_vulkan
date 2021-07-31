@@ -13,7 +13,7 @@
 #define BASE_MASS 1
 #define EXTRA_MASS 10
 namespace tEngine {
-	using namespace tPhysics;
+	using namespace tEngine;
 	class Platform :public Component
 	{
         Particle particleArray[6];

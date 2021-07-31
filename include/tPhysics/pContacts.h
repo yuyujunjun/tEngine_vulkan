@@ -1,7 +1,7 @@
 #pragma once
 #include<vector>
-#include"physicsCore.h"
-namespace tPhysics {
+#include"numerical.h"
+namespace tEngine {
 	class Particle;
 	class ParticleContact {
 	

@@ -1,7 +1,7 @@
 #include"pForceGen.h"
 #include"tParticles.h"
 #include"RigidBody.h"
-namespace tPhysics {
+namespace tEngine {
 	void ParticleForceRegistry::add(Particle* particle, ParticleForceGenerator* fg) {
 		registry.emplace_back(ParticleForceRegistration(particle,fg));
 	}

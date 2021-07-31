@@ -8,7 +8,7 @@
 #include"collide.h"
 #include"tCCD.h"
 using namespace tEngine;
-using namespace tPhysics;
+using namespace tEngine;
 Mesh lines;
 Vertex V(glm::vec3 position) {
 	Vertex a;
@@ -85,7 +85,7 @@ int main() {
 			glm::vec3 rotation;
 			glm::vec3 scale;
 			position = character->transform.getPosition();
-			rotation = character->transform.getEulerAngle();
+			rotation = character->transform.getLocalEulerAngle();
 			scale = character->transform.getScale();
 			ImGui::InputFloat3("position", &position[0]); character->transform.setPosition(position);
 			ImGui::InputFloat3("rotation", &rotation[0]); character->transform.setOrientation(rotation);
@@ -98,7 +98,7 @@ int main() {
 			glm::vec3 rotation;
 			glm::vec3 scale;
 			position = box->transform.getPosition();
-			rotation = box->transform.getEulerAngle();
+			rotation = box->transform.getLocalEulerAngle();
 			scale = box->transform.getScale();
 			ImGui::InputFloat3("position", &position[0]); box->transform.setPosition(position);
 			ImGui::InputFloat3("rotation", &rotation[0]); box->transform.setOrientation(rotation);

@@ -1,7 +1,7 @@
 #include"pWorld.h"
 #include"tParticles.h"
 #include"RigidBody.h"
-namespace tPhysics {
+namespace tEngine {
 	ParticleWorld::ParticleWorld(unsigned maxContacts, unsigned iterations):maxContacts(maxContacts),resolver(iterations) {
 		contacts.resize(maxContacts);
 		calculateIterations = (iterations == 0);

@@ -1,6 +1,6 @@
 #pragma once
-#include"physicsCore.h"
-namespace tPhysics {
+#include"numerical.h"
+namespace tEngine {
 	class Particle {
 	public:
 		Particle() :position(0, 0, 0), velocity(0, 0, 0), accleration(0, 0, 0), forceAccum(0, 0, 0), damping(0.99), inverseMass(1) {};

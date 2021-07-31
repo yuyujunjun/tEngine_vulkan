@@ -1,8 +1,8 @@
 #pragma once
-#include"physicsCore.h"
+#include"numerical.h"
 #include"tTransform.h"
 #include"Component.h"
-namespace tPhysics {
+namespace tEngine {
 	class RigidBody:public tEngine::Component {
 	
 		
@@ -19,9 +19,10 @@ namespace tPhysics {
 		bool isAwake;
 		bool canSleep;
 		real motion;
+		Vector3 accumInducedByForce;
 	public:
 		RigidBody(tEngine::GameObject_* gameObject) :tEngine::Component(gameObject), inverseInertiaTensor(1), inverseInertiaTensorWorld(1),inverseMass(1), velocity(0, 0, 0), angularVelocity(0, 0, 0),
-			linearDamping(0.9), angularDamping(0.9), forceAccum(0, 0, 0), torqueAccum(0, 0, 0), accleration(0, 0, 0), isAwake(true), canSleep(true), motion(sleepEpsilon*2.0f) {}
+			linearDamping(0.9), angularDamping(0.9), forceAccum(0, 0, 0), torqueAccum(0, 0, 0), accleration(0, 0, 0), isAwake(true), canSleep(true), motion(sleepEpsilon*2.0f), accumInducedByForce(0,0,0){}
 	//	tEngine::Transform transform;
 		const tEngine::Transform& getTransform() const; 
 		void setMass(const real mass);
@@ -32,6 +33,8 @@ namespace tPhysics {
 		void addForceAtLocalPoint(const Vector3& force, const Vector3& point);
 		void addForceAtPoint(const Vector3& force, const Vector3& point);
 		void addTorque(const Vector3& torque);
+		void addVelocity(const Vector3& v);
+		void addAngularVelocity(const Vector3& v);
 		void setVelocity(const Vector3& v);
 		void setAngularVelocity(const Vector3& v);
 		
@@ -44,13 +47,18 @@ namespace tPhysics {
 		void setCanSleep(const bool canSleep);
 		real getMass()const;
 		real getInverseMass()const;
+		//get Constant Acceleration(not induced by force)
 		const Vector3& getAcceleration()const;
+		//get accuration this frame
+		const Vector3& getCurrentAcceleration()const;
+		
 		const Vector3& getVelocity()const;
+		const Vector3& getAngularVelocity()const;
 		const Vector3& getPosition()const;
 		void setInertiaTensor(const Mat3& inertiaTensor);
 		void calculateDerivedData();
 		void transformInertiaTensor();
-
+		Mat3 getInverseInertiaTensorWorld()const;
 
 	};
 

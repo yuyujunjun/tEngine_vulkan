@@ -1,7 +1,7 @@
 #pragma once
 #include<functional>
 #include<vector>
-#include"physicsCore.h"
+#include"numerical.h"
 #include"Component.h"
 #include"AABB.h"
 
@@ -12,7 +12,7 @@ namespace tEngine {
 }
 
 
-namespace tPhysics {
+namespace tEngine {
 	
 	class Collider:public tEngine::Component {
 		//std::function<void(const void* obj, const ccd_vec3_t* dir, ccd_vec3_t* vec)> support;

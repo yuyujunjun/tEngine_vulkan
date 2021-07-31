@@ -9,7 +9,7 @@
 #include"tParticles.h"
 #include"FlightSims.h"
 using namespace tEngine;
-using namespace tPhysics;
+using namespace tEngine;
 void TransformGeo(const Transform& transform, Geo* geo) {
 	auto mtx = transform.getMtx();
 	for (auto& v : geo->vertices) {

@@ -1,9 +1,9 @@
 #pragma once
-#include"physicsCore.h"
+#include"numerical.h"
 #include"pForceGen.h"
 #include"pContacts.h"
 #include<list>
-namespace tPhysics {
+namespace tEngine {
 	class Particle;
 
 	class ParticleWorld {

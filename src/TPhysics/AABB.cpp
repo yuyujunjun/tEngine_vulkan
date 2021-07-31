@@ -1,5 +1,5 @@
 #include"AABB.h"
-namespace tPhysics {
+namespace tEngine {
 	bool Overlap(const AABB* a, const AABB* b) {
 		auto overlapAxis = [a, b](unsigned idx)->bool {
 			return a->minCoord[idx] <= b->maxCoord[idx] && a->maxCoord[idx] >= b->minCoord[idx];

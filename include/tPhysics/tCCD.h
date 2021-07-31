@@ -1,11 +1,10 @@
 #pragma once
-#include"physicsCore.h"
+#include"numerical.h"
 #include"collide.h"
 #include"ccd/ccd.h"
-namespace tPhysics {
+namespace tEngine {
 	class Collider;
 	struct ContactInfo {
-	
 		Vector3 pos;
 		Vector3 dir;
 		real depth;

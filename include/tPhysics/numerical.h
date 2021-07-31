@@ -1,9 +1,9 @@
 #pragma once
-#include <glm/glm.hpp>
+#include<glm/glm.hpp>
 #include<glm/gtc/matrix_transform.hpp>
 #include<glm/gtx/norm.hpp>
 #include<math.h>
-namespace tPhysics {
+namespace tEngine {
 	using real = float;
 	using Vector3 = glm::vec<3, real>;
 	using Vector4 = glm::vec<4, real>;
@@ -12,7 +12,7 @@ namespace tPhysics {
 	using Mat3 = glm::mat3;
 #define MAXREAL std::numeric_limits<real>().max()
 #define MINREAL std::numeric_limits<real>().lowest()
-# define CCD_EPS  1.192092896e-07F
+#define CCD_EPS  1.192092896e-07F
 	inline bool isZero(real x) {
 		return abs(x) < CCD_EPS;
 	}
@@ -61,5 +61,11 @@ namespace tPhysics {
 	inline Mat3 absMat(const Mat3& mat) {
 		return Mat3(abs(mat[0]), abs(mat[1]), abs(mat[2]));
 	}
+	inline Mat3 createSkewMat3(const Vector3& v) {
+		return Mat3(0,v.z,-v.y,
+					-v.z,0,v.x,
+					v.y,-v.x,0);
+	}
 	static real sleepEpsilon=0.3;
+
 }

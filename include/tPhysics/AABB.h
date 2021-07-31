@@ -1,7 +1,7 @@
 #pragma once
-#include"physicsCore.h"
+#include"numerical.h"
 
-namespace tPhysics {
+namespace tEngine {
 	class AABB {
 		Vector3 center;
 		Vector3 halfSizes;

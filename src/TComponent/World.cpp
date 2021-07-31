@@ -9,7 +9,7 @@
 #include"Image.h"
 #include"FrameBuffer.h"
 #include"RigidBody.h"
-using namespace tPhysics;
+using namespace tEngine;
 namespace tEngine {
 
 	void tWorld::AddGameObject(GameObject& obj) {

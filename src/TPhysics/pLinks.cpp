@@ -1,7 +1,7 @@
 #include"pLinks.h"
 #include"pContacts.h"
 #include"tParticles.h"
-namespace tPhysics {
+namespace tEngine {
 	real ParticleLink::currentLength()const {
 		return glm::length(particle[0]->getPosition() - particle[1]->getPosition());
 	}

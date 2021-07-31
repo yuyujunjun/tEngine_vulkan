@@ -3,7 +3,7 @@
 #include"pForceGen.h"
 #include"tTransform.h"
 #include"RigidBody.h"
-using namespace tPhysics;
+using namespace tEngine;
 using namespace tEngine;
 
 class FlightSims

@@ -1,7 +1,7 @@
 #include<assert.h>
 #include"tPhysics/tParticles.h"
 
-namespace tPhysics {
+namespace tEngine {
 	void Particle::integrate(real duration) {
 		assert(duration > 0);
 		position += velocity * duration;
