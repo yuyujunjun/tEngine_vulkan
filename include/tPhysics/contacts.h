@@ -112,4 +112,8 @@ namespace tEngine {
 		 */
 		void adjustPositions(Contact* contactArray,unsigned numContacts,real duration);
 	};
+	class ContactGenerator {
+	public:
+		virtual unsigned addContact(Contact* contact, unsigned limit)const=0;
+	};
 }

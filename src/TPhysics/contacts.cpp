@@ -21,10 +21,10 @@ namespace tEngine {
 		
 		Vector3 velocity = glm::cross(body->getAngularVelocity(), relativeContactPosition[bodyIdx]) + body->getVelocity();
 		Vector3 contactVelocity = world2Contact * velocity;
-		//add force affect on the contact Normal
+		//add extra force affect on the planar(notice that we have add veocity by rigidBody->integrate())
+		//we need remove this velocity to avoid obj from sliding when force direction is not the same as the contact normal
 		Vector3 accVelocity = body->getCurrentAcceleration() * duration;
 		accVelocity = world2Contact * accVelocity;
-		//ignore the acceleration in the contact normal direction
 		accVelocity.y = 0;
 		contactVelocity += accVelocity;
 		return contactVelocity;
@@ -192,7 +192,7 @@ namespace tEngine {
 			if (rigidBody[i]) {
 				real sign = (i == 0) ? 1 : -1;
 				
-				angularMove[i] = sign * inverseTotalInertia * penetration *angularInertia[i];
+				angularMove[i] = sign * inverseTotalInertia * penetration * velocityPerUnitImpulse[i];
 				linearMove[i] = sign * inverseTotalInertia * penetration *linearInertia[i];
 				
 				//Avoid angular Move if it's too large
@@ -213,7 +213,7 @@ namespace tEngine {
 			
 					Vector3 impulseDirection = glm::cross(relativeContactPosition[i], contactNormal);
 					//angularMove[i]/angularInertia: the impulse required to move angularMove[i] along direction
-					angularChange[i] =rigidBody[i]->getInverseInertiaTensorWorld()* impulseDirection * angularMove[i] / angularInertia[i];
+					angularChange[i] =rigidBody[i]->getInverseInertiaTensorWorld()* impulseDirection * angularMove[i] / velocityPerUnitImpulse[i];
 					glm::quat q = rigidBody[i]->gameObject->transform.getOrientation();
 					rigidBody[i]->gameObject->transform.rotate(angularChange[i]);
 				}
@@ -295,7 +295,7 @@ namespace tEngine {
 				}
 			}
 			if (index == numContacts)break;
-			
+			c[index].MatchAwakeState();
 			c[index].ApplyVelocityChange(linearChange,angularChange);
 			for (unsigned i = 0; i < numContacts; ++i) {
 				for (unsigned b = 0; b < 2; ++b)if (c[i].collider[b]) {
