@@ -1,6 +1,7 @@
 #include"pWorld.h"
 #include"tParticles.h"
 #include"RigidBody.h"
+#include"ecs.h"
 namespace tEngine {
 	ParticleWorld::ParticleWorld(unsigned maxContacts, unsigned iterations):maxContacts(maxContacts),resolver(iterations) {
 		contacts.resize(maxContacts);
@@ -47,6 +48,9 @@ namespace tEngine {
 		}
 	}
 	void PhysicsWorld::startFrame() {
+		for (auto entity : SceneView<RigidBody>(*ecsManager)) {
+			rigidBodys.push_back(ecsManager->GetComponent<RigidBody>(entity));
+		}
 		for (auto body : rigidBodys) {
 			body->clearAccumulator();
 			body->calculateDerivedData();

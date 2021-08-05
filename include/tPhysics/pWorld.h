@@ -30,13 +30,13 @@ namespace tEngine {
 		ParticleForceRegistry& getForceRegistry() { return registry; }
 	};
 	class Collider;
-	class PhysicsWorld {
+	class PhysicsWorld:public System {
 		std::list<RigidBody*> rigidBodys;
 		std::vector<ForceRegistration> forceRegistration;
 	public:
 		PhysicsWorld() = default;
-		void addRigidBody(RigidBody* body) { rigidBodys.emplace_back(body); }
-		void removeRigidBody(RigidBody* body) { rigidBodys.remove(body); }
+	//	void addRigidBody(RigidBody* body) { rigidBodys.emplace_back(body); }
+	//	void removeRigidBody(RigidBody* body) { rigidBodys.remove(body); }
 		void startFrame();
 		void registerForce(ForceGenerator* force, RigidBody* rigidBody);
 		void unregisterForce(ForceGenerator* force, RigidBody* rigidBody);

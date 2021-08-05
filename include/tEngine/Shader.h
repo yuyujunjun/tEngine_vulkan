@@ -61,6 +61,9 @@ namespace tEngine {
 		{
 			return blockToSetBinding.at(name);
 		}
+		bool hasResource(const std::string& name)const {
+			return blockToSetBinding.count(name) != 0;
+		}
 		//including empty set
 		uint32_t setCount()const;
 		const PipelineLayoutHandle& getPipelineLayout()const {

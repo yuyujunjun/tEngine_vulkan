@@ -14,7 +14,7 @@ namespace tEngine {
 
 namespace tEngine {
 	
-	class Collider:public tEngine::Component {
+	class Collider {
 		//std::function<void(const void* obj, const ccd_vec3_t* dir, ccd_vec3_t* vec)> support;
 	protected:
 		AABB coarseAABB;
@@ -25,13 +25,14 @@ namespace tEngine {
 		/// if isTrigger is true, only detect if collide, otherwise detect the penetration at the same time
 		/// </summary>
 		bool isTrigger;
-		Collider(tEngine::GameObject_* gameObject) :Component(gameObject),isTrigger(false),worldCenter(0,0,0) {}
+		Collider() :isTrigger(false),worldCenter(0,0,0) {}
 		const AABB* getAABB()const { return &coarseAABB; }
 		/// <summary>
 		/// Update worldCenter and calculate AABB
 		/// </summary>
 		virtual void UpdateDerivedData() {};
-		virtual Vector3 SupportPoint(const Vector3& direction)const { return Vector3(0, 0, 0); };
+		std::function<Vector3(const void* obj, const Vector3 direction)> SupportPoint;
+	//	virtual Vector3 SupportPoint(const Vector3& direction)const { return Vector3(0, 0, 0); };
 	};
 	/// <summary>
 	/// Center equals to origin, radius equals to 1
@@ -43,13 +44,13 @@ namespace tEngine {
 		//real worldScale;
 	public:
 		friend Vector3 SphereSupport(const void* obj, const Vector3& dir);
-		SphereCollider(tEngine::GameObject_* gameObject) :Collider(gameObject), center(0,0,0), scale(1){}
+		SphereCollider() : center(0,0,0), scale(1){
+			SupportPoint = SphereSupport;
+		}
 		void setScale(real s) { scale = s; }
 		void setTranslate(const Vector3& v) { center = v; }
 		void UpdateDerivedData()override;
-		Vector3 SupportPoint(const Vector3& direction)const override {
-			return SphereSupport(this, direction);
-		}
+		
 	};
 	
 	class BoxCollider :public Collider {

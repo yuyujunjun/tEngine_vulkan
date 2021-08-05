@@ -62,16 +62,19 @@ CameraSystem::CameraSystem()
 
 glm::vec3 const& CameraSystem::getCameraPosition() const
 {
+    auto cam = &ecsManager->GetComponent<Camera>(cam_id)->transform;
     return cam->m_cameraPosition;
 }
 
 glm::vec3 const& CameraSystem::getCenterPosition() const
 {
+    auto cam = &ecsManager->GetComponent<Camera>(cam_id)->transform;
     return cam->m_centerPosition;
 }
 
 glm::mat4 const& CameraSystem::getMatrix() const
 {
+    auto cam = &ecsManager->GetComponent<Camera>(cam_id)->transform;
     return cam->m_matrix;
 }
 
@@ -87,6 +90,7 @@ glm::ivec2 const& CameraSystem::getMousePosition() const
 
 float CameraSystem::getRoll() const
 {
+    auto cam = &ecsManager->GetComponent<Camera>(cam_id)->transform;
     return cam->m_roll;
 }
 
@@ -97,11 +101,13 @@ float CameraSystem::getSpeed() const
 
 glm::vec3 const& CameraSystem::getUpVector() const
 {
+    auto cam = &ecsManager->GetComponent<Camera>(cam_id)->transform;
     return cam->m_upVector;
 }
 
 glm::u32vec2 const& CameraSystem::getWindowSize() const
 {
+    auto cam = &ecsManager->GetComponent<Camera>(cam_id)->transform;
     return cam->m_windowSize;
 }
 void CameraSystem::ExecuteAllComponents(float dt) {
@@ -174,6 +180,7 @@ void CameraSystem::setLookat(const glm::vec3& cameraPosition,
     const glm::vec3& centerPosition,
     const glm::vec3& upVector)
 {
+    auto cam = &ecsManager->GetComponent<Camera>(cam_id)->transform;
     cam->m_cameraPosition = cameraPosition;
     cam->m_centerPosition = centerPosition;
     cam->m_upVector = upVector;
@@ -192,13 +199,15 @@ void CameraSystem::setMousePosition(glm::ivec2 const& position)
 
 void CameraSystem::setRoll(float roll)
 {
+    auto cam = &ecsManager->GetComponent<Camera>(cam_id)->transform;
     cam->m_roll = roll;
     cam->update();
 }
-void CameraSystem::setCamera(CameraTransform* cam) {
-    this->cam = cam;
-    setWindowSize(cam->m_windowSize);
-    cam->update();
+void CameraSystem::setCamera(EntityID cam_) {
+    this->cam_id = cam_;
+    auto& cam = ecsManager->GetComponent<Camera>(cam_)->transform;
+    setWindowSize(cam.m_windowSize);
+    cam.update();
 
 }
 void CameraSystem::setSpeed(float speed)
@@ -213,6 +222,7 @@ void CameraSystem::setWindowSize(glm::ivec2 const& size)
 
 void CameraSystem::wheel(int value)
 {
+    auto cam = &ecsManager->GetComponent<Camera>(cam_id)->transform;
     float fValue = static_cast<float>(value);
     float dx = (fValue * std::abs(fValue)) / static_cast<float>(m_windowSize[0]);
 
@@ -227,6 +237,7 @@ void CameraSystem::wheel(int value)
 
 void CameraSystem::dolly(glm::vec2 const& delta)
 {
+    auto cam = &ecsManager->GetComponent<Camera>(cam_id)->transform;
     glm::vec3 z = cam->m_centerPosition - cam->m_cameraPosition;
     float     length = glm::length(z);
 
@@ -315,7 +326,7 @@ void CameraSystem::motion(glm::ivec2 const& position, Action action)
         break;
     default: break;
     }
-
+    auto cam = &ecsManager->GetComponent<Camera>(cam_id)->transform;
     cam->update();
 
     m_mousePosition = position;
@@ -327,7 +338,7 @@ void CameraSystem::orbit(glm::vec2 const& delta, bool invert)
     {
         return;
     }
-
+    auto cam = &ecsManager->GetComponent<Camera>(cam_id)->transform;
     // Full width will do a full turn
     float dx = delta[0] * float(glm::two_pi<float>());
     float dy = delta[1] * float(glm::two_pi<float>());
@@ -380,6 +391,7 @@ void CameraSystem::orbit(glm::vec2 const& delta, bool invert)
 
 void CameraSystem::pan(glm::vec2 const& delta)
 {
+    auto cam = &ecsManager->GetComponent<Camera>(cam_id)->transform;
     glm::vec3 z(cam->m_cameraPosition - cam->m_centerPosition);
     float     length = static_cast<float>(glm::length(z)) / 0.785f;  // 45 degrees
     z = glm::normalize(z);
@@ -448,6 +460,7 @@ void CameraSystem::trackball(glm::ivec2 const& position)
     float rad = 2.0f * asin(t);
 
     {
+        auto cam = &ecsManager->GetComponent<Camera>(cam_id)->transform;
         glm::vec4 rot_axis = cam->m_matrix * glm::vec4(axis, 0);
         glm::mat4 rot_mat = glm::rotate(rad, glm::vec3(rot_axis.x, rot_axis.y, rot_axis.z));
 

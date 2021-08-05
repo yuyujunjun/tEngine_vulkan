@@ -24,13 +24,13 @@ namespace tEngine {
 		//Vector3 massPos;
 		Vector3 massPosDisplay;
         Mesh mesh;
-        std::array<unsigned,24> idx;
+        std::array<unsigned,24> identityPerComponent;
     public:
         Platform(GameObject_* gameObject,ParticleWorld* pWorld):Component(gameObject),gravity(Vector3(0,-10,0)) {
             setParticleArray(pWorld);
             mesh.vertices.resize(24);
             mesh.indices.resize(24);
-            idx = { 0,2,1,1,2,3,0,1,4,4,1,5,0,4,2,1,3,5,3,2,4,5,3,4 };
+            identityPerComponent = { 0,2,1,1,2,3,0,1,4,4,1,5,0,4,2,1,3,5,3,2,4,5,3,4 };
             for (uint32_t i = 0; i < 24; ++i) {
                 mesh.indices[i] = i;
             }
@@ -184,10 +184,10 @@ namespace tEngine {
         }
         void updateMesh() {
             for (unsigned i = 0; i < 24; ++i) {
-                mesh.vertices[i].Position = particleArray[idx[i]].getPosition();
+                mesh.vertices[i].Position = particleArray[identityPerComponent[i]].getPosition();
             }
             mesh.UpdateNormal();
-            auto meshBuffer=gameObject->getComponent<MeshBuffer>();
+            auto meshBuffer=gameObject->getComponent<MeshFilter>();
             meshBuffer->setMesh(mesh);
             meshBuffer->uploadVertexBuffer(nullptr,nullptr);
 
@@ -201,7 +201,7 @@ namespace tEngine {
             pWorld->getForceRegistry().remove(particleArray + 3, bungee + 1);
         }
         void initializeMesh(Device* device) {
-            auto meshBuffer = gameObject->getComponent<MeshBuffer>();// ->setMesh(mesh);
+            auto meshBuffer = gameObject->getComponent<MeshFilter>();// ->setMesh(mesh);
             meshBuffer->setMesh(mesh);
             auto uploadData = [meshBuffer, device](CommandBufferHandle& cmd) {
                 meshBuffer->createVertexBuffer(device, cmd, BufferDomain::Host);

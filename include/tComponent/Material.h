@@ -13,7 +13,7 @@ namespace tEngine {
 	class BufferRangeManager;
 	struct GraphicsState;
 
-
+	
 	struct Material {
 		Material(tShader* shader);
 		
@@ -42,6 +42,9 @@ namespace tEngine {
 		std::unordered_map<std::string, value_offset> storedValue;
 
 	};
-		
+	struct View {
+		std::shared_ptr<Material> material;
+
+	};
 
 }

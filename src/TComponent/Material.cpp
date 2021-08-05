@@ -57,6 +57,7 @@ namespace tEngine {
 
 	}
 	void Material::SetBuffer(const std::string& name, const BufferHandle& buffer, size_t offset ) {
+		
 		shader->SetBuffer(name, buffer, offset);
 	}
 	void Material::SetImage(std::string name, ImageHandle image, vk::ImageView vkView , StockSampler sampler) {

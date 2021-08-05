@@ -65,37 +65,37 @@ namespace tEngine {
 		iterationUsed = 0;
 		while (iterationUsed < iterations) {
 			real min = 0;
-			unsigned idx = numContacts;
+			unsigned identityPerComponent = numContacts;
 			for (unsigned i = 0; i < numContacts; ++i) {
 				real sepVel = particleContacts[i].calculateSepartingVelocity();
 				if (sepVel < min) {
 					min = sepVel;
-					idx = i;
+					identityPerComponent = i;
 				}
 			}
-			if (idx == numContacts)break;
-			particleContacts[idx].resolve(duration);
+			if (identityPerComponent == numContacts)break;
+			particleContacts[identityPerComponent].resolve(duration);
 	
 
 			// Update the interpenetrations for all particles
-			Vector3* move = particleContacts[idx].particleMovement;
+			Vector3* move = particleContacts[identityPerComponent].particleMovement;
 			for (unsigned i = 0; i < numContacts; i++)
 			{
-				if (particleContacts[i].particle[0] == particleContacts[idx].particle[0])
+				if (particleContacts[i].particle[0] == particleContacts[identityPerComponent].particle[0])
 				{
 					particleContacts[i].penetration -= dot(move[0] , particleContacts[i].contactNormal);
 				}
-				else if (particleContacts[i].particle[0] == particleContacts[idx].particle[1])
+				else if (particleContacts[i].particle[0] == particleContacts[identityPerComponent].particle[1])
 				{
 					particleContacts[i].penetration -= dot( move[1] , particleContacts[i].contactNormal);
 				}
 				if (particleContacts[i].particle[1])
 				{
-					if (particleContacts[i].particle[1] == particleContacts[idx].particle[0])
+					if (particleContacts[i].particle[1] == particleContacts[identityPerComponent].particle[0])
 					{
 						particleContacts[i].penetration += dot(move[0] , particleContacts[i].contactNormal);
 					}
-					else if (particleContacts[i].particle[1] == particleContacts[idx].particle[1])
+					else if (particleContacts[i].particle[1] == particleContacts[identityPerComponent].particle[1])
 					{
 						particleContacts[i].penetration += dot( move[1] , particleContacts[i].contactNormal);
 					}

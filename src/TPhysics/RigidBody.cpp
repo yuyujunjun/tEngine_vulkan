@@ -3,6 +3,7 @@
 #include"tTransform.h"
 #include"GameObject.h"
 namespace tEngine {
+
 	void RigidBody::integrate(const real duration) {
 		if (!isAwake)return;
 		

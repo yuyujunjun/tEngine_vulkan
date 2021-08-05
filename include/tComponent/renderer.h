@@ -6,7 +6,7 @@
 namespace tEngine {
 	class tShaderInterface;
 	class Material;
-	class MeshBuffer;
+	class MeshFilter;
 	class CommandBuffer;
 	using CommandBufferHandle = std::shared_ptr<CommandBuffer>;
 	class tRenderPass;
@@ -29,9 +29,13 @@ namespace tEngine {
 		//glm::mat4 perspectiveMtx;
 		//glm::mat4 vpMtx;
 	};
-	class Renderer:public Component {
+	
+	class Renderer:public System {
+		
 		RenderLayer layer;
 	public:
+		using BufferMap = std::vector<std::pair<std::string, BufferRangeManager*>>;
+		using ImageMap = std::vector<std::pair<std::string, ImageHandle>>;
 		uint8_t getLayer()const {
 			return static_cast<uint8_t>(layer);
 		}
@@ -42,17 +46,18 @@ namespace tEngine {
 			Off,
 			On
 		}shadowCastingMode;
+		
 		bool recieveShadow = true;
-		Renderer(std::shared_ptr<Material>& mat) :material(mat), recieveShadow(true),shadowCastingMode(ShadowCastingMode::On),layer(RenderLayer::Default){}
-		Renderer(GameObject_* gameObject, std::shared_ptr<Material>& mat) :material(mat),Component(gameObject), recieveShadow(true), shadowCastingMode(ShadowCastingMode::On), layer(RenderLayer::Default) {}
-		std::shared_ptr<Material> material;
-		void setMaterial(std::shared_ptr<Material>& mat) { material = mat; }
+		Renderer() : recieveShadow(true),shadowCastingMode(ShadowCastingMode::On),layer(RenderLayer::Default){}
+		//Renderer(GameObject_* gameObject, std::shared_ptr<Material>& mat) :material(mat), recieveShadow(true), shadowCastingMode(ShadowCastingMode::On), layer(RenderLayer::Default) {}
+		//std::shared_ptr<Material> material;
+	//	void setMaterial(std::shared_ptr<Material>& mat) { material = mat; }
 		/// <summary>
 		/// Draw Function: Must execute after setting all material varibles, except self transform             
 		/// </summary>
 		/// <param name="cb"></param>
 		/// <param name="renderInfo"></param>
-		virtual void Draw(CommandBufferHandle& cb,const RenderInfo& renderInfo)const {};
+		virtual void Draw(CommandBufferHandle& cb,const RenderInfo& renderInfo,const BufferMap& bufferMap,const ImageMap& imageMap)const {};
 		/// <summary>
 		/// Ignore self material and use the given material to draw
 		/// </summary>
@@ -65,11 +70,11 @@ namespace tEngine {
 	class MeshRenderer:public Renderer {
 		
 	public:
-		//std::shared_ptr<MeshBuffer> meshBuffer;
+
+		//std::shared_ptr<MeshFilter> meshBuffer;
 		unsigned instanceCount = 1;
-		MeshRenderer(std::shared_ptr<Material>& mat);
-		MeshRenderer(GameObject_* gameObject, std::shared_ptr<Material>& mat);
-		void Draw(CommandBufferHandle& cb, const RenderInfo& renderInfo)const override;
+
+		void Draw(CommandBufferHandle& cb, const RenderInfo& renderInfo, const Renderer::BufferMap& bufferMap, const Renderer::ImageMap& imageMap)const override;
 		void DrawWithMaterial(CommandBufferHandle& cb, const RenderInfo& renderInfo, Material* material)const override;
 
 	};

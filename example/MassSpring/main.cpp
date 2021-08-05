@@ -38,11 +38,11 @@ int main() {
 	sphere->transform.setPosition( { 0,0.4,-1.4 });
 	sphere->transform.setScale( { 0.2,0.2,0.2 });
 	auto meshAsset = LoadMesh("sphere.obj");
-	sphere->AddComponent<MeshBuffer>()->setMeshUpload(meshAsset->mesh,device.get());
-	cloth->AddComponent<MeshBuffer>()->setMesh(spring.mesh);
+	sphere->AddComponent<MeshFilter>()->setMeshUpload(meshAsset->mesh,device.get());
+	cloth->AddComponent<MeshFilter>()->setMesh(spring.mesh);
 	oneTimeSubmit(device.get(), [&](const CommandBufferHandle& cb) {
-		cloth->getComponent<MeshBuffer>()->createVertexBuffer(device.get(),cb,BufferDomain::Host );
-		cloth->getComponent<MeshBuffer>()->createIdxBuffer(device.get(),cb,BufferDomain::Device );
+		cloth->getComponent<MeshFilter>()->createVertexBuffer(device.get(),cb,BufferDomain::Host );
+		cloth->getComponent<MeshFilter>()->createIdxBuffer(device.get(),cb,BufferDomain::Device );
 		
 		});
 	
@@ -53,8 +53,8 @@ int main() {
 		auto& io = ImGui::GetIO();
 		world.update(deltaTime);
 		spring.Update(deltaTime);
-		cloth->getComponent<MeshBuffer>()->setMesh(spring.mesh);
-		cloth->getComponent<MeshBuffer>()->uploadVertexBuffer(device.get(),nullptr);
+		cloth->getComponent<MeshFilter>()->setMesh(spring.mesh);
+		cloth->getComponent<MeshFilter>()->uploadVertexBuffer(device.get(),nullptr);
 		ImGui::Begin("Fluid");
 		Eigen::Vector3f f = spring.fluid.cast<float>();
 		ImGui::InputFloat3("x", f.data());

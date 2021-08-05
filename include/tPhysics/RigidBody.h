@@ -3,8 +3,7 @@
 #include"tTransform.h"
 #include"Component.h"
 namespace tEngine {
-	class RigidBody:public tEngine::Component {
-	
+	class RigidBody{
 		
 		real inverseMass=0;
 		Mat3 inverseInertiaTensor;
@@ -21,7 +20,7 @@ namespace tEngine {
 		real motion;
 		Vector3 accumInducedByForce;
 	public:
-		RigidBody(tEngine::GameObject_* gameObject) :tEngine::Component(gameObject), inverseInertiaTensor(1), inverseInertiaTensorWorld(1),inverseMass(1), velocity(0, 0, 0), angularVelocity(0, 0, 0),
+		RigidBody() :inverseInertiaTensor(1), inverseInertiaTensorWorld(1),inverseMass(1), velocity(0, 0, 0), angularVelocity(0, 0, 0),
 			linearDamping(0.9), angularDamping(0.9), forceAccum(0, 0, 0), torqueAccum(0, 0, 0), accleration(0, 0, 0), isAwake(true), canSleep(true), motion(sleepEpsilon*2.0f), accumInducedByForce(0,0,0){}
 	//	tEngine::Transform transform;
 		const tEngine::Transform& getTransform() const; 
@@ -78,5 +77,23 @@ namespace tEngine {
 		setInertiaTensorCoeffs(mat, 0.3f * mass * (squares.y + squares.z),
 			0.3f * mass * (squares.x + squares.z),
 			0.3f * mass * (squares.x + squares.y));
+	}
+	inline Mat3 CuboidInertiaTensor(const real mass, const real dx, const real dy, const real dz) {
+		Mat3 re;
+		real coff = 0.08333 * mass;
+		setInertiaTensorCoeffs(re, coff*(dy*dy+dz*dz), coff*(dx*dx+dz*dz), coff * (dx * dx + dy * dy));
+		return re;
+	}
+	inline Mat3 SphereInertiaTensor(const real mass, const real r) {
+		Mat3 re;
+		real coff = 0.4 * mass * r * r;
+		setInertiaTensorCoeffs(re, coff, coff, coff);
+		return re;
+	}
+	inline Mat3 SphereShellInertialTensor(const real mass, const real r) {
+		Mat3 re;
+		real coff = 0.6667 * mass * r * r;
+		setInertiaTensorCoeffs(re, coff, coff, coff);
+		return re;
 	}
 }

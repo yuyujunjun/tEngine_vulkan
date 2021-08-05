@@ -64,12 +64,12 @@ namespace SpringSolver {
 		v = Eigen::VectorXd(p.size());
 		v.setZero();
 		{
-			int idx = 0;
+			int identityPerComponent = 0;
 			for (auto& v : mesh.vertices) {
-				p[3 * idx] = v.Position.x;
-				p[3 * idx + 1] = v.Position.y;
-				p[3 * idx + 2] = v.Position.z;
-				++idx;
+				p[3 * identityPerComponent] = v.Position.x;
+				p[3 * identityPerComponent + 1] = v.Position.y;
+				p[3 * identityPerComponent + 2] = v.Position.z;
+				++identityPerComponent;
 			}
 		}
 		auto Idx = [this](int i, int j) {

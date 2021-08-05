@@ -7,8 +7,7 @@
 #include<glm/gtc/matrix_transform.hpp>
 #include"ShaderVariable.h"
 #include"imgui.h"
-#include"GameObject.h"
-#include"Component.h"
+#include"ecs.h"
 #include"RenderLayers.h"
 #include <tComponent\RenderLayers.h>
 
@@ -55,8 +54,10 @@ namespace tEngine {
         glm::vec2 halfSize = glm::vec2(100);
         void update();
     };
-    class Camera:public Component {
+    class Camera {
+
         friend class RenderWorld;
+        friend class CameraSystem;
         ImageHandle renderTexture=nullptr;
         vk::ImageView renderImageView = {};
         RenderPassHandle renderPass;
@@ -80,17 +81,13 @@ namespace tEngine {
         void setAfterRender(std::function<void(CommandBufferHandle, const BufferRangeManager* cameraBuffer,const RenderInfo& renderInfo, const FrameBufferHandle& frameBuffer)> afterRender) {
             this->afterRender = afterRender;
         }
-        static GameObject Create() {
-            GameObject obj = GameObject_::Create();
-            obj->AddComponent<Camera>();
-            return obj;
-        }
+     
         CameraTransform transform;
         const ImageHandle& getRenderTexture()const { return renderTexture; }
         const vk::ImageView& getImageView()const { return renderImageView; }
         const ImageHandle& getImage()const { return renderTexture; }
         Camera() :renderTexture(nullptr), renderImageView(vk::ImageView()), viewPortRatio(1, 1), scissorRatio(1, 1),layer(RenderLayer::Everything) {}
-        Camera(GameObject_* gameObject) :Component(gameObject),renderTexture(nullptr), renderImageView(vk::ImageView()),viewPortRatio(1,1),scissorRatio(1,1), layer(RenderLayer::Everything) {}
+      //  Camera(GameObject_* gameObject) :Component(gameObject),renderTexture(nullptr), renderImageView(vk::ImageView()),viewPortRatio(1,1),scissorRatio(1,1), layer(RenderLayer::Everything) {}
      //   Camera(ImageHandle& renderTexture, const vk::ImageView& imageView) :renderTexture(renderTexture), renderImageView(imageView), viewPortRatio(1, 1), scissorRatio(1, 1) {}
         const glm::mat4& ViewMatrix()const { return transform.m_matrix; }
         const glm::mat4& ProjectionMatrix()const { return transform.p_matrix; }
@@ -107,6 +104,7 @@ namespace tEngine {
         }
       
     };
+  
     class CameraSystem:public System
     {
     public:
@@ -118,7 +116,8 @@ namespace tEngine {
 
     public:
        // ImGuiIO io;
-        void ExecuteAllComponents(float dt) override;
+        EntityID cam_id;
+        void ExecuteAllComponents(float dt) ;
 
         CameraSystem();
 
@@ -140,7 +139,7 @@ namespace tEngine {
         void setSpeed(float speed);
         void setWindowSize(glm::ivec2 const& size);
         void wheel(int value);
-        void setCamera(CameraTransform* cam);
+        void setCamera(EntityID cam);
     private:
         void dolly(glm::vec2 const& delta);
         void motion(glm::ivec2 const& position, Action action = Action::None);
@@ -151,7 +150,7 @@ namespace tEngine {
         // void update();
 
     private:
-        CameraTransform* cam;
+      //  CameraTransform* cam;
 
 
         glm::u32vec2 m_windowSize = glm::u32vec2(1080, 960);

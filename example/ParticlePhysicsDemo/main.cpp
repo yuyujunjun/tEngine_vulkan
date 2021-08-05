@@ -33,9 +33,9 @@ int main() {
 	cam->transform.m_windowSize = glm::uvec2(context.swapChain->getExtent().width, context.swapChain->getExtent().height);
 	GameObject obj = GameObject_::Create();
 	GameObject plane = GameObject_::Create();
-	plane->AddComponent<MeshBuffer>()->setMeshUpload(Mesh::UnitSquare(),device.get());
+	plane->AddComponent<MeshFilter>()->setMeshUpload(Mesh::UnitSquare(),device.get());
 	
-	obj->AddComponent<MeshBuffer>();
+	obj->AddComponent<MeshFilter>();
 	obj->AddComponent<Platform>(&pWorld);
 	obj->getComponent<Platform>()->initializeMesh(device.get());
 	auto shader = tShader::Create(device.get());

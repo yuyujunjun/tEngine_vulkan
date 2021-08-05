@@ -5,20 +5,36 @@
 #include"MeshBuffer.h"
 #include"GameObject.h"
 #include"ShaderVariable.h"
+#include"ecs.h"
 namespace tEngine {
-	MeshRenderer::MeshRenderer(std::shared_ptr<Material>& mat) :Renderer(mat) {
-	}
-	MeshRenderer::MeshRenderer(GameObject_* gameObject, std::shared_ptr<Material>& mat):Renderer(gameObject,mat) {
 
-	}
-	void MeshRenderer::Draw(CommandBufferHandle& cb, const RenderInfo& renderInfo)const {
-		DrawWithMaterial(cb, renderInfo, material.get());
+	void MeshRenderer::Draw(CommandBufferHandle& cb, const RenderInfo& renderInfo, const Renderer::BufferMap& bufferMap, const Renderer::ImageMap& imageMap)const {
+		for (auto entity : SceneView<Transform, MeshFilter,View>(*ecsManager)) {
+			auto material =  ecsManager->GetComponent<View>(entity)->material;
+			auto transform = ecsManager->GetComponent<Transform>(entity);
+			auto meshBuffer = ecsManager->GetComponent<MeshFilter>(entity);
+			for (const auto& k_v : bufferMap) {
+				material->SetBuffer(k_v.first, k_v.second->buffer(), k_v.second->getOffset());
+			}
+			for (const auto& k_v : imageMap) {
+				material->SetImage(k_v.first, k_v.second);
+			}
+			material->SetValue(ShaderString(SV::_MATRIX_M), transform->updateMtx());
+			material->flushBuffer();
+			flushGraphicsShaderState(material->shader, material->graphicsState, cb, renderInfo.renderPass, renderInfo.subpass);
+			DrawMesh(meshBuffer, cb, instanceCount);
+		}
+	
 	}
 	void MeshRenderer::DrawWithMaterial(CommandBufferHandle& cb, const RenderInfo& renderInfo, Material* material)const {
-		material->SetValue(ShaderString(SV::_MATRIX_M), gameObject->transform.updateMtx());
-		material->flushBuffer();
-		flushGraphicsShaderState(material->shader, material->graphicsState, cb, renderInfo.renderPass, renderInfo.subpass);
-		auto meshBuffer=gameObject->getComponent<MeshBuffer>();
-		DrawMesh(meshBuffer, cb, instanceCount);
+		for (auto entity : SceneView<Transform, MeshFilter,View>(*ecsManager)) {
+			auto transform = ecsManager->GetComponent<Transform>(entity);
+			auto meshBuffer = ecsManager->GetComponent<MeshFilter>(entity);
+			material->SetValue(ShaderString(SV::_MATRIX_M), transform->updateMtx());
+			material->flushBuffer();
+			flushGraphicsShaderState(material->shader, material->graphicsState, cb, renderInfo.renderPass, renderInfo.subpass);
+			DrawMesh(meshBuffer, cb, instanceCount);
+		}
+		
 	}
 }

@@ -61,7 +61,7 @@ namespace tEngine {
 		std::vector<ResSetBinding>& getResSetBinding();
 		bool isSetEmpty(int i);
 		const Device* getDevice();
-		
+	
 	protected:
 
 		std::vector<ResSetBinding> bindResources;

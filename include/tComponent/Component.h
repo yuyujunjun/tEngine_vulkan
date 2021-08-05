@@ -1,17 +1,13 @@
 #pragma once
+#include<vector>
+#include<memory>
+#include<queue>
+#include<unordered_map>
+#include<assert.h>
+#include"ComponentData.h"
 namespace tEngine {
 	class GameObject_;
-	class System {
-		friend class tWorld;
-	public:
-		virtual void ExecuteAllComponents(float dt) = 0;
-	};
-	class Component {
-	public:
-		Component() = default;
-		Component(GameObject_* gameObject) :gameObject(gameObject) {}
-		GameObject_* gameObject = 0;
-		virtual ~Component() {}
 
-	};
+	
+
 }

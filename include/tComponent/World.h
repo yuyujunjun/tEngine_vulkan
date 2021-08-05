@@ -1,10 +1,10 @@
 #pragma once
 #include<memory>
 #include<vector>
-#include"Component.h"
 #include"renderer.h"
 #include"RenderWorld.h"
 #include"tPhysics/pWorld.h"
+#include"ecs.h"
 namespace tEngine {
 	class System;
 	struct RenderInfo;
@@ -21,22 +21,25 @@ namespace tEngine {
 
 
 	class tWorld {
+		EcsManager ecsManager;
 		RenderWorld renderWorld;
 		PhysicsWorld rigidBodyWorld;
-		std::vector<GameObject> gameObjects;
+	//	std::vector<GameObject> gameObjects;
 		std::vector<System*> systems;
 	public:
+		EcsManager& getEcsManager() { return ecsManager; }
+		tWorld(Device* device) :renderWorld(device) {
+			renderWorld.ecsManager = &ecsManager;
 
-		tWorld(Device* device) :renderWorld(device) {};// = default;
+		
+		};// = default;
 	
 		void AddGameObject(GameObject& gameObj);
 		void AddSystem(System* sys) {
 			systems.push_back(sys);
 		}
 		void update(float dt) {
-			for (auto& sys : systems) {
-				sys->ExecuteAllComponents(dt);
-			}
+
 			rigidBodyWorld.startFrame();
 			rigidBodyWorld.runPhysics(dt);
 		}

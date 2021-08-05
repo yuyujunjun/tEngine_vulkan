@@ -97,8 +97,8 @@ namespace SpringSolver {
 		Eigen::Vector3d fluid;
 		double constant=1;
 		tEngine::Mesh mesh;
-		//tEngine::MeshBuffer mesh;
-		//tEngine::MeshBuffer collide;
+		//tEngine::MeshFilter mesh;
+		//tEngine::MeshFilter collide;
 		double time = 0;
 	private:
 	

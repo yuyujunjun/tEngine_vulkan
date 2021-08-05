@@ -110,6 +110,7 @@ namespace tEngine {
 	}
 	//只是缓存，仅有拷贝操作
 	void tShaderInterface::SetBuffer(std::string name, BufferHandle buffer, uint32_t offset) {
+		if (!base_shader->hasResource(name))return;
 		auto s_b = base_shader->getBlockSetBinding(name);
 
 		auto set_number = s_b.first;
@@ -121,6 +122,7 @@ namespace tEngine {
 	//fake viewInfo
 	void tShaderInterface::SetImage(std::string name, ImageHandle image, vk::ImageView vkView, StockSampler sampler) {
 		//	assert(bindResource_to_idx.count(name) != 0);
+		if (!base_shader->hasResource(name))return;
 		auto s_b = base_shader->getBlockSetBinding(name);
 
 		auto set_number = s_b.first;
@@ -216,7 +218,7 @@ namespace tEngine {
 			for (const auto& s : setInfos) {
 				if (s.set_number == s_b.first) {
 					auto block = s.blockBuffers.at(s_b.second);
-					return requestBufferRange(block, 30);
+					return requestBufferRange(block,256);
 				}
 			}
 		}

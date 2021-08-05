@@ -1,7 +1,7 @@
 #pragma once
 #include<memory>
 #include<vector>
-#include"Component.h"
+#include"ecs.h"
 #include"renderer.h"
 #include"renderHelper.h"
 namespace tEngine {
@@ -24,23 +24,22 @@ namespace tEngine {
 	class BufferRangeManager;
 	BufferRangeManager* UpdateCameraBuffer(const Device* device,const Camera* camera);
 	BufferRangeManager* UpdateCameraBuffer(const Device* device, const glm::mat4& view, const glm::mat4& projection);
-	class RenderWorld {
+	class RenderWorld:public System {
 		
-		std::vector<Renderer*> renderers;
+		//std::vector<EntityID> renderers;
 		//	RenderEngine renderEngine;
 		const Device* device;
 		ForwardRenderPass forwardRenderPass;
-		std::vector<Camera*> cameras;
-		Camera* mainCamera;
+		//std::vector<Camera*> cameras;
+		EntityID mainCamera;
+		std::vector<Renderer*> renderers;
 	public:
 		
-		RenderWorld(const Device* device) :device(device),mainCamera(nullptr){};
-		void AddCamera(Camera* cam);// { cameras.emplace_back(cam); }
-		void RemoveCamera(Camera* cam);
-	
-		void RegistryMeshRenderer(Renderer* obj);
-		void RemoveMeshRenderer(const Renderer* obj);
-		std::vector<Renderer*>& getRenderers() { return renderers; }
+		RenderWorld(const Device* device) :device(device),mainCamera(-1){};
+		void AddCamera(EntityID cam) { mainCamera = cam; }
+		void AddRenderer(Renderer* renderer) { renderers.emplace_back(renderer); }
+
+		//std::vector<Renderer*>& getRenderers() { return renderers; }
 
 		void Render(CommandBufferHandle& cb, const SwapChainHandle& swapChain, uint32_t idx);
 		/// <summary>
@@ -52,14 +51,14 @@ namespace tEngine {
 		/// <param name="mat"></param>
 		/// <param name="view"></param>
 		/// <param name="projection"></param>
-		void RenderWithMaterial(CommandBufferHandle& cb, const RenderInfo& renderInfo,  Material* mat, BufferRangeManager* cameraBuffer);
+		void RenderWithMaterial(std::vector<Renderer*>& renderer,CommandBufferHandle& cb, const RenderInfo& renderInfo,  Material* mat, BufferRangeManager* cameraBuffer);
 		
 	protected:
 		
 		void updateMainCameraRT(const SwapChainHandle& swapChain, uint32_t idx, Camera& camera);
 		void PrepareRenderPass(Camera& camera);
 		FrameBufferHandle PrepareFrameBuffer(Camera& camera);
-		void RenderWithCamera(CommandBufferHandle& cb, const RenderInfo& renderInfo, BufferRangeManager* cameraBuffer);
+		void RenderWithCamera(std::vector<Renderer*>& renderer,CommandBufferHandle& cb, const RenderInfo& renderInfo, BufferRangeManager* cameraBuffer);
 		
 	};
 	

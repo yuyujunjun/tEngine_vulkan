@@ -2,9 +2,8 @@
 #include"CommandBufferBase.h"
 #include"Log.h"
 namespace tEngine {
-	void MeshBuffer::setMeshUpload(const Mesh& mesh, Device* device) {
+	void MeshBuffer::setMeshUpload(Device* device) {
 		if (mesh.vertices.size() == 0)return;
-		setMesh(mesh);
 		auto createUpload = [&](CommandBufferHandle cb) {
 			if (!createVertexBuffer(device, cb)) {
 				uploadVertexBuffer(device, cb);
@@ -20,9 +19,12 @@ namespace tEngine {
 		else {
 			oneTimeSubmit(device, createUpload);
 		}
-
 	}
-	void DrawMesh(MeshBuffer* mb, CommandBufferHandle& cb, uint32_t instanceCount ) {
+	void MeshFilter::setMeshUpload(const Mesh& mesh, Device* device) {
+		setMesh(mesh);
+		meshBuffer->setMeshUpload(device);
+	}
+	void DrawMesh(MeshFilter* mb, CommandBufferHandle& cb, uint32_t instanceCount ) {
 		cb->bindVertexBuffer(mb->getVBO(), 0, 0);
 		if (mb->getIBO() != nullptr) {
 			cb->bindIndexBuffer(mb->getIBO(), 0, vk::IndexType::eUint32);
@@ -58,5 +60,10 @@ namespace tEngine {
 		IBO = createBuffer(device, info, mesh.indices.data(), cb);
 		return 1;
 	}
-	
+	int MeshFilter::createVertexBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain ) {
+		return meshBuffer->createVertexBuffer(device, cb, domain);
+	}
+	int MeshFilter::createIdxBuffer(Device* device, CommandBufferHandle cb, BufferDomain domain ) {
+		return meshBuffer->createIdxBuffer(device, cb, domain);
+	}
 }
