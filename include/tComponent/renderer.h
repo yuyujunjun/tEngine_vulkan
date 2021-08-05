@@ -1,8 +1,9 @@
 #pragma once
 #include<memory>
 #include"glm/glm.hpp"
-#include"Component.h"
+
 #include"RenderLayers.h"
+#include"ecs.h"
 namespace tEngine {
 	class tShaderInterface;
 	class Material;
@@ -11,6 +12,9 @@ namespace tEngine {
 	using CommandBufferHandle = std::shared_ptr<CommandBuffer>;
 	class tRenderPass;
 	class Renderer;
+	class BufferRangeManager;
+	class tImage;
+	using ImageHandle = std::shared_ptr<tImage>;
 	/// <summary>
 	/// Store some values shared by multiple renderers
 	/// </summary>

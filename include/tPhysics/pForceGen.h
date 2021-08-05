@@ -1,6 +1,7 @@
 #pragma once
 #include<vector>
 #include"tPhysics/numerical.h"
+#include"ecs.h"
 //#include"tParticles.h"
 namespace tEngine {
 	class Particle;
@@ -81,33 +82,40 @@ namespace tEngine {
 		ParticleAnchoredBungee(const Vector3& anchor, real springConstant, real restLength) :anchor(anchor), springConstant(springConstant), restLength(restLength) {}
 		virtual void updateForce(Particle* particle, real duration);
 	};
-	class ForceGenerator {
+	class ForceGenerator:public System {
 	public:
-		virtual void updateForce(RigidBody* body, real duration) = 0;
+		virtual void updateForce(EntityID body, real duration) {};
 	};
 	struct ForceRegistration {
-		ForceRegistration() :body(0), fg(0) {}
-		ForceRegistration(RigidBody* p, ForceGenerator* f) :body(p), fg(f) {}
-		RigidBody* body;
+		ForceRegistration() :body(-1), fg(0) {}
+		ForceRegistration(EntityID id, ForceGenerator* f) :body(id), fg(f) {}
+		EntityID body;
 		ForceGenerator* fg;
 	};
 	class Gravity :public ForceGenerator {
 		Vector3 gravity;
 	public:
 		Gravity(const Vector3& gravity) :gravity(gravity) {}
-		void updateForce(RigidBody* body, real duration)override;
+		void updateForce(EntityID id, real duration)override;
 	};
-	class Spring :public ForceGenerator {
+	struct Spring {
+		Spring() {
+			connectedBody[0] = -1;
+			connectedBody[1] = -1;
+		}
 		/*if connectedBody is nullptr then the spring will be connected to a fixed point in space*/
-		RigidBody* connectedBody;
+		EntityID connectedBody[2];
 		/** The point of connection of the spring, in local coordinates. */
-		Vector3 anchor;
-		Vector3 connectedAnchor;
+		Vector3 anchor[2];
+		Vector3 connectedAnchor[2];
 		real springConstant;
 		real restLength;
+		
+	};
+	class SpringSystem :public ForceGenerator {
 	public:
 		bool autoConfigureConnectedAnchor=true;
-		void updateForce(RigidBody* body, real duration)override;
+		void updateForce(EntityID id, real duration)override;
 	};
 	class Aero :public ForceGenerator {
 	protected:
@@ -116,8 +124,8 @@ namespace tEngine {
 	public:
 		Vector3& windSpeed;
 		Aero(const Mat3& tensor, const Vector3& position,  Vector3& windSpeed) :tensor(tensor), position(position), windSpeed(windSpeed) {}
-		void updateForce(RigidBody* body, real duration)override;
-		void updateForceFromTensor(RigidBody* body, real duration, const Mat3& tensor);
+		void updateForce(EntityID id, real duration)override;
+		void updateForceFromTensor(EntityID id, real duration, const Mat3& tensor);
 	};
 	class AeroControl :public Aero {
 		Mat3 maxTensor;
@@ -127,6 +135,6 @@ namespace tEngine {
 	public:
 		AeroControl(const Mat3& base, const Mat3& min, const Mat3& max,  Vector3& position,  Vector3& windSpeed) :Aero(base, position, windSpeed), maxTensor(max), minTensor(min) {};
 		void setControl(real value) { controlSetting = value; }
-		void updateForce(RigidBody* body, real duration)override;
+		void updateForce(EntityID id, real duration)override;
 	};
 }

@@ -4,6 +4,7 @@
 #include"pContacts.h"
 #include"ecs.h"
 #include<list>
+#include"RigidBody.h"
 namespace tEngine {
 	class Particle;
 
@@ -32,15 +33,16 @@ namespace tEngine {
 	};
 	class Collider;
 	class PhysicsWorld:public System {
-		std::list<RigidBody*> rigidBodys;
+		//std::list<RigidBody*> rigidBodys;
 		std::vector<ForceRegistration> forceRegistration;
+		RigidBodySystem rigidBodySystem;
 	public:
 		PhysicsWorld() = default;
 	//	void addRigidBody(RigidBody* body) { rigidBodys.emplace_back(body); }
 	//	void removeRigidBody(RigidBody* body) { rigidBodys.remove(body); }
 		void startFrame();
-		void registerForce(ForceGenerator* force, RigidBody* rigidBody);
-		void unregisterForce(ForceGenerator* force, RigidBody* rigidBody);
+		void registerForce(ForceGenerator* force,EntityID id);
+		void unregisterForce(ForceGenerator* force, EntityID id);
 		void runPhysics(real duration);
 		
 	};

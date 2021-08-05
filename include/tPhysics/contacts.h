@@ -5,6 +5,7 @@ namespace tEngine {
 	class ContactResolver;
 	class Collider;
 	class RigidBody;
+	class RigidBodySystem;
 /// <summary>
 /// Obtain Orthonormal Basis given contact normal(contact normal as y)
 /// </summary>
@@ -40,7 +41,8 @@ namespace tEngine {
 	class Contact {
 		friend class ContactResolver;
 	public:
-		Collider* collider[2];
+		//Collider* collider[2];
+		Transform* transform[2];
 		RigidBody* rigidBody[2];
 		real velocityPerUnitImpulse[2];//沿法线方向的单位冲量引起的角速度变化导致的的延法线速度变化
 		real friction;
@@ -48,7 +50,7 @@ namespace tEngine {
 		Vector3 contactPoint;
 		Vector3 contactNormal;
 		real penetration;
-		void SetData(Collider* obj1, Collider* obj2, const ContactInfo& info);
+		void SetData(RigidBody* obj1,Transform* t1, RigidBody* obj2,Transform* t2, const ContactInfo& info);
 	protected:
 		Mat3 contact2World;
 		Vector3 contactVelocity;

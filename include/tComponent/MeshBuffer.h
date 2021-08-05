@@ -31,7 +31,7 @@ namespace tEngine {
 		
 	public:
 		MeshFilter() {}
-		MeshFilter() {}
+
 		void setMesh(const Mesh& mesh) {
 			this->meshBuffer = std::make_shared<MeshBuffer>();
 			this->meshBuffer->setMesh(mesh);

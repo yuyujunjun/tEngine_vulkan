@@ -35,33 +35,32 @@ namespace tEngine {
 		const Vector3& getCurrentAcceleration()const;
 		const Vector3& getVelocity()const;
 		const Vector3& getAngularVelocity()const;
-		Mat3 RigidBody::getInverseInertiaTensorWorld()const;
-		void setInertiaTensor(const Mat3& inertiaTensor);
+		
 		Mat3 getInverseInertiaTensorWorld()const;
+		void clearAccumulator();
+		void addForce(const Vector3& force);
+		void addForceAtLocalPoint(Transform* transform, const Vector3& force, const Vector3& point);
+		void addForceAtPoint(Transform* transform, const Vector3& force, const Vector3& point);
+		void addTorque(const Vector3& torque);
+		void addVelocity(const Vector3& v);
+		void addAngularVelocity( const Vector3& v);
+		void setVelocity(const Vector3& v);
+		void setAngularVelocity(const Vector3& v);
+
+		void setLinearDamping(real damping);
+		void setAngularDamping( real damping);
+		void setAcceleration( const Vector3& accleration);
+		bool hasFiniteMass();
+
+		void calculateDerivedData(Transform* transform);
+		void transformInertiaTensor(Transform* transform);
 	};
 	class RigidBodySystem:public System{
 		
 	public:
 		RigidBodySystem() {}
-
 		void integrate(EntityID id,const real duration);
-		void clearAccumulator(RigidBody* body);
-		void addForce(RigidBody* body,const Vector3& force);
-		void addForceAtLocalPoint(RigidBody* body,Transform* transform, const Vector3& force, const Vector3& point);
-		void addForceAtPoint(RigidBody* body, Transform* transform, const Vector3& force, const Vector3& point);
-		void addTorque(RigidBody* body,const Vector3& torque);
-		void addVelocity(RigidBody* body, const Vector3& v);
-		void addAngularVelocity(RigidBody* body, const Vector3& v);
-		void setVelocity(RigidBody* body, const Vector3& v);
-		void setAngularVelocity(RigidBody* body, const Vector3& v);
-		
-		void setLinearDamping(RigidBody* body, real damping);
-		void setAngularDamping(RigidBody* body, real damping);
-		void setAcceleration(RigidBody* body, const Vector3& accleration);
-		bool hasFiniteMass(RigidBody* body);
 
-		void calculateDerivedData(Transform* transform, RigidBody* body);
-		void transformInertiaTensor(Transform* transform,RigidBody* body);
 		
 
 	};

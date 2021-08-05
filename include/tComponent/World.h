@@ -24,22 +24,18 @@ namespace tEngine {
 		EcsManager ecsManager;
 		RenderWorld renderWorld;
 		PhysicsWorld rigidBodyWorld;
-	//	std::vector<GameObject> gameObjects;
 		std::vector<System*> systems;
 	public:
 		EcsManager& getEcsManager() { return ecsManager; }
 		tWorld(Device* device) :renderWorld(device) {
 			renderWorld.ecsManager = &ecsManager;
-
-		
+			rigidBodyWorld.ecsManager = &ecsManager;
+			renderWorld.AddRenderer(new MeshRenderer());
 		};// = default;
-	
-		void AddGameObject(GameObject& gameObj);
 		void AddSystem(System* sys) {
 			systems.push_back(sys);
 		}
 		void update(float dt) {
-
 			rigidBodyWorld.startFrame();
 			rigidBodyWorld.runPhysics(dt);
 		}

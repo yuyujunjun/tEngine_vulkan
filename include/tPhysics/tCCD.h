@@ -9,6 +9,10 @@ namespace tEngine {
 		Vector3 dir;
 		real depth;
 	};
-	int GJKPenetration(const Collider* obj1, const Collider* obj2, ContactInfo* info);
-	bool GJKIntersect(const Collider* obj1, const Collider* obj2);
+	struct GJKSupportObj {
+		ColliderSystem* system;
+		EntityID id;
+	};
+	int GJKPenetration(const GJKSupportObj obj1, const GJKSupportObj obj2, ContactInfo* info);
+	bool GJKIntersect(const GJKSupportObj obj1, const GJKSupportObj obj2);
 }

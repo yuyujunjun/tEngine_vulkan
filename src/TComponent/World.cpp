@@ -42,7 +42,7 @@ namespace tEngine {
 			cameras.emplace_back(ecsManager->GetComponent<Camera>(entity));
 			PrepareRenderPass(*cameras.back());
 		}
-		
+	
 		for (auto cam : cameras) {
 			auto frameBuffer=PrepareFrameBuffer(*cam);
 			auto cameraBuffer=UpdateCameraBuffer(device, cam);

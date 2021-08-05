@@ -5,9 +5,10 @@
 #include<assert.h>
 #include<queue>
 namespace tEngine {
-	int s_componentCounter = 1;
+	extern int s_componentCounter;
 	template<class T>
 	int GetTypeId() {
+		
 		static int s_componentId = s_componentCounter++;
 		return s_componentId;
 	}
@@ -19,8 +20,9 @@ namespace tEngine {
 	class BaseComponentPool {
 	public:
 		virtual void RemoveComponent(uint32_t entity_id) = 0;
-		//	virtual ~BaseComponentPool() = 0;
+		virtual ~BaseComponentPool() {};
 		virtual bool HasComponent(uint32_t entity_id)const = 0;
+		
 
 	};
 	template<typename T>
@@ -145,8 +147,9 @@ namespace tEngine {
 			}
 			return id++;
 		}
-		size_t GetEntityPos(EntityID id) {
-			auto entity_pos = id_to_pos[id];
+
+		const size_t GetEntityPos(EntityID id)const {
+			auto entity_pos = id_to_pos.at(id);
 			assert(entities[entity_pos].id == id);
 			/*if (entities[entity_pos].id != id)
 				return -1;*/
@@ -213,10 +216,88 @@ namespace tEngine {
 			id_to_pos[id] = -1;
 			freeEntities.push(entity_pos);
 		}
+		~EcsManager() {
+			for (auto pool : componentPools) {
+				delete pool;
+			}
+		}
+		const ComponentMask& getMask(EntityID id)const {
+			auto pos = GetEntityPos(id);
+			return entities[pos].mask;
+		}
+		template<typename T>
+		bool hasComponent(EntityID id)const {
+			int componentId = GetTypeId<T>();
+			auto pos = GetEntityPos(id);
+			return entities[pos].mask.test(componentId);
+		}
 		std::vector<size_t> id_to_pos;
 		std::vector<EntityDesc> entities;
 		std::queue<uint32_t> freeEntities;
 		std::vector<BaseComponentPool*> componentPools;
+	};
+	template<typename ...ComponentTypes>
+	struct EntitiesView {
+		EntitiesView(EcsManager* ecs,std::vector<EntityID>& idList) :ecsSystem(ecs),idList(idList) {
+			if (sizeof...(ComponentTypes) == 0) {
+				all = true;
+			}
+			else {
+				int componentIds[] = { GetTypeId<ComponentTypes>()... };
+				for (unsigned i = 0; i < sizeof...(ComponentTypes); ++i) {
+					componentMask.set(componentIds[i]);
+				}
+			}
+		}
+		struct Iterator {
+			Iterator(EcsManager* ecs, std::vector<EntityID>& idList,int index, ComponentMask mask, bool all) :ecsSystem(ecs), idList(idList),index(index), mask(mask), all(all) {}
+			EntityID operator*()const {
+				return idList[index];
+			}
+			bool operator==(const Iterator& other)const {
+				return index == other.index || index==idList.size();
+			}
+			bool operator!=(const Iterator& other) const
+			{
+				return index != other.index && index != idList.size();
+			}
+			bool ValidIndex(int index) {
+				return ecsSystem->IsIDValid(idList[index]) && (all || (ecsSystem->getMask(idList[index]) & mask) == mask);
+			}
+			Iterator& operator++()
+			{
+				do
+				{
+					index++;
+				} while (index < idList.size() && !ValidIndex(index));
+				return *this;
+			}
+			int index;
+			EcsManager* ecsSystem;
+			std::vector<EntityID>& idList;
+			ComponentMask mask;
+			bool all{ false };
+		};
+		const Iterator begin() const
+		{
+			int firstIndex = 0;
+			while (firstIndex < idList.size() &&
+				(!ecsSystem->IsIDValid(idList[firstIndex]) || componentMask != (componentMask & ecsSystem->getMask(idList[firstIndex]).mask)
+					))
+			{
+				firstIndex++;
+			}
+			return Iterator(ecsSystem,idList, firstIndex, componentMask, all);
+		}
+
+		const Iterator end() const
+		{
+			return Iterator(ecsSystem, idList, ecsSystem->entities.size(), componentMask, all);
+			// Give an iterator to the end of this view 
+		}
+		EcsManager* ecs;
+		std::vector<EntityID>& idList;
+		bool all{ false };
 	};
 	template<typename ...ComponentTypes>
 	struct SceneView {
@@ -225,8 +306,8 @@ namespace tEngine {
 				all = true;
 			}
 			else {
-				int componentIds[] = { 0,GetId<ComponentTypes>()... };
-				for (unsigned i = 0; i < sizeof...(ComponentTypes) + 1; ++i) {
+				int componentIds[] = { GetTypeId<ComponentTypes>()... };
+				for (unsigned i = 0; i < sizeof...(ComponentTypes) ; ++i) {
 					componentMask.set(componentIds[i]);
 				}
 			}

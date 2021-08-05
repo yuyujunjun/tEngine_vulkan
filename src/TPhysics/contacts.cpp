@@ -3,19 +3,21 @@
 #include"GameObject.h"
 #include"RigidBody.h"
 namespace tEngine {
-	void Contact::SetData(Collider* obj1, Collider* obj2, const ContactInfo& info) {
-		collider[0] = obj1;
-		rigidBody[0] = obj1->gameObject->getComponent<RigidBody>();
+	void Contact::SetData(RigidBody* obj1,Transform* t1, RigidBody* obj2,Transform* t2, const ContactInfo& info) {
+		//collider[0] = obj1;
+		rigidBody[0] = obj1;
+		transform[0] = t1;
 		if (obj2) {
-			rigidBody[1] = obj2->gameObject->getComponent<RigidBody>();
-			collider[1] = obj2;
+			rigidBody[1] = obj2;
+			transform[1] = t2;
+		//	collider[1] = obj2;
 		}
 		contactPoint = info.pos;
 		contactNormal = info.dir;
 		penetration = info.depth;
 	}
 	Vector3 Contact::calculateLocalVelocity(unsigned bodyIdx, real duration) {
-		Collider* obj = collider[bodyIdx];
+	//	Collider* obj = collider[bodyIdx];
 		RigidBody* body = rigidBody[bodyIdx];
 		Mat3 world2Contact = glm::transpose(contact2World);
 		
@@ -61,12 +63,12 @@ namespace tEngine {
 	}
 	void Contact:: calculateInternals(real duration) {
 		contact2World = calculateContactsBasis(contactNormal);
-		relativeContactPosition[0] = contactPoint - collider[0]->worldCenter;
-		if (collider[1]) {
-			relativeContactPosition[1] = contactPoint - collider[1]->worldCenter;
+		relativeContactPosition[0] = contactPoint - transform[0]->getPosition();
+		if (rigidBody[1]) {
+			relativeContactPosition[1] = contactPoint - transform[1]->getPosition();
 		}
 		contactVelocity = calculateLocalVelocity(0, duration);
-		if (collider[1]) {
+		if (rigidBody[1]) {
 			contactVelocity -= calculateLocalVelocity(1, duration);//point to the 0th object
 		}
 		
@@ -214,13 +216,13 @@ namespace tEngine {
 					Vector3 impulseDirection = glm::cross(relativeContactPosition[i], contactNormal);
 					//angularMove[i]/angularInertia: the impulse required to move angularMove[i] along direction
 					angularChange[i] =rigidBody[i]->getInverseInertiaTensorWorld()* impulseDirection * angularMove[i] / velocityPerUnitImpulse[i];
-					glm::quat q = rigidBody[i]->gameObject->transform.getOrientation();
-					rigidBody[i]->gameObject->transform.rotate(angularChange[i]);
+					glm::quat q = transform[i]->getOrientation();
+					transform[i]->rotate(angularChange[i]);
 				}
 				linearChange[i] = contactNormal * linearMove[i];
-				rigidBody[i]->gameObject->transform.translate(linearChange[i]);
+				transform[i]->translate(linearChange[i]);
 				//for sleep objects, we have to update mannully
-				if (!rigidBody[i]->getAwake())rigidBody[i]->calculateDerivedData();
+				if (!rigidBody[i]->getAwake())rigidBody[i]->calculateDerivedData(transform[i]);
 				
 			}
 		}
@@ -266,9 +268,9 @@ namespace tEngine {
 			c[index].ApplyPositionChange(linearChange,angularChange,c[index].penetration);
 			Vector3 deltaPosition;
 			for (unsigned cid = 0; cid < numContacts; ++cid) {
-				for (unsigned bodyId = 0; bodyId < 2; ++bodyId)if (c[cid].collider[bodyId]) { 
-					for (unsigned d = 0; d < 2; ++d)if(c[index].collider[d]) {
-						if (c[cid].collider[bodyId]==c[index].collider[d]) {
+				for (unsigned bodyId = 0; bodyId < 2; ++bodyId)if (c[cid].rigidBody[bodyId]) { 
+					for (unsigned d = 0; d < 2; ++d)if(c[index].rigidBody[d]) {
+						if (c[cid].rigidBody[bodyId]==c[index].rigidBody[d]) {
 							//although contact position change slightly, we only concern about the contact normal direction, so it's ok
 							deltaPosition = linearChange[d] + glm::cross(angularChange[d], c[cid].relativeContactPosition[bodyId]);
 							c[cid].penetration += glm::dot(deltaPosition, c[cid].contactNormal)*(bodyId?1:-1);
@@ -298,9 +300,9 @@ namespace tEngine {
 			c[index].MatchAwakeState();
 			c[index].ApplyVelocityChange(linearChange,angularChange);
 			for (unsigned i = 0; i < numContacts; ++i) {
-				for (unsigned b = 0; b < 2; ++b)if (c[i].collider[b]) {
-					for (unsigned d = 0; d < 2; ++d)if (c[index].collider[d]) {
-						if (c[index].collider[d] == c[i].collider[b]) {
+				for (unsigned b = 0; b < 2; ++b)if (c[i].rigidBody[b]) {
+					for (unsigned d = 0; d < 2; ++d)if (c[index].rigidBody[d]) {
+						if (c[index].rigidBody[d] == c[i].rigidBody[b]) {
 							//update contact velocity
 							Vector3 deltaVe=linearChange[d] + glm::cross(angularChange[d], c[i].relativeContactPosition[b]);
 							c[i].contactVelocity += glm::transpose(c[i].contact2World) * deltaVe * (real)(b ? 1 : -1);

@@ -13,19 +13,25 @@ int main() {
 	auto& device = context.device; 
 	tWorld world(device.get());
 	auto& scene = world.getEcsManager();
-	
+	MeshRenderer* renderer=new MeshRenderer();
+	world.getRenderWorld().AddRenderer(renderer);
+	renderer->ecsManager = &scene;
 	auto camera = scene.NewEntity();
 	scene.AddComponent<Camera>(camera)->transform.m_windowSize = glm::uvec2(context.swapChain->getExtent().width, context.swapChain->getExtent().height);
 	scene.GetComponent<Camera>(camera)->transform.update();
+	world.getRenderWorld().AddCamera(camera);
 	auto meshAsset = tEngine::LoadMesh("Obj/Marry.obj");
 	auto imageAsset = tEngine::LoadImage("Obj/MC003_Kozakura_Mari.png");
 	auto image = createImage(device.get(),
 		ImageCreateInfo::immutable_2d_image(imageAsset->width, imageAsset->height, VK_FORMAT_R8G8B8A8_UNORM), imageAsset, nullptr);
 	auto character = scene.NewEntity();
 	scene.AddComponent<View>(character)->material = std::make_shared<Material>( tShaderInterface::requestTexturedShader(device.get()));
+	scene.AddComponent<Transform>(character);
+	scene.GetComponent<View>(character)->material->SetImage("_MainTex",image);
 	scene.AddComponent<MeshFilter>(character)->setMeshUpload(meshAsset->mesh, device.get());
 
 	CameraSystem cam_sys;
+	cam_sys.ecsManager = &scene;
 	cam_sys.setCamera(camera);
 	context.Update([&](double timeDelta) {
 		auto& io = ImGui::GetIO();
@@ -35,5 +41,7 @@ int main() {
 		world.getRenderWorld().Render(cb, context.swapChain, context.getImageIdx());
 		});
 	context.Loop(context.AddThreadContext());
+//	scene.DestroyEntity(camera);
+	//scene.DestroyEntity(character);
 	return 0;
 }

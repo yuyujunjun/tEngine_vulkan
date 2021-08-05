@@ -35,9 +35,14 @@ namespace tEngine {
 		std::vector<Renderer*> renderers;
 	public:
 		
-		RenderWorld(const Device* device) :device(device),mainCamera(-1){};
+		RenderWorld(const Device* device) :device(device),mainCamera(-1){
+			
+		
+		};
 		void AddCamera(EntityID cam) { mainCamera = cam; }
-		void AddRenderer(Renderer* renderer) { renderers.emplace_back(renderer); }
+		void AddRenderer(Renderer* renderer) {
+			renderers.emplace_back(renderer);
+		}
 
 		//std::vector<Renderer*>& getRenderers() { return renderers; }
 

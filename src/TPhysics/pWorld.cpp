@@ -48,20 +48,19 @@ namespace tEngine {
 		}
 	}
 	void PhysicsWorld::startFrame() {
-		for (auto entity : SceneView<RigidBody>(*ecsManager)) {
-			rigidBodys.push_back(ecsManager->GetComponent<RigidBody>(entity));
-		}
-		for (auto body : rigidBodys) {
+		
+		for (auto id : SceneView<RigidBody>(*ecsManager)) {
+			auto body = ecsManager->GetComponent<RigidBody>(id);
 			body->clearAccumulator();
-			body->calculateDerivedData();
+			body->calculateDerivedData(ecsManager->GetComponent<Transform>(id));
 		}
 	}
-	void PhysicsWorld::registerForce(ForceGenerator* force, RigidBody* rigidBody) {
-		forceRegistration.emplace_back(rigidBody, force);
+	void PhysicsWorld::registerForce(ForceGenerator* force, EntityID id) {
+		forceRegistration.emplace_back(id, force);
 	}
-	void PhysicsWorld::unregisterForce(ForceGenerator* force, RigidBody* rigidBody) {
+	void PhysicsWorld::unregisterForce(ForceGenerator* force, EntityID id) {
 		for (int i = forceRegistration.size() - 1; i >= 0; --i) {
-			if (forceRegistration[i].fg == force && forceRegistration[i].body == rigidBody) {
+			if (forceRegistration[i].fg == force && forceRegistration[i].body == id) {
 				forceRegistration.erase(forceRegistration.begin()+i);
 				break;
 			}
@@ -71,8 +70,8 @@ namespace tEngine {
 		for (auto& fg : forceRegistration) {
 			fg.fg->updateForce(fg.body, duration);
 		}
-		for (auto& body : rigidBodys) {
-			body->integrate(duration);
+		for (auto body : SceneView<RigidBody>(*ecsManager)) {
+			rigidBodySystem.integrate(body,duration);
 		}
 	}
 }
