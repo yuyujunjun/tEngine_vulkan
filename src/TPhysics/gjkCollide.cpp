@@ -3,13 +3,14 @@
 #include"collide.h"
 #include"support.h"
 #include"Log.h"
+#include"ecs.h"
 /// <summary>
 /// Some Basic function comes from libccd
 /// </summary>
-void __tccdSupport(const void* _obj1, const void* _obj2, const ccd_vec3_t* dir, ccd_support_t* supp) {
+void __tccdSupport(const void* _obj1, const void* _obj2, const ccd_t& ccd,const ccd_vec3_t* dir, ccd_support_t* supp) {
     using namespace tEngine;
-   auto obj1 =  static_cast<const tEngine::Collider*>(_obj1);
-   auto obj2 = static_cast<const tEngine::Collider*>(_obj2);
+
+
    auto sup1=obj1->SupportPoint(tEngine::Vector3(dir->v[0], dir->v[1], dir->v[2]));
    supp->v1.v[0] = sup1[0]; supp->v1.v[1] = sup1[1]; supp->v1.v[2] = sup1[2];
    auto sup2=obj2->SupportPoint(tEngine::Vector3(-dir->v[0], -dir->v[1], -dir->v[2]));

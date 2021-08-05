@@ -4,98 +4,104 @@
 #include"GameObject.h"
 namespace tEngine {
 
-	void RigidBody::integrate(const real duration) {
-		if (!isAwake)return;
+	void RigidBodySystem::integrate(EntityID id,const real duration) {
+		auto body = ecsManager->GetComponent<RigidBody>(id);
+		auto transform = ecsManager->GetComponent<Transform>(id);
+		if (!body->isAwake)return;
 		
-		Vector3 angularAccleration = inverseInertiaTensorWorld * torqueAccum;
-		accumInducedByForce = accleration;
-		accumInducedByForce += forceAccum * inverseMass;
+		Vector3 angularAccleration = body->inverseInertiaTensorWorld * body->torqueAccum;
+		body->accumInducedByForce = body->accleration;
+		body->accumInducedByForce += body->forceAccum * body->inverseMass;
 		
-		velocity += accumInducedByForce * duration;
-		angularVelocity += angularAccleration * duration;
-		velocity *= std::pow(linearDamping,duration);
-		angularVelocity *= std::pow(angularDamping,duration);
-		gameObject->transform.setPosition(gameObject->transform.getPosition()+velocity*duration);
-		gameObject->transform.rotate(angularVelocity, duration);
+		body->velocity += body->accumInducedByForce * duration;
+		body->angularVelocity += angularAccleration * duration;
+		body->velocity *= std::pow(body->linearDamping,duration);
+		body->angularVelocity *= std::pow(body->angularDamping,duration);
+		transform->setPosition( transform->getPosition()+ body->velocity*duration);
+		transform->rotate(body->angularVelocity, duration);
 		
-		calculateDerivedData();
-		clearAccumulator();
-		if (canSleep) {
-			real currentMotion = glm::dot(velocity, velocity) + glm::dot(angularVelocity, angularVelocity);
+		calculateDerivedData(transform,body);
+		clearAccumulator(body);
+		if (body->canSleep) {
+			real currentMotion = glm::dot(body->velocity, body->velocity) + glm::dot(body->angularVelocity, body->angularVelocity);
 			real bias = std::pow(0.5, duration);
-			motion = bias * motion + (1 - bias) * currentMotion;
-			if (motion < sleepEpsilon)setAwake(false);
-			else if (motion > 10 * sleepEpsilon)motion = 10 * sleepEpsilon;
+			body->motion = bias * body->motion + (1 - bias) * currentMotion;
+			if (body->motion < sleepEpsilon)body->setAwake(false);
+			else if (body->motion > 10 * sleepEpsilon)body->motion = 10 * sleepEpsilon;
 		}
 
 	}
-	void RigidBody::calculateDerivedData() {
-		gameObject->transform.updateMtx();
-		transformInertiaTensor();
+	void RigidBodySystem::calculateDerivedData(Transform* transform, RigidBody* body) {
+
+		transform->updateMtx();
+		transformInertiaTensor(transform,body);
 	}
 	void RigidBody::setInertiaTensor(const Mat3& inertiaTensor) {
 		inverseInertiaTensor = glm::inverse(inertiaTensor);
 	}
 	//BMB^{-1}, so inverseworld=BM^{-1}B^{-1}
-	void RigidBody::transformInertiaTensor() {
-		inverseInertiaTensorWorld = gameObject->transform.getMat3()* inverseInertiaTensor * gameObject->transform.getInverseMat3();
+	void RigidBodySystem::transformInertiaTensor(Transform* transform, RigidBody* body) {
+		body->inverseInertiaTensorWorld =  transform->getMat3()* body->inverseInertiaTensor *  transform->getInverseMat3();
 	}
 	Mat3 RigidBody::getInverseInertiaTensorWorld()const {
 		return inverseInertiaTensorWorld;
 	}
-	void RigidBody::clearAccumulator() {
+	void RigidBodySystem::clearAccumulator(RigidBody* body) {
+		auto& forceAccum = body->forceAccum;
+		auto& torqueAccum = body->torqueAccum;
 		forceAccum.x = forceAccum.y = forceAccum.z = 0;
 		torqueAccum.x = torqueAccum.y = torqueAccum.z = 0;
 	}
-	void RigidBody::addForce(const Vector3& force) {
-		forceAccum += force;
-		isAwake = true;
+	void RigidBodySystem::addForce(RigidBody* body, const Vector3& force) {
+		body->forceAccum += force;
+		body->isAwake = true;
 	}
-	void RigidBody::addForceAtLocalPoint(const Vector3& force, const Vector3& point) {
-		Vector4 point_in_world = gameObject->transform.getMtx() * Vector4(point,1);
-		addForceAtPoint(force, point_in_world);
-		isAwake = true;
+	void RigidBodySystem::addForceAtLocalPoint(RigidBody* body,Transform* transform, const Vector3& force, const Vector3& point) {
+		Vector4 point_in_world =  transform->getMtx() * Vector4(point,1);
+		addForceAtPoint(body,transform,force, point_in_world);
+		body->isAwake = true;
 	}
-	void RigidBody::addForceAtPoint(const Vector3& force, const Vector3& point) {
-		addForce(force);
-		addTorque( glm::cross(point - gameObject->transform.getPosition(),force));
-		isAwake = true;
+	void RigidBodySystem::addForceAtPoint(RigidBody* body, Transform* transform, const Vector3& force, const Vector3& point) {
+		addForce(body,force);
+		addTorque( body,glm::cross(point -  transform->getPosition(),force));
+		body->isAwake = true;
 	}
-	void RigidBody::addTorque(const Vector3& torque) {
-		torqueAccum += torque;
-		isAwake = true;
+	void RigidBodySystem::addTorque(RigidBody* body, const Vector3& torque) {
+		body->torqueAccum += torque;
+		body->isAwake = true;
 	}
-	void RigidBody::addVelocity(const Vector3& v) {
-		velocity += v;
+	void RigidBodySystem::addVelocity(RigidBody* body, const Vector3& v) {
+		body->velocity += v;
 	}
-	void RigidBody::addAngularVelocity(const Vector3& v) {
-		angularVelocity += v;
+	void RigidBodySystem::addAngularVelocity(RigidBody* body, const Vector3& v) {
+		body->angularVelocity += v;
 	}
-	void RigidBody::setVelocity(const Vector3& v) {
-		this->velocity = v;
+	void RigidBodySystem::setVelocity(RigidBody* body, const Vector3& v) {
+		body->velocity = v;
 	}
-	void RigidBody::setAngularVelocity(const Vector3& v) {
-		this->angularVelocity = v;
+	void RigidBodySystem::setAngularVelocity(RigidBody* body, const Vector3& v) {
+		body->angularVelocity = v;
 	}
-	void RigidBody::setLinearDamping(real damping) {
-		this->linearDamping = damping;
-	}void RigidBody::setAngularDamping(real damping) {
-		this->angularDamping = damping;
+	void RigidBodySystem::setLinearDamping(RigidBody* body, real damping) {
+		body->linearDamping = damping;
+	}void RigidBodySystem::setAngularDamping(RigidBody* body, real damping) {
+		body->angularDamping = damping;
 	}
-	void RigidBody::setAcceleration(const Vector3& accleration) {
-		this->accleration = accleration;
+	void RigidBodySystem::setAcceleration(RigidBody* body, const Vector3& accleration) {
+		body->accleration = accleration;
 	}
-	bool RigidBody::hasFiniteMass() {
-		return inverseMass > 0;
+	bool RigidBodySystem::hasFiniteMass(RigidBody* body) {
+		return body->inverseMass > 0;
 	}
-	void RigidBody::setAwake(const bool awake) {
-		isAwake = awake;
+	void RigidBody::setAwake( const bool awake) {
+		auto body = this;
+		body->isAwake = awake;
 		if (awake) {
-			motion = sleepEpsilon * 2.0f;
+			body->motion = sleepEpsilon * 2.0f;
 		}
 		else {
-			velocity.x = velocity.y = velocity.z = 0;
-			angularVelocity.x = angularVelocity.y = angularVelocity.z=0;
+			body->velocity.x = body->velocity.y = body->velocity.z = 0;
+			body->angularVelocity.x = body->angularVelocity.y = body->angularVelocity.z=0;
 		}
 	}
 	void RigidBody::setCanSleep(const bool canSleep) {
@@ -107,9 +113,6 @@ namespace tEngine {
 		mass = mass;
 		inverseMass = 1.0 / mass;
 	}
-	const tEngine::Transform& RigidBody::getTransform() const {
-		return  gameObject->transform;
-		; }
 	void RigidBody::setInverseMass(real inverse_mass) {
 		inverseMass = inverse_mass;
 	}
@@ -123,9 +126,7 @@ namespace tEngine {
 	const Vector3& RigidBody::getAngularVelocity()const {
 		return angularVelocity;
 	}
-	const Vector3& RigidBody::getPosition()const {
-		return gameObject->transform.getPosition();//position;
-	}
+
 	const Vector3& RigidBody::getAcceleration()const {
 		return accleration;
 	}

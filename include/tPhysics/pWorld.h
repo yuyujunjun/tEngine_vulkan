@@ -2,11 +2,12 @@
 #include"numerical.h"
 #include"pForceGen.h"
 #include"pContacts.h"
+#include"ecs.h"
 #include<list>
 namespace tEngine {
 	class Particle;
 
-	class ParticleWorld {
+	class ParticleWorld:public System {
 		using ContactGenerators = std::vector<ParticleContactGenerator*>;
 		std::list<Particle*> pList;
 		ParticleForceRegistry registry;//force generator and particle

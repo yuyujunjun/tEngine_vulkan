@@ -44,7 +44,7 @@ _ccd_inline void ccdSupportCopy(ccd_support_t *, const ccd_support_t *s);
 //                  const ccd_vec3_t *dir, const ccd_t *ccd,
 //                  ccd_support_t *supp);
 
-void __tccdSupport(const void* obj1, const void* obj2,
+void __tccdSupport(const void* obj1, const void* obj2, const ccd_t& ccd,
     const ccd_vec3_t* dir, ccd_support_t* supp);
 /**** INLINES ****/
 _ccd_inline void ccdSupportCopy(ccd_support_t *d, const ccd_support_t *s)

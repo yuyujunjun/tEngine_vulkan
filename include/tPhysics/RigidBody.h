@@ -1,11 +1,13 @@
 #pragma once
 #include"numerical.h"
 #include"tTransform.h"
-#include"Component.h"
+#include"ecs.h"
 namespace tEngine {
-	class RigidBody{
-		
-		real inverseMass=0;
+	struct RigidBody {
+		RigidBody() :inverseInertiaTensor(1), inverseInertiaTensorWorld(1), inverseMass(1), velocity(0, 0, 0), angularVelocity(0, 0, 0),
+			linearDamping(0.9), angularDamping(0.9), forceAccum(0, 0, 0), torqueAccum(0, 0, 0), accleration(0, 0, 0), isAwake(true), canSleep(true), motion(sleepEpsilon * 2.0f), accumInducedByForce(0, 0, 0) {}
+
+		real inverseMass = 0;
 		Mat3 inverseInertiaTensor;
 		Mat3 inverseInertiaTensorWorld;
 		Vector3 velocity;
@@ -19,28 +21,9 @@ namespace tEngine {
 		bool canSleep;
 		real motion;
 		Vector3 accumInducedByForce;
-	public:
-		RigidBody() :inverseInertiaTensor(1), inverseInertiaTensorWorld(1),inverseMass(1), velocity(0, 0, 0), angularVelocity(0, 0, 0),
-			linearDamping(0.9), angularDamping(0.9), forceAccum(0, 0, 0), torqueAccum(0, 0, 0), accleration(0, 0, 0), isAwake(true), canSleep(true), motion(sleepEpsilon*2.0f), accumInducedByForce(0,0,0){}
-	//	tEngine::Transform transform;
-		const tEngine::Transform& getTransform() const; 
 		void setMass(const real mass);
 		void setInverseMass(const real inverse_mass);
-		void integrate(const real duration);
-		void clearAccumulator();
-		void addForce(const Vector3& force);
-		void addForceAtLocalPoint(const Vector3& force, const Vector3& point);
-		void addForceAtPoint(const Vector3& force, const Vector3& point);
-		void addTorque(const Vector3& torque);
-		void addVelocity(const Vector3& v);
-		void addAngularVelocity(const Vector3& v);
-		void setVelocity(const Vector3& v);
-		void setAngularVelocity(const Vector3& v);
-		
-		void setLinearDamping(real damping);
-		void setAngularDamping(real damping);
-		void setAcceleration(const Vector3& accleration);
-		bool hasFiniteMass();
+		void setInertiaTensor(const Mat3& inertiaTensor);
 		bool getAwake()const { return isAwake; }
 		void setAwake(const bool awake);
 		void setCanSleep(const bool canSleep);
@@ -50,14 +33,36 @@ namespace tEngine {
 		const Vector3& getAcceleration()const;
 		//get accuration this frame
 		const Vector3& getCurrentAcceleration()const;
-		
 		const Vector3& getVelocity()const;
 		const Vector3& getAngularVelocity()const;
-		const Vector3& getPosition()const;
+		Mat3 RigidBody::getInverseInertiaTensorWorld()const;
 		void setInertiaTensor(const Mat3& inertiaTensor);
-		void calculateDerivedData();
-		void transformInertiaTensor();
 		Mat3 getInverseInertiaTensorWorld()const;
+	};
+	class RigidBodySystem:public System{
+		
+	public:
+		RigidBodySystem() {}
+
+		void integrate(EntityID id,const real duration);
+		void clearAccumulator(RigidBody* body);
+		void addForce(RigidBody* body,const Vector3& force);
+		void addForceAtLocalPoint(RigidBody* body,Transform* transform, const Vector3& force, const Vector3& point);
+		void addForceAtPoint(RigidBody* body, Transform* transform, const Vector3& force, const Vector3& point);
+		void addTorque(RigidBody* body,const Vector3& torque);
+		void addVelocity(RigidBody* body, const Vector3& v);
+		void addAngularVelocity(RigidBody* body, const Vector3& v);
+		void setVelocity(RigidBody* body, const Vector3& v);
+		void setAngularVelocity(RigidBody* body, const Vector3& v);
+		
+		void setLinearDamping(RigidBody* body, real damping);
+		void setAngularDamping(RigidBody* body, real damping);
+		void setAcceleration(RigidBody* body, const Vector3& accleration);
+		bool hasFiniteMass(RigidBody* body);
+
+		void calculateDerivedData(Transform* transform, RigidBody* body);
+		void transformInertiaTensor(Transform* transform,RigidBody* body);
+		
 
 	};
 
