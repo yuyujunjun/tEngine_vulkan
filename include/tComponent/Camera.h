@@ -53,6 +53,8 @@ namespace tEngine {
         float fieldOfview = glm::radians(60.f);
         glm::vec2 halfSize = glm::vec2(100);
         void update();
+        const glm::mat4& ViewMatrix()const { return m_matrix; }
+        const glm::mat4& ProjectionMatrix()const { return p_matrix; }
     };
     class Camera {
 
@@ -82,15 +84,13 @@ namespace tEngine {
             this->afterRender = afterRender;
         }
      
-        CameraTransform transform;
         const ImageHandle& getRenderTexture()const { return renderTexture; }
         const vk::ImageView& getImageView()const { return renderImageView; }
         const ImageHandle& getImage()const { return renderTexture; }
-        Camera() :renderTexture(nullptr), renderImageView(vk::ImageView()), viewPortRatio(1, 1), scissorRatio(1, 1),layer(RenderLayer::Everything) {}
+        Camera() :renderTexture(nullptr), renderImageView(vk::ImageView()), viewPortRatio(1, 1), scissorRatio(1, 1),layer(RenderLayer::Default) {}
       //  Camera(GameObject_* gameObject) :Component(gameObject),renderTexture(nullptr), renderImageView(vk::ImageView()),viewPortRatio(1,1),scissorRatio(1,1), layer(RenderLayer::Everything) {}
      //   Camera(ImageHandle& renderTexture, const vk::ImageView& imageView) :renderTexture(renderTexture), renderImageView(imageView), viewPortRatio(1, 1), scissorRatio(1, 1) {}
-        const glm::mat4& ViewMatrix()const { return transform.m_matrix; }
-        const glm::mat4& ProjectionMatrix()const { return transform.p_matrix; }
+
         
         RenderPassHandle& getRenderPass() { return renderPass; }
         void setRenderTexture(const ImageHandle& image, const vk::ImageView& imageView) { renderTexture = image; renderImageView = imageView; }
@@ -169,7 +169,7 @@ namespace tEngine {
         return glm::perspective(fieldOfview, _viewportAspectRatio, nearPlane, farPlane);
     }
     inline glm::mat4 Ortho(float left, float right, float bottom, float top, float depth) {
-        auto mat = glm::ortho(left, right, bottom, top, 1.f, 1000.f);
+      
         return glm::ortho(left, right, bottom, top, 0.1f, depth);
     }
  
@@ -177,8 +177,9 @@ namespace tEngine {
 
     BufferRangeManager* requestCameraBufferRange(const Device* device);
   
-  void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material);
-  void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tBuffer* buffer, unsigned rangeOffset);
+  //void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, tShaderInterface* material);
+    void uploadCameraMatrix(const glm::mat4& view, const glm::mat4& projection, const glm::vec3& position, tBuffer* buffer, unsigned rangeOffset);
+  void uploadCameraMatrix(const CameraTransform& transform, tBuffer* buffer, unsigned rangeOffset);
  
 }
 

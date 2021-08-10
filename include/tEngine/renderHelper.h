@@ -32,5 +32,5 @@ namespace tEngine {
 	void getForwardRenderPass(const ForwardRenderPass::uniqueAttribute& att, const Device* device, RenderPassHandle& renderPass);
 	RenderPassHandle getUIRenderpass(Device* device, vk::Format format);
 	RenderPassHandle getShadowMapPass(Device* device, vk::Format format, vk::Format depthFormat);
-	RenderPassHandle getCollectShadowPass(Device* device, vk::Format format);
+	RenderPassHandle getCollectShadowPass(const Device* device, vk::Format format);
 }

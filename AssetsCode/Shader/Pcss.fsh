@@ -1,6 +1,7 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 #extension GL_ARB_shading_language_420pack : enable
+#include"./include/VertexDescriptor.h"
 layout (location = 0) in vec2 uv;
 layout(location=1)in vec4 color;
 layout(location=2) in vec3 worldNormal;
@@ -12,14 +13,15 @@ layout(set = 1, binding = 3) uniform MaterialInfo {
    
     vec3 uKd;float pad0;
     vec3 uKs;float pad1;
-    vec4 lightPosArea;
-    float lightIntensity;
+    
 };
-layout(set = 0,binding = 2)uniform globalVar{
-    vec3 cameraPos;int halfblockSize;
+layout(set = 0,binding = 2)uniform LightProperty{
+    vec3 lightPos;int halfblockSize;
     mat4 world_to_shadow;
     vec2 depthMapSize;int maxKernelSize;
-
+    float lightIntensity;
+    float lightArea;
+    
 };
 float unpack_depth(const in vec4 rgba_depth)
 {
@@ -72,7 +74,7 @@ float pcss(vec2 uv,float depth){
     vec2 occDepth=avgOccdepth(uv,depth);
     if(occDepth.y==0)return 1;
     float occAvg=occDepth.x;
-    float penmubraSize= (lightPosArea.w*(depth-occAvg)/occAvg);
+    float penmubraSize= (lightArea*(depth-occAvg)/occAvg);
     
     penmubraSize=max(min(penmubraSize,1.f),0);
     int kernelSize=int(maxKernelSize*penmubraSize+0.5);
@@ -87,7 +89,7 @@ void main() {
     vec3 color=pow(texture(_MainTex,uv).xyz,vec3(2.2));
     vec3 ambient=0.05*color;
     
-    vec3 lightDir=(lightPosArea.xyz-worldPosition);
+    vec3 lightDir=(lightPos-worldPosition);
     float distance_to_light=length(lightDir);
     lightDir=lightDir/distance_to_light;
     vec3 normal=normalize(worldNormal);
@@ -95,7 +97,7 @@ void main() {
     float light_atten_coff=lightIntensity;
     vec3 diffuse=diff*light_atten_coff*color;
 
-    vec3 viewDir=normalize(cameraPos-worldPosition);
+    vec3 viewDir=normalize(_CAMERA_POS.xyz-worldPosition);
     float spec=0.0;
     vec3 reflectDir=2*dot(normal,lightDir)*normal-lightDir;
     spec=pow(max(dot(viewDir,reflectDir),0.0),35.0);

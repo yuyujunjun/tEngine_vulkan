@@ -2,7 +2,7 @@
 #include"CommandBufferBase.h"
 #include"Log.h"
 namespace tEngine {
-	void MeshBuffer::setMeshUpload(Device* device) {
+	void MeshBuffer::Upload(Device* device) {
 		if (mesh.vertices.size() == 0)return;
 		auto createUpload = [&](CommandBufferHandle cb) {
 			if (!createVertexBuffer(device, cb)) {
@@ -22,7 +22,7 @@ namespace tEngine {
 	}
 	void MeshFilter::setMeshUpload(const Mesh& mesh, Device* device) {
 		setMesh(mesh);
-		meshBuffer->setMeshUpload(device);
+		meshBuffer->Upload(device);
 	}
 	void DrawMesh(MeshFilter* mb, CommandBufferHandle& cb, uint32_t instanceCount ) {
 		cb->bindVertexBuffer(mb->getVBO(), 0, 0);

@@ -4,6 +4,7 @@ namespace tEngine {
 	enum class RenderLayer :uint8_t {
 		Everything = 255,//11111111
 		Default = 254,//11111110
-		UI = 1//00000001
+		Opaque = 1,
+		UI = 0//00000000
 	};
 }

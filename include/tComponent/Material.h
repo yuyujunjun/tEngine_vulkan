@@ -3,6 +3,7 @@
 
 #include<unordered_map>
 #include"GraphicsState.h"
+#include"RenderLayers.h"
 namespace tEngine {
 	class tShaderInterface;
 	class tShader;
@@ -43,8 +44,16 @@ namespace tEngine {
 
 	};
 	struct View {
+		void interactShadow(bool set) {
+			castingShadow = recieveShadow = set;
+		}
+		RenderLayer layer=RenderLayer::Opaque;
+		unsigned renderOrder = 1;
+		bool castingShadow=false;
+		bool recieveShadow=false;
 		std::shared_ptr<Material> material;
-
 	};
+
+
 
 }

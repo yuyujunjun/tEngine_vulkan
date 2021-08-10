@@ -164,7 +164,7 @@ namespace tEngine {
 		handle->setupRenderPass();
 		return handle;
 	}
-	RenderPassHandle getCollectShadowPass(Device* device, vk::Format format) {
+	RenderPassHandle getCollectShadowPass(const Device* device, vk::Format format) {
 		auto& handle = std::make_shared<tRenderPass>(device);
 		auto desc=StartColorDescription(format);
 		desc.setFinalLayout(vk::ImageLayout::eShaderReadOnlyOptimal);
@@ -174,7 +174,7 @@ namespace tEngine {
 		pass.addColorOutput("back", vk::ImageLayout::eColorAttachmentOptimal);
 		pass.setDepth("depth", vk::ImageLayout::eDepthStencilAttachmentOptimal);
 		handle->SetDependencies(SingleDependencies());
-		//Handle->setClearValue("shadowMap", { 0,0,0,0 });
+		handle->setClearValue("back", { 0,0,0,1 });
 		handle->setDepthStencilValue("depth", 1.);
 		handle->setupRenderPass();
 		return handle;

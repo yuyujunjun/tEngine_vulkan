@@ -9,7 +9,7 @@ namespace tEngine {
 		
 	public:
 
-		void setMeshUpload(Device* device);
+		void Upload(Device* device);
 		void setMesh(const Mesh& mesh) {
 			this->mesh = mesh;
 		}
@@ -36,6 +36,9 @@ namespace tEngine {
 			this->meshBuffer = std::make_shared<MeshBuffer>();
 			this->meshBuffer->setMesh(mesh);
 
+		}
+		void setMeshBuffer(const std::shared_ptr<MeshBuffer>& meshBuffer) {
+			this->meshBuffer = meshBuffer;
 		}
 		void setMeshUpload(const Mesh& mesh, Device* device);
 		void createBuffers(Device* device, CommandBufferHandle cb, BufferDomain domain = BufferDomain::Device) {

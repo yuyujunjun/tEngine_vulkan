@@ -33,7 +33,7 @@ namespace tEngine {
 	}
 	void RigidBody::calculateDerivedData(Transform* transform) {
 
-		transform->updateMtx();
+	
 		transformInertiaTensor(transform);
 	}
 	void RigidBody::setInertiaTensor(const Mat3& inertiaTensor) {

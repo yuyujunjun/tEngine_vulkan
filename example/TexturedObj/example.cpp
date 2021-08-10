@@ -13,23 +13,20 @@ int main() {
 	auto& device = context.device; 
 	tWorld world(device.get());
 	auto& scene = world.getEcsManager();
-	MeshRenderer* renderer=new MeshRenderer();
-	world.getRenderWorld().AddRenderer(renderer);
-	renderer->ecsManager = &scene;
-	auto camera = scene.NewEntity();
-	scene.AddComponent<Camera>(camera)->transform.m_windowSize = glm::uvec2(context.swapChain->getExtent().width, context.swapChain->getExtent().height);
-	scene.GetComponent<Camera>(camera)->transform.update();
-	world.getRenderWorld().AddCamera(camera);
+	auto camera = createCamera(&scene, glm::uvec2(context.swapChain->getExtent().width, context.swapChain->getExtent().height));
+	world.getRenderWorld().SetCamera(camera);
 	auto meshAsset = tEngine::LoadMesh("Obj/Marry.obj");
 	auto imageAsset = tEngine::LoadImage("Obj/MC003_Kozakura_Mari.png");
 	auto image = createImage(device.get(),
 		ImageCreateInfo::immutable_2d_image(imageAsset->width, imageAsset->height, VK_FORMAT_R8G8B8A8_UNORM), imageAsset, nullptr);
-	auto character = scene.NewEntity();
-	scene.AddComponent<View>(character)->material = std::make_shared<Material>( tShaderInterface::requestTexturedShader(device.get()));
-	scene.AddComponent<Transform>(character);
-	scene.GetComponent<View>(character)->material->SetImage("_MainTex",image);
-	scene.AddComponent<MeshFilter>(character)->setMeshUpload(meshAsset->mesh, device.get());
-
+	auto character = createGameObject(&scene);
+	auto material = std::make_shared<Material>(tShaderInterface::requestTexturedShader(device.get()));;
+	material->SetImage("_MainTex",image);
+	auto meshBuffer =  std::make_shared<MeshBuffer>();
+	meshBuffer->setMesh(meshAsset->mesh);
+	meshBuffer->Upload(device.get());
+	scene.GetComponent<View>(character)->material = material;
+	scene.GetComponent<MeshFilter>(character)->setMeshBuffer(meshBuffer);
 	CameraSystem cam_sys;
 	cam_sys.ecsManager = &scene;
 	cam_sys.setCamera(camera);

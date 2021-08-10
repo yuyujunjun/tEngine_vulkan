@@ -57,6 +57,14 @@ namespace tEngine {
 			this->minCoord = center - halfSize;
 			this->maxCoord = center + halfSize;
 		}
+		void EXPAND(const Vector3& extents) {
+			this->minCoord -= extents;
+			this->maxCoord += extents;
+			this->center = (this->minCoord + this->maxCoord)/2.f;
+			this->halfSizes = (this->maxCoord - this->minCoord)/2.f;
+		}
+		const Vector3& MinCoords() { return minCoord; }
+		const Vector3& MaxCoords() { return maxCoord; }
 		friend bool Overlap(const AABB* a, const AABB* b);
 	};
 	

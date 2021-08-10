@@ -30,17 +30,25 @@ namespace tEngine {
 		tWorld(Device* device) :renderWorld(device) {
 			renderWorld.ecsManager = &ecsManager;
 			rigidBodyWorld.ecsManager = &ecsManager;
-			renderWorld.AddRenderer(new MeshRenderer());
+			renderWorld.meshRenderer->ecsManager = &ecsManager;
+		
 		};// = default;
 		void AddSystem(System* sys) {
 			systems.push_back(sys);
 		}
 		void update(float dt) {
+			updateTransform();
+			updateAABB();
 			rigidBodyWorld.startFrame();
 			rigidBodyWorld.runPhysics(dt);
 		}
 		//void render(CommandBufferHandle cb,const RenderInfo& info){}
 		PhysicsWorld& getPhysicsWorld() { return rigidBodyWorld; }
 		RenderWorld& getRenderWorld() { return renderWorld; }
+		void updateTransform();
+		void updateAABB();
+	
 	};
+	EntityID createCamera(EcsManager* ecsManager, glm::uvec2 screenSize);
+	EntityID createGameObject(EcsManager* ecsManager);
 }
