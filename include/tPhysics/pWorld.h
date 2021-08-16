@@ -5,9 +5,14 @@
 #include"ecs.h"
 #include<list>
 #include"RigidBody.h"
+#include"pForceGen.h"
+#include"collide.h"
+#include"contacts.h"
 namespace tEngine {
 	class Particle;
-
+	class BoxColliderSystem;
+	class MeshColliderSystem;
+	class SphereColliderSystem;
 	class ParticleWorld:public System {
 		using ContactGenerators = std::vector<ParticleContactGenerator*>;
 		std::list<Particle*> pList;
@@ -31,17 +36,29 @@ namespace tEngine {
 		ContactGenerators& getContactGenerators() { return contactGenerators; }
 		ParticleForceRegistry& getForceRegistry() { return registry; }
 	};
-	class Collider;
+
+	class ContactWorld{
+	public:
+		std::vector<GJKSupportCollider> gjkSupportObj;
+		std::vector<ContactInfo> contactlist;
+		//std::list<PotentialContact> broadContacts;
+		//	BoxColliderSystem boxSystem;
+	//	MeshColliderSystem meshSystem;
+	//	SphereColliderSystem sphereSystem;
+		void colliderDetect(EcsManager* ecsManager,std::vector<Contact>& contacts);
+	};
 	class PhysicsWorld:public System {
+		ContactWorld contactWorld;
+		ContactResolver resolver;
 		//std::list<RigidBody*> rigidBodys;
 		std::vector<ForceRegistration> forceRegistration;
-		RigidBodySystem rigidBodySystem;
+		
 	public:
 		PhysicsWorld() = default;
 	//	void addRigidBody(RigidBody* body) { rigidBodys.emplace_back(body); }
 	//	void removeRigidBody(RigidBody* body) { rigidBodys.remove(body); }
 		void startFrame();
-		void registerForce(ForceGenerator* force,EntityID id);
+		void registerForce(ForceGenerator* force);
 		void unregisterForce(ForceGenerator* force, EntityID id);
 		void runPhysics(real duration);
 		
@@ -50,13 +67,9 @@ namespace tEngine {
 	/// First detect contact using AABB
 	/// </summary>
 	struct PotentialContact {
-		Collider* obj1;
-		Collider* obj2;
+		EntityID obj1;
+		EntityID obj2;
 	};
-	class ContactWorld {
-		std::list<Collider*> colliders;
-		std::list<PotentialContact> broadContacts;
-		
 
-	};
+	
 }

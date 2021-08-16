@@ -7,6 +7,7 @@ layout(location=2) in vec3 normal;
 layout(location=3)in vec3 worldPosition;
 layout (location = 0) out vec4 outColor;
 
+
 void main() {
 //   outColor = vec4(texture(_MainTex,uv));
 	vec3 abeldo=vec3(1,1,1);

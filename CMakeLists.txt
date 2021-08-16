@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.3)
 project(Tangine)
 find_package(vulkan REQUIRED FATAL_ERROR)
 find_package(glfw3 CONFIG REQUIRED)
-  
+find_package(fcl REQUIRED)
 INCLUDE_DIRECTORIES(SYSTEM ${CMAKE_CURRENT_SOURCE_DIR})
 INCLUDE_DIRECTORIES(
 	3rdParty
@@ -15,7 +15,6 @@ INCLUDE_DIRECTORIES(
     3rdParty/vma/src
     ${VULKAN_INCLUDE_DIRS} 
     3rdParty/glfw/include
-    3rdParty/libccd
     include
     include/tEngine
     include/tComponent

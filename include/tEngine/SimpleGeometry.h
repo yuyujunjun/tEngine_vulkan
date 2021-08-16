@@ -107,7 +107,7 @@ namespace tEngine {
 			}
 		}
 		
-		static Mesh UnitBox(float length = 2) {
+		static Mesh UnitBox(float length = 1) {
 			float skyboxVertices[] = {
 				// positions
 				-1.0f,  1.0f, -1.0f,

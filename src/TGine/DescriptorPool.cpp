@@ -200,6 +200,10 @@ namespace tEngine {
 		imageInfo.reserve(rb.size());
 		//imageInfo.reserve(rb.getImages().size());
 		for (auto& bindingInfo : rb) {
+			if (bindingInfo.dstBinding == uint32_t(-1)) {
+				LOG(LogLevel::Error, "Dst Binding error");
+				continue;
+			}
 			if (bindingInfo.isEmptyResource())continue;
 			auto& resource = bindingInfo;
 			switch (resource.type) {

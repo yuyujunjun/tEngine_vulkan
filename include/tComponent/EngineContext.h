@@ -61,6 +61,7 @@ namespace tEngine {
 		SwapChainHandle swapChain;
 		vk::Instance instance;
 		vk::DebugUtilsMessengerEXT debugUtilsMessenger;
+		float timeRatio = 1.0;
 		ThreadContext* AddThreadContext(uint32_t idx=0) 
 		{
 			if (threadContext.size() > idx) {

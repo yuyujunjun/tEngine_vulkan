@@ -4,7 +4,7 @@
 #include"GameObject.h"
 namespace tEngine {
 
-	void RigidBodySystem::integrate(EntityID id,const real duration) {
+	void RigidBodySystem::integrate( EcsManager* ecsManager,EntityID id,const real duration) {
 		auto body = ecsManager->GetComponent<RigidBody>(id);
 		auto transform = ecsManager->GetComponent<Transform>(id);
 		if (!body->isAwake)return;

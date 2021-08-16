@@ -34,7 +34,7 @@ namespace tEngine {
 		//glm::mat4 vpMtx;
 	};
 	
-	class Renderer:public System {
+	class Renderer{
 		
 
 	public:
@@ -62,15 +62,15 @@ namespace tEngine {
 		virtual void DrawWithMaterial(EntityID id, CommandBufferHandle& cb, const RenderInfo& renderInfo, Material* material)const {}
 		virtual ~Renderer() {}
 	};
-	class MeshRenderer:public Renderer {
+	class MeshRenderer {
 		
 	public:
 
 		//std::shared_ptr<MeshFilter> meshBuffer;
 		unsigned instanceCount = 1;
-		void Draw(EntityID id, CommandBufferHandle& cb, const RenderInfo& renderInfo)const override;
+		static void Draw(EcsManager* ecsManager, EntityID id, CommandBufferHandle& cb, const RenderInfo& renderInfo) ;
 	//	void DrawWithMaterial(CommandBufferHandle& cb, const RenderInfo& renderInfo, Material* material)const override;
-		void DrawWithMaterial(EntityID id, CommandBufferHandle& cb, const RenderInfo& renderInfo, Material* material)const override;
+		static void DrawWithMaterial(EcsManager* ecsManager, EntityID id, CommandBufferHandle& cb, const RenderInfo& renderInfo, Material* material) ;
 
 	};
 	

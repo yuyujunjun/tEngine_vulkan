@@ -37,7 +37,7 @@ namespace tEngine {
 		
 	}
 
-	void CollectShadowPass::collectShadow(Renderer* renderer, CommandBufferHandle& cb) {
+	void CollectShadowPass::collectShadow( CommandBufferHandle& cb) {
 		for (auto entity : SceneView<Light>(*ecsManager)) {
 			auto light = ecsManager->GetComponent<Light>(entity);
 
@@ -88,7 +88,7 @@ namespace tEngine {
 			light->world_to_shadow = projection * glm::mat4(inverser_view);
 			shadowMaterial->SetBuffer("CameraMatrix",camera_buffer->buffer(),camera_buffer->getOffset());
 			for (auto obj : objs) {
-				renderer->DrawWithMaterial(obj, cb, info, shadowMaterial.get());
+				MeshRenderer::DrawWithMaterial(ecsManager,obj, cb, info, shadowMaterial.get());
 			}
 			cb->endRenderPass();
 		}

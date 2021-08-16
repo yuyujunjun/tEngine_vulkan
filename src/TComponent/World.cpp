@@ -29,6 +29,7 @@ namespace tEngine {
 			auto data = &ecsManager.GetComponent<MeshFilter>(entity)->getMesh();
 			auto bounds = ecsManager.GetComponent<AABB>(entity);
 			bounds->CLEAR();
+			if (data == nullptr)continue;
 			Vector3 maxPoint(MINREAL);
 			Vector3 minPoint(MAXREAL);
 			for (int i = 0; i < data->vertices.size(); ++i) {
@@ -42,6 +43,7 @@ namespace tEngine {
 	}
 	EntityID createCamera(EcsManager* ecsManager, glm::uvec2 screenSize) {
 		auto entity = ecsManager->NewEntity();
+		ecsManager->entity_map[entity] = "camera";
 		ecsManager->AddComponent<Camera>(entity);
 		ecsManager->AddComponent<CameraTransform>(entity)->m_windowSize = screenSize;
 		ecsManager->GetComponent<CameraTransform>(entity)->update();
@@ -53,6 +55,7 @@ namespace tEngine {
 		ecsManager->AddComponent<View>(entity);
 		ecsManager->AddComponent<MeshFilter>(entity);
 		ecsManager->AddComponent<AABB>(entity);
+	
 		return entity;
 	}
 
@@ -103,7 +106,7 @@ namespace tEngine {
 		}
 		//Update Light
 		
-		collectShadowPass->collectShadow(meshRenderer, cb);
+		collectShadowPass->collectShadow(cb);
 		for (auto entity : SceneView<Light>(*ecsManager)) {
 			auto light = ecsManager->GetComponent<Light>(entity);
 			light->updateBuffer();
@@ -152,13 +155,13 @@ namespace tEngine {
 	}
 
 	void RenderWorld::RenderWithMaterial(CommandBufferHandle& cb, const RenderInfo& renderInfo, Material* mat, BufferRangeManager* camera_buffer) {
-		auto renderer = meshRenderer;
+		//auto renderer = meshRenderer;
 		{
 
 			mat->SetBuffer("CameraMatrix", camera_buffer->buffer(), camera_buffer->getOffset());
 			for (auto entity : SceneView<View>(*ecsManager)) {
 
-				renderer->DrawWithMaterial(entity,cb, renderInfo, mat);
+				MeshRenderer::DrawWithMaterial(ecsManager,entity,cb, renderInfo, mat);
 			}
 		}
 
@@ -180,7 +183,7 @@ namespace tEngine {
 				material->SetImage("_ShadowMap", collectShadowPass->getCollectedImage(), collectShadowPass->getCollectedImage()->get_view()->get_float_view(), tEngine::StockSampler::NearestShadow);
 				material->SetBuffer("LightProperty", collectShadowPass->getFirstLight()->lightPropertyBuffer, collectShadowPass->getFirstLight()->offset);
 			}
-			meshRenderer->Draw(entity, cb, renderInfo);
+			MeshRenderer::Draw(ecsManager,entity, cb, renderInfo);
 		}
 
 		

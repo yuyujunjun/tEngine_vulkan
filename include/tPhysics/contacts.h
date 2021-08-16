@@ -45,12 +45,12 @@ namespace tEngine {
 		Transform* transform[2];
 		RigidBody* rigidBody[2];
 		real velocityPerUnitImpulse[2];//沿法线方向的单位冲量引起的角速度变化导致的的延法线速度变化
-		real friction;
-		real restitution;
+		real friction=0.4;
+		real restitution=0.1;
 		Vector3 contactPoint;
 		Vector3 contactNormal;
 		real penetration;
-		void SetData(RigidBody* obj1,Transform* t1, RigidBody* obj2,Transform* t2, const ContactInfo& info);
+		void SetData(RigidBody* obj1,Transform* t1, RigidBody* obj2,Transform* t2);
 	protected:
 		Mat3 contact2World;
 		Vector3 contactVelocity;
@@ -87,8 +87,8 @@ namespace tEngine {
 	private:
 		bool validSettings;
 	public:
-		ContactResolver(unsigned iterations, real velocityEpsilon = (real)0.01, real positionEpsilon = (real)0.01);
-		ContactResolver(unsigned velocityIterations,unsigned positionIterations,real velocityEpsilon = (real)0.01,real positionEpsilon = (real)0.01);
+		ContactResolver(unsigned iterations=10000, real velocityEpsilon = (real)1e-8, real positionEpsilon = (real)1e-8);
+		ContactResolver(unsigned velocityIterations,unsigned positionIterations,real velocityEpsilon = (real)1e-8,real positionEpsilon = (real)1e-8);
 		/**
 		* Returns true if the resolver has valid settings and is ready to go.
 		*/

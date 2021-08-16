@@ -3,6 +3,8 @@
 #include<glm/gtc/matrix_transform.hpp>
 #include<glm/gtx/norm.hpp>
 #include<math.h>
+#include"Eigen/Core"
+#include"Eigen/Dense"
 namespace tEngine {
 	using real = float;
 	using Vector3 = glm::vec<3, real>;
@@ -10,6 +12,7 @@ namespace tEngine {
 	using Quaternion = glm::quat;
 	using Mat4 = glm::mat4;
 	using Mat3 = glm::mat3;
+	
 #define MAXREAL std::numeric_limits<real>().max()
 #define MINREAL std::numeric_limits<real>().lowest()
 #define CCD_EPS  1.192092896e-07F
@@ -18,6 +21,18 @@ namespace tEngine {
 	}
 	inline bool isZero(const Vector3& v) {
 		return isZero(v.x) && isZero(v.y) && isZero(v.z);
+	}
+	template<size_t rows>
+	inline void GLM2Eigen(const glm::vec<rows,real,glm::qualifier::defaultp>& mat, Eigen::Matrix<real,rows,1>& e_mat) {
+		memcpy(e_mat.data(), &mat[0], sizeof(real) * rows );
+	}
+	template<size_t rows,size_t cols>
+	inline void GLM2Eigen(const glm::mat<rows,cols, real, glm::qualifier::defaultp>& mat, Eigen::Matrix<real, rows, cols>& e_mat) {
+		memcpy(e_mat.data(), &mat[0], sizeof(real) * rows*cols);
+	}
+	template<size_t rows>
+	inline void Eigen2GLM(const Eigen::Matrix<real, rows, 1>& e_vec, glm::vec<rows, real, glm::qualifier::defaultp>& vec) {
+		memcpy(&vec[0], e_vec.data(), sizeof(real) * rows);
 	}
 	inline bool ccdEqual(real  x, real y) {
 		real ab;
@@ -66,6 +81,6 @@ namespace tEngine {
 					-v.z,0,v.x,
 					v.y,-v.x,0);
 	}
-	static real sleepEpsilon=0.3;
+	static real sleepEpsilon=0.05;
 
 }

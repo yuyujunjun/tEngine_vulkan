@@ -5,7 +5,7 @@
 namespace tEngine {
 	struct RigidBody {
 		RigidBody() :inverseInertiaTensor(1), inverseInertiaTensorWorld(1), inverseMass(1), velocity(0, 0, 0), angularVelocity(0, 0, 0),
-			linearDamping(0.9), angularDamping(0.9), forceAccum(0, 0, 0), torqueAccum(0, 0, 0), accleration(0, 0, 0), isAwake(true), canSleep(true), motion(sleepEpsilon * 2.0f), accumInducedByForce(0, 0, 0) {}
+			linearDamping(0.8), angularDamping(0.8), forceAccum(0, 0, 0), torqueAccum(0, 0, 0), accleration(0, 0, 0), isAwake(true), canSleep(true), motion(sleepEpsilon * 2.0f), accumInducedByForce(0, 0, 0) {}
 
 		real inverseMass = 0;
 		Mat3 inverseInertiaTensor;
@@ -55,14 +55,11 @@ namespace tEngine {
 		void calculateDerivedData(Transform* transform);
 		void transformInertiaTensor(Transform* transform);
 	};
-	class RigidBodySystem:public System{
+	class RigidBodySystem{
 		
 	public:
 		RigidBodySystem() {}
-		void integrate(EntityID id,const real duration);
-
-		
-
+		static void integrate(EcsManager* ecsManager,EntityID id,const real duration);
 	};
 
 	inline void setInertiaTensorCoeffs(Mat3& mat,real ix, real iy, real iz, real ixy = 0, real ixz = 0, real iyz = 0) {

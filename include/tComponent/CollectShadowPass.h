@@ -34,7 +34,7 @@ namespace tEngine {
 		Light* getFirstLight();
 		std::shared_ptr<tShader> shadowShader;
 		CollectShadowPass(const Device* device,EcsManager* ecsManager);
-		void collectShadow(Renderer* renderer,CommandBufferHandle& cb);
+		void collectShadow(CommandBufferHandle& cb);
 		const Device* device;
 	};
 }

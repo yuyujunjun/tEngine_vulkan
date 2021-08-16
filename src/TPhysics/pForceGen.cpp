@@ -1,7 +1,7 @@
 #include"pForceGen.h"
 #include"tParticles.h"
 #include"RigidBody.h"
-
+#include"ecs.h"
 namespace tEngine {
 	void ParticleForceRegistry::add(Particle* particle, ParticleForceGenerator* fg) {
 		registry.emplace_back(ParticleForceRegistration(particle,fg));
@@ -74,75 +74,78 @@ namespace tEngine {
 		force *= -magnitude;
 		particle->addForce(force);
 	} 
-	void Gravity::updateForce(EntityID id, real duration) {
-		auto body = ecsManager->GetComponent<RigidBody>(id);
-		if (!body->hasFiniteMass())return;
-		body->addForce(gravity * body->getMass());
+	void Gravity::updateForce(EcsManager* scene, real duration) {
+		for (auto entity : SceneView<RigidBody>(*scene)) {
+			auto body = scene->GetComponent<RigidBody>(entity);
+			if (!body->hasFiniteMass())continue;
+			body->addForce(gravity * body->getMass());
+		}
 	}
 
-	void SpringSystem::updateForce(EntityID id, real duration) {
-	
-		auto spring = ecsManager->GetComponent<Spring>(id);
-		Transform* t0 = nullptr;
-		Transform* t1 = nullptr;
-		Vector3 pos0, pos1;
-		if (spring->connectedBody[0] != -1) {
-			t0 = ecsManager->GetComponent<Transform>(spring->connectedBody[0]);
-			pos0 = t0->getMtx() * Vector4(spring->anchor[0], 1);
-		}
-		else {
-			pos0 = spring->connectedAnchor[0];
-		}
-		if (spring->connectedBody[1] != -1) {
-			t1= ecsManager->GetComponent<Transform>(spring->connectedBody[1]);
-			pos1= t1->getMtx() * Vector4(spring->anchor[1], 1);
-		}
-		else {
-			pos1 = spring->connectedAnchor[1];
-		}
-		
+	void SpringSystem::updateForce(EcsManager* scene, real duration) {
+		for (auto entity : SceneView<Spring>(*scene)) {
+			auto spring = scene->GetComponent<Spring>(entity);
+			Transform* t0 = nullptr;
+			Transform* t1 = nullptr;
+			Vector3 pos0, pos1;
+			if (spring->connectedBody[0] != -1) {
+				t0 = scene->GetComponent<Transform>(spring->connectedBody[0]);
+				pos0 = t0->getMtx() * Vector4(spring->anchor[0], 1);
+			}
+			else {
+				pos0 = spring->connectedAnchor[0];
+			}
+			if (spring->connectedBody[1] != -1) {
+				t1 = scene->GetComponent<Transform>(spring->connectedBody[1]);
+				pos1 = t1->getMtx() * Vector4(spring->anchor[1], 1);
+			}
+			else {
+				pos1 = spring->connectedAnchor[1];
+			}
 
-		Vector3 force = pos0 - pos1;
-		real magnitude = glm::length(force);
-		magnitude =abs( magnitude - spring->restLength);
-		magnitude *= spring->springConstant;
-		force = glm::normalize(force);
-		force *= -magnitude;
-		if (t0) {
-			ecsManager->GetComponent<RigidBody>(spring->connectedBody[0])->addForceAtPoint(t0,force,pos0);
-		}
-		if (t1) {
-			ecsManager->GetComponent<RigidBody>(spring->connectedBody[1])->addForceAtPoint(t1, -force, pos1);
-		}
 
+			Vector3 force = pos0 - pos1;
+			real magnitude = glm::length(force);
+			magnitude = abs(magnitude - spring->restLength);
+			magnitude *= spring->springConstant;
+			force = glm::normalize(force);
+			force *= -magnitude;
+			if (t0) {
+				scene->GetComponent<RigidBody>(spring->connectedBody[0])->addForceAtPoint(t0, force, pos0);
+			}
+			if (t1) {
+				scene->GetComponent<RigidBody>(spring->connectedBody[1])->addForceAtPoint(t1, -force, pos1);
+			}
+		}
 	}
-	void Aero::updateForce(EntityID id, real duration) {
-		Aero::updateForceFromTensor(id, duration, tensor);
-	}
-	
-	void Aero::updateForceFromTensor(EntityID id, real duration, const Mat3& tensor) {
-		auto body = ecsManager->GetComponent<RigidBody>(id);
-		auto transform = ecsManager->GetComponent<Transform>(id);
-		// Calculate total velocity (windspeed and body's velocity).
-		Vector3 velocity = body->getVelocity();
-		velocity += windSpeed;
+	//void Aero::updateForce(EcsManager* scene, real duration) {
+	//	for(auto )
+	//	Aero::updateForceFromTensor(id, duration, tensor);
+	//}
+	//
+	//void Aero::updateForceFromTensor(EntityID id, real duration, const Mat3& tensor) {
+	//	auto body = ecsManager->GetComponent<RigidBody>(id);
+	//	auto transform = ecsManager->GetComponent<Transform>(id);
+	//	// Calculate total velocity (windspeed and body's velocity).
+	//	Vector3 velocity = body->getVelocity();
+	//	velocity += windSpeed;
 
-		// Calculate the velocity in body coordinates
-		Vector3 bodyVel = transform->transformInverseDirection(velocity);// *Vector4(velocity, 0);
+	//	// Calculate the velocity in body coordinates
+	//	Vector3 bodyVel = transform->transformInverseDirection(velocity);// *Vector4(velocity, 0);
 
-		// Calculate the force in body coordinates
-		Vector3 bodyForce = tensor*(bodyVel);
-		// Calculate the force in world coordinates
-		Vector3 force = transform->transformDirection(bodyForce);
+	//	// Calculate the force in body coordinates
+	//	Vector3 bodyForce = tensor*(bodyVel);
+	//	// Calculate the force in world coordinates
+	//	Vector3 force = transform->transformDirection(bodyForce);
 
-		// Apply the force
-		body->addForceAtLocalPoint(transform,force, position);
-	}
-	void AeroControl::updateForce(EntityID id, real duration) {
-		Mat3 tensor = getTensor();
-		
-		Aero::updateForceFromTensor(id, duration, tensor);
-	}
+	//	// Apply the force
+	//	body->addForceAtLocalPoint(transform,force, position);
+	//}
+	//void AeroControl::updateForce(EntityID id, real duration) {
+	//	Mat3 tensor = getTensor();
+	//	
+	//	Aero::updateForceFromTensor(id, duration, tensor);
+	//}
 	Mat3 AeroControl::getTensor() {
 		if (controlSetting <= -1.0f) return minTensor;
 		else if (controlSetting >= 1.0f) return maxTensor;

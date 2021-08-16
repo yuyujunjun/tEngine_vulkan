@@ -255,6 +255,7 @@ namespace tEngine {
 		, SemaphoreHandle presentSemaphore, FenceHandle fence) {
 		glfwPollEvents();
 		double deltaTime = time == 0 ? 0 : (static_cast<double>(clock()) - time) / 1e3;
+		deltaTime *= timeRatio;
 		time = clock();
 
 		auto currentBuffer = (VkResult)device->acquireNextImageKHR(swapChain->getVkHandle(), -1, acquireSemaphore->getVkHandle(), {}, &imageIdx);

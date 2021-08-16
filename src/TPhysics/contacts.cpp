@@ -2,19 +2,16 @@
 #include"collide.h"
 #include"GameObject.h"
 #include"RigidBody.h"
+#include"Log.h"
 namespace tEngine {
-	void Contact::SetData(RigidBody* obj1,Transform* t1, RigidBody* obj2,Transform* t2, const ContactInfo& info) {
+	void Contact::SetData(RigidBody* obj1,Transform* t1, RigidBody* obj2,Transform* t2) {
 		//collider[0] = obj1;
 		rigidBody[0] = obj1;
 		transform[0] = t1;
-		if (obj2) {
-			rigidBody[1] = obj2;
-			transform[1] = t2;
-		//	collider[1] = obj2;
-		}
-		contactPoint = info.pos;
-		contactNormal = info.dir;
-		penetration = info.depth;
+
+		rigidBody[1] = obj2;
+		transform[1] = t2;
+
 	}
 	Vector3 Contact::calculateLocalVelocity(unsigned bodyIdx, real duration) {
 	//	Collider* obj = collider[bodyIdx];
@@ -50,14 +47,17 @@ namespace tEngine {
 			thisRestitution = 0;
 		}
 		desiredDeltaVelocity = -contactVelocity.y - thisRestitution * (contactVelocity.y-velocityFromAcc);
+		
+	//	printf("%f %f %f\n", contactNormal.x, contactNormal.g, contactNormal.b);
+	//	tEngine::LOG(tEngine::LogLevel::Debug, "DesiredVelocity", desiredDeltaVelocity);
 	}
 	void Contact::calculateAngularInertiaPerUnit() {
 		for (int i = 0; i < 2; ++i) {
 			if (rigidBody[i]) {
 				Vector3 impulsetorquePerUnitImpulse = glm::cross(relativeContactPosition[i], contactNormal);
 				Vector3 rotationPerUnitImpulse = rigidBody[i]->getInverseInertiaTensorWorld() * impulsetorquePerUnitImpulse;
-				Vector3 velocityPerUnitImpulse = glm::cross(rotationPerUnitImpulse, relativeContactPosition[i]);
-				velocityPerUnitImpulse[i] = glm::dot(velocityPerUnitImpulse, contactNormal);
+				Vector3 velocityPerUnitImpulse_ = glm::cross(rotationPerUnitImpulse, relativeContactPosition[i]);
+				velocityPerUnitImpulse[i] = glm::dot(velocityPerUnitImpulse_, contactNormal);
 			}
 		}
 	}
@@ -75,13 +75,14 @@ namespace tEngine {
 		calculateDesiredDeltaVelocity(duration);
 		calculateAngularInertiaPerUnit();
 		
+		
 
 	}
 	Vector3 Contact::calculateFrictionlessImpulse() {
 	//calculateAngularInertiaPerUnit();
 		Vector3 impulseContact;
 		real deltaVelocity = velocityPerUnitImpulse[0];
-		deltaVelocity += rigidBody[1]->getInverseMass();
+		deltaVelocity += rigidBody[0]->getInverseMass();
 		if (rigidBody[1]) {
 			deltaVelocity += velocityPerUnitImpulse[1];
 			deltaVelocity += rigidBody[1]->getInverseMass();
@@ -151,8 +152,8 @@ namespace tEngine {
 		Vector3 impulseTorque = glm::cross(relativeContactPosition[0], impulseWorld);
 		angularChange[0] = rigidBody[0]->getInverseInertiaTensorWorld() * impulseTorque;
 		linearChange[0] = impulseWorld * rigidBody[0]->getInverseMass();
-		rigidBody[0]->addVelocity(angularChange[0]);
-		rigidBody[0]->addAngularVelocity(linearChange[0]);
+		rigidBody[0]->addVelocity(linearChange[0]);
+		rigidBody[0]->addAngularVelocity(angularChange[0]);
 		if (rigidBody[1]) {
 			//use -impulseWorld
 			Vector3 impulseTorque = glm::cross( impulseWorld, relativeContactPosition[1]);
@@ -237,8 +238,11 @@ namespace tEngine {
 	}
 	void ContactResolver::resolveContacts(Contact* contactArray, unsigned numContacts, real duration){
 		if (numContacts == 0)return;
+	//	LOG(LogLevel::Information, "prepareContacts");
 		prepareContacts(contactArray, numContacts, duration);
+	//	LOG(LogLevel::Information, "adujstPosition");
 		adjustPositions(contactArray, numContacts, duration);
+	//	LOG(LogLevel::Information, "adjustVelocites");
 		adjustVelocities(contactArray, numContacts, duration);
 
 	}
@@ -266,6 +270,7 @@ namespace tEngine {
 			c[index].MatchAwakeState();
 			
 			c[index].ApplyPositionChange(linearChange,angularChange,c[index].penetration);
+	//		printf("%f %f %f\n", linearChange->x, linearChange->g, linearChange->b);
 			Vector3 deltaPosition;
 			for (unsigned cid = 0; cid < numContacts; ++cid) {
 				for (unsigned bodyId = 0; bodyId < 2; ++bodyId)if (c[cid].rigidBody[bodyId]) { 
@@ -299,13 +304,15 @@ namespace tEngine {
 			if (index == numContacts)break;
 			c[index].MatchAwakeState();
 			c[index].ApplyVelocityChange(linearChange,angularChange);
+	//	printf("%f %f %f\n", linearChange->x, linearChange->g, linearChange->b);
 			for (unsigned i = 0; i < numContacts; ++i) {
 				for (unsigned b = 0; b < 2; ++b)if (c[i].rigidBody[b]) {
 					for (unsigned d = 0; d < 2; ++d)if (c[index].rigidBody[d]) {
 						if (c[index].rigidBody[d] == c[i].rigidBody[b]) {
 							//update contact velocity
 							Vector3 deltaVe=linearChange[d] + glm::cross(angularChange[d], c[i].relativeContactPosition[b]);
-							c[i].contactVelocity += glm::transpose(c[i].contact2World) * deltaVe * (real)(b ? 1 : -1);
+							c[i].contactVelocity += glm::transpose(c[i].contact2World) * deltaVe * (real)(b ? -1 : 1);
+					//		printf("%f \n", c[i].contactVelocity.y);
 							c[i].calculateDesiredDeltaVelocity(duration);
 						}
 					}

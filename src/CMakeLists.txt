@@ -19,8 +19,7 @@ set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
 file(GLOB USER_SRC_PATH ../3rdParty/imgui/impl/*.cpp)
 set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
 # libccd 
-file(GLOB USER_SRC_PATH ../3rdParty/libccd/*.cpp)
-set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
+
 message(${SRC_FILES})
 # file(GLOB_RECURSE USER_SRC_PATH 3rdParty/assimp/code/*.*)
 # set(SRC_FILES ${SRC_FILES} ${USER_SRC_PATH})
@@ -42,10 +41,12 @@ endfunction(assign_source_group)
 assign_source_group(${SRC_FILES})
 
 assign_source_group(${INCLUDE_DIRECTORIES})
-
+find_package(fcl CONFIG REQUIRED)
 add_library(Engine ${SRC_FILES})
-target_link_libraries(${PROJECT_NAME} PUBLIC glfw ${Vulkan_LIBRARIES})
-
+target_link_libraries(${PROJECT_NAME} PUBLIC glfw fcl ${Vulkan_LIBRARIES})
+if(WINDOWS)
+    SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
+endif()
 install(TARGETS Engine
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib)

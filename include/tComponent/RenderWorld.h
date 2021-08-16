@@ -32,16 +32,14 @@ namespace tEngine {
 		std::shared_ptr<CollectShadowPass>  collectShadowPass;
 		EntityID mainCamera;
 	public:
-		MeshRenderer* meshRenderer;
+	//	MeshRenderer* meshRenderer;
 		RenderWorld(const Device* device) :device(device),mainCamera(-1){
-			meshRenderer = new MeshRenderer();
-			meshRenderer->ecsManager = ecsManager;
 		
 		};
 		void SetCamera(EntityID cam) { mainCamera = cam; }
 	
 		~RenderWorld(){
-			delete meshRenderer;
+		//	delete meshRenderer;
 		}
 		//std::vector<Renderer*>& getRenderers() { return renderers; }
 

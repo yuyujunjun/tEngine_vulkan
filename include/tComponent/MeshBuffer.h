@@ -33,7 +33,9 @@ namespace tEngine {
 		MeshFilter() {}
 
 		void setMesh(const Mesh& mesh) {
-			this->meshBuffer = std::make_shared<MeshBuffer>();
+			if (this->meshBuffer == nullptr) {
+				this->meshBuffer = std::make_shared<MeshBuffer>();
+			}
 			this->meshBuffer->setMesh(mesh);
 
 		}
@@ -75,7 +77,9 @@ namespace tEngine {
 		Mesh& getMesh() {
 			return meshBuffer->mesh;
 		}
-
+		const MeshBuffer* getMeshBuffer() {
+			return meshBuffer.get();
+		}
 	private:
 		
 		std::shared_ptr<MeshBuffer> meshBuffer;

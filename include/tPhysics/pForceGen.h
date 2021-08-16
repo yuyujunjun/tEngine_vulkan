@@ -82,21 +82,21 @@ namespace tEngine {
 		ParticleAnchoredBungee(const Vector3& anchor, real springConstant, real restLength) :anchor(anchor), springConstant(springConstant), restLength(restLength) {}
 		virtual void updateForce(Particle* particle, real duration);
 	};
-	class ForceGenerator:public System {
+	class ForceGenerator {
 	public:
-		virtual void updateForce(EntityID body, real duration) {};
+		virtual void updateForce(EcsManager* scene, real duration) {};
 	};
 	struct ForceRegistration {
-		ForceRegistration() :body(-1), fg(0) {}
-		ForceRegistration(EntityID id, ForceGenerator* f) :body(id), fg(f) {}
-		EntityID body;
+		ForceRegistration() : fg(0) {}
+		ForceRegistration( ForceGenerator* f) : fg(f) {}
+		//EntityID body;
 		ForceGenerator* fg;
 	};
 	class Gravity :public ForceGenerator {
 		Vector3 gravity;
 	public:
 		Gravity(const Vector3& gravity) :gravity(gravity) {}
-		void updateForce(EntityID id, real duration)override;
+		void updateForce(EcsManager*  id, real duration)override;
 	};
 	struct Spring {
 		Spring() {
@@ -115,7 +115,7 @@ namespace tEngine {
 	class SpringSystem :public ForceGenerator {
 	public:
 		bool autoConfigureConnectedAnchor=true;
-		void updateForce(EntityID id, real duration)override;
+		void updateForce(EcsManager* scene, real duration)override;
 	};
 	class Aero :public ForceGenerator {
 	protected:
@@ -124,7 +124,7 @@ namespace tEngine {
 	public:
 		Vector3& windSpeed;
 		Aero(const Mat3& tensor, const Vector3& position,  Vector3& windSpeed) :tensor(tensor), position(position), windSpeed(windSpeed) {}
-		void updateForce(EntityID id, real duration)override;
+		void updateForce(EcsManager* scene, real duration)override;
 		void updateForceFromTensor(EntityID id, real duration, const Mat3& tensor);
 	};
 	class AeroControl :public Aero {
@@ -135,6 +135,6 @@ namespace tEngine {
 	public:
 		AeroControl(const Mat3& base, const Mat3& min, const Mat3& max,  Vector3& position,  Vector3& windSpeed) :Aero(base, position, windSpeed), maxTensor(max), minTensor(min) {};
 		void setControl(real value) { controlSetting = value; }
-		void updateForce(EntityID id, real duration)override;
+		void updateForce(EcsManager* scene, real duration)override;
 	};
 }

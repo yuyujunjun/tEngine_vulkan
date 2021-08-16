@@ -18,10 +18,10 @@ layout (location = 0) out vec4 outColor;
 
 void main() {
    
-	vec3 abeldo=vec3(1,1,1);
+	vec3 abeldo=texture(_MainTex,uv).xyz;
 	float LdotV=abs(dot(normalize(normal),vec3(0,0,1)));
-	outColor=  vec4(LdotV*abeldo*0.7+abeldo*0.3,1);
-	outColor = vec4(texture(_MainTex,uv));
+	 outColor= vec4( LdotV*0.7*abeldo+abeldo*0.3,1);
+	//outColor = vec4(texture(_MainTex,uv).xyz*ratio,1);
 	//outColor=vec4(normalize(normal),1);
 	//brightnessColor=vec4(1);
 	//brightnessColor.xyz= Prefilter2(outColor.xyz);

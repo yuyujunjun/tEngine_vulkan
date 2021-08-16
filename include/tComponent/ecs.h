@@ -231,6 +231,7 @@ namespace tEngine {
 			auto pos = GetEntityPos(id);
 			return entities[pos].mask.test(componentId);
 		}
+		std::unordered_map<EntityID, std::string> entity_map;
 		std::vector<size_t> id_to_pos;
 		std::vector<EntityDesc> entities;
 		std::queue<uint32_t> freeEntities;
@@ -299,9 +300,13 @@ namespace tEngine {
 		std::vector<EntityID>& idList;
 		bool all{ false };
 	};
+
+
+
 	template<typename ...ComponentTypes>
 	struct SceneView {
-		SceneView(EcsManager& ecs) :ecsSystem(&ecs) {
+		//if or is true, then return entity has any component
+		SceneView(EcsManager& ecs,bool any=false) :ecsSystem(&ecs), any(any) {
 			if (sizeof...(ComponentTypes) == 0) {
 				all = true;
 			}
@@ -313,8 +318,13 @@ namespace tEngine {
 			}
 
 		};
+		bool ValidIndex(int index)const {
+			if (!ecsSystem->IsPosHasEntity(index)) { return false; }
+			bool satified_mask = this->any ? (ecsSystem->entities[index].mask & componentMask) != 0 : (ecsSystem->entities[index].mask & componentMask) == componentMask;
+			return  (all || satified_mask);
+		}
 		struct Iterator {
-			Iterator(EcsManager* ecs, int index, ComponentMask mask, bool all) :ecsSystem(ecs), index(index), mask(mask), all(all) {}
+			Iterator(EcsManager* ecs, int index, ComponentMask mask, bool all,bool any) :ecsSystem(ecs), index(index), mask(mask), all(all),any(any) {}
 			EntityID operator*()const {
 				return ecsSystem->entities[index].id;
 			}
@@ -326,7 +336,9 @@ namespace tEngine {
 				return index != other.index && index != ecsSystem->entities.size();
 			}
 			bool ValidIndex(int index) {
-				return ecsSystem->IsPosHasEntity(index) && (all || (ecsSystem->entities[index].mask & mask) == mask);
+				if (!ecsSystem->IsPosHasEntity(index)) { return false; }
+				bool satified_mask = this->any ? (ecsSystem->entities[index].mask & mask) != 0 : (ecsSystem->entities[index].mask & mask) == mask;
+				return  (all || satified_mask);
 			}
 			Iterator& operator++()
 			{
@@ -340,27 +352,28 @@ namespace tEngine {
 			EcsManager* ecsSystem;
 			ComponentMask mask;
 			bool all{ false };
+			bool any{ false };
 		};
 		const Iterator begin() const
 		{
 			int firstIndex = 0;
-			while (firstIndex < ecsSystem->entities.size() &&
-				(!ecsSystem->IsPosHasEntity(firstIndex) || componentMask != (componentMask & ecsSystem->entities[firstIndex].mask)
-					))
+			while (firstIndex < ecsSystem->entities.size() && (!ValidIndex(firstIndex))
+					)
 			{
 				firstIndex++;
 			}
-			return Iterator(ecsSystem, firstIndex, componentMask, all);
+			return Iterator(ecsSystem, firstIndex, componentMask, all,any);
 		}
 
 		const Iterator end() const
 		{
-			return Iterator(ecsSystem, ecsSystem->entities.size(), componentMask, all);
+			return Iterator(ecsSystem, ecsSystem->entities.size(), componentMask, all,any);
 			// Give an iterator to the end of this view 
 		}
 		ComponentMask componentMask;
 		EcsManager* ecsSystem;
 		bool all{ false };
+		bool any{ false };
 	};
 	class System {
 		friend class tWorld;
@@ -369,5 +382,58 @@ namespace tEngine {
 		System(EcsManager* manager) :ecsManager(manager) {}
 		EcsManager* ecsManager;
 		//virtual void ExecuteAllComponents(float dt) = 0;
+	};
+	class SystemManager {
+	public:
+		SystemManager()  {}
+		template<typename T,typename ... Args>
+		T* AddSystem(Args ...args) {
+			if (hash_to_id.count(typeid(T).hash_code()) == 0) {
+				if (pool.empty()) {
+					systems.push_back(new T(args...));
+					hash_to_id[typeid(T).hash_code()] = systems.size();
+					systems.back()->ecsManager = ecsManager;
+				}
+				else {
+					auto idx = pool.front();
+					pool.pop();
+					systems[idx] = (new T(args...));
+					hash_to_id[typeid(T).hash_code()] = idx;
+					systems[idx]->ecsManager = ecsManager;
+				}
+				
+			}
+		}
+		template<typename T>
+		void RemoveSystem(){
+			auto idx = getIndex(typeid(T).hash_code());
+			if (idx == -1)return;
+			hash_to_id[idx] = -1;
+			delete systems[idx];
+			systems[idx] == nullptr;
+			pool.push(idx);
+		}
+		size_t getIndex(size_t hash) {
+			if (hash_to_id.count(hash) != 0) {
+				return hash_to_id.at(hash);
+			}
+			return -1;
+		}
+		template<typename T>
+		T* getSystem() {
+			auto idx = getIndex(typeid(T).hash_code());
+			if (idx == -1)return nullptr;
+			return static_cast<T*>(systems[idx]);
+		}
+		~SystemManager() {
+			for (auto s : systems) {
+				delete s;
+			}
+			
+		}
+		std::queue<size_t> pool;
+		std::unordered_map<size_t, size_t> hash_to_id;
+		EcsManager* ecsManager;
+		std::vector<System*> systems;
 	};
 }
