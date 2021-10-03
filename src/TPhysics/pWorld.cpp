@@ -89,8 +89,8 @@ namespace tEngine {
 	void ContactWorld::colliderDetect(EcsManager* ecsManager, std::vector<Contact>& allContacts) {
 		
 		gjkSupportObj.clear();
-		contactlist.clear();
-		contactlist.reserve(100);
+	//	contactlist.clear();
+	//	contactlist.reserve(100);
 
 		Eigen::Matrix<real, 3, 3> rotation;
 		Eigen::Matrix<real, 3, 1> translate;

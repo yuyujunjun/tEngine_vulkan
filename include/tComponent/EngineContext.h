@@ -23,7 +23,6 @@
 #include"utils.hpp"
 #include"Queue.h"
 #include<functional>
-#include"Camera.h"
 #include<imgui/imgui.h>
 #include"Log.h"
 namespace tEngine {

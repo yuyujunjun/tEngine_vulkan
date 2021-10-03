@@ -40,7 +40,7 @@ namespace tEngine {
 	class ContactWorld{
 	public:
 		std::vector<GJKSupportCollider> gjkSupportObj;
-		std::vector<ContactInfo> contactlist;
+	//	std::vector<ContactInfo> contactlist;
 		//std::list<PotentialContact> broadContacts;
 		//	BoxColliderSystem boxSystem;
 	//	MeshColliderSystem meshSystem;
